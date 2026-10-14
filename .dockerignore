@@ -1,0 +1,15 @@
+**/node_modules
+**/.next
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.venv
+**/dist
+.git
+.env
+uploads
+**/uploads
+frontend/public
+*.md
+!libs/**/README.md
+!services/**/README.md

@@ -1,34 +1,225 @@
-version: '3.8'
+name: before-you-buy
+
+# Each app runs beside its own daprd sidecar on the shared bridge network.
+# The sidecar reaches its app through --app-channel-address, and the app reaches
+# daprd through DAPR_HTTP_ENDPOINT. This keeps normal service DNS (api-gateway, ...)
+# working, which the `network_mode: service:` pod layout would break.
+
+x-service: &service
+  restart: unless-stopped
+  networks: [byb]
+
+x-daprd: &daprd
+  image: daprio/daprd:latest
+  <<: *service
+  volumes:
+    - ./components:/components:ro
+
+x-upload: &upload
+  type: volume
+  source: uploads
+  target: /uploads
 
 services:
-  db:
-    image: postgres:15-alpine
+  postgres:
+    <<: *service
+    image: postgres:16-alpine
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: beforeyoubuy
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-beforeyoubuy}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-beforeyoubuy}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
-  backend:
-    build: ./backend
+  redis:
+    <<: *service
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ---------- AMD ROCm inference host ----------
+  vllm:
+    <<: *service
+    profiles: [gpu]
+    image: vllm/vllm-openai-rocm:latest
+    command:
+      - --model
+      - ${VLLM_MODEL:-Qwen/Qwen2.5-3B-Instruct}
+      - --max-model-len
+      - "8192"
+      - --gpu-memory-utilization
+      - "0.85"
     environment:
-      - DATABASE_URL=postgresql://user:password@db/beforeyoubuy
+      HSA_ENABLE_SDMA: "0"
+      HF_HOME: /cache/huggingface
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    security_opt:
+      - seccomp:unconfined
+    group_add:
+      - video
+      - render
     ports:
-      - "8000:8000"
-    depends_on:
-      - db
+      - "${VLLM_PORT:-8000}:8000"
+    volumes:
+      - hf-cache:/cache/huggingface
 
+  # ---------- api-gateway ----------
+  api-gateway:
+    <<: *service
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    hostname: api-gateway
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-beforeyoubuy}
+      DAPR_HTTP_ENDPOINT: ${DAPR_GATEWAY_ENDPOINT:-http://dapr-api-gateway:3500}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}
+      INFERENCE_URL: http://inference-service:8002
+      GEOMETRY_URL: http://geometry-service:8003
+      UPLOAD_DIR: /uploads
+      ALLOWED_ORIGINS: http://localhost:3000,http://frontend:3000
+    volumes:
+      - *upload
+    ports:
+      - "${GATEWAY_PORT:-8001}:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  dapr-api-gateway:
+    <<: *daprd
+    command:
+      - ./daprd
+      - --app-id
+      - api-gateway
+      - --app-channel-address
+      - api-gateway
+      - --app-port
+      - "8001"
+      - --dapr-http-port
+      - "3500"
+      - --components-path
+      - /components
+    depends_on:
+      - api-gateway
+
+  # ---------- inference-service ----------
+  inference-service:
+    <<: *service
+    build:
+      context: .
+      dockerfile: services/inference-service/Dockerfile
+    hostname: inference-service
+    environment:
+      DAPR_HTTP_ENDPOINT: ${DAPR_INFERENCE_ENDPOINT:-http://dapr-inference-service:3500}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}
+      GEOMETRY_URL: http://geometry-service:8003
+      VLLM_BASE_URL: ${VLLM_BASE_URL:-http://vllm:8000/v1}
+      VLLM_MODEL: ${VLLM_MODEL:-Qwen/Qwen2.5-3B-Instruct}
+      VLLM_SUPPORTS_VISION: ${VLLM_SUPPORTS_VISION:-false}
+      UPLOAD_DIR: /uploads
+    volumes:
+      - *upload
+    ports:
+      - "${INFERENCE_PORT:-8002}:8002"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  dapr-inference-service:
+    <<: *daprd
+    command:
+      - ./daprd
+      - --app-id
+      - inference-service
+      - --app-channel-address
+      - inference-service
+      - --app-port
+      - "8002"
+      - --dapr-http-port
+      - "3500"
+      - --components-path
+      - /components
+      - --resources-path
+      - /subscriptions
+    volumes:
+      - ./components:/components:ro
+      - ./services/inference-service/dapr:/subscriptions:ro
+    depends_on:
+      - inference-service
+
+  # ---------- geometry-service ----------
+  geometry-service:
+    <<: *service
+    build:
+      context: .
+      dockerfile: services/geometry-service/Dockerfile
+    hostname: geometry-service
+    environment:
+      DAPR_HTTP_ENDPOINT: ${DAPR_GEOMETRY_ENDPOINT:-http://dapr-geometry-service:3500}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}
+      GATEWAY_URL: http://api-gateway:8001
+    ports:
+      - "${GEOMETRY_PORT:-8003}:8003"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  dapr-geometry-service:
+    <<: *daprd
+    command:
+      - ./daprd
+      - --app-id
+      - geometry-service
+      - --app-channel-address
+      - geometry-service
+      - --app-port
+      - "8003"
+      - --dapr-http-port
+      - "3500"
+      - --components-path
+      - /components
+      - --resources-path
+      - /subscriptions
+    volumes:
+      - ./components:/components:ro
+      - ./services/geometry-service/dapr:/subscriptions:ro
+    depends_on:
+      - geometry-service
+
+  # ---------- frontend ----------
   frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
+    <<: *service
+    build:
+      context: ./frontend
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      API_GATEWAY_URL: http://api-gateway:8001
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
-      - backend
+      - api-gateway
+
+networks:
+  byb:
+    driver: bridge
 
 volumes:
-  postgres_data:
+  postgres-data:
+  uploads:
+  hf-cache:

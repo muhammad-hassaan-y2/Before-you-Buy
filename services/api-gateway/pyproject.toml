@@ -1,0 +1,34 @@
+[project]
+name = "byb-api-gateway"
+version = "0.1.0"
+description = "Buy You Before - ingest, persistence and orchestration gateway"
+authors = [{ name = "Hassaan", email = "hassaan@example.com" }]
+readme = "README.md"
+requires-python = ">=3.11"
+
+[tool.poetry]
+packages = [{ include = "byb_gateway", from = "src" }]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<4.0"
+fastapi = ">=0.115.0"
+uvicorn = { version = ">=0.30.0", extras = ["standard"] }
+sqlalchemy = ">=2.0.30"
+psycopg2-binary = ">=2.9.9"
+pydantic-settings = ">=2.3.0"
+python-multipart = ">=0.0.9"
+httpx = ">=0.27.0"
+byb-common = { path = "../../libs/byb-common", develop = true }
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.2.0"
+ruff = ">=0.6.0"
+
+[tool.poetry.scripts]
+start = "byb_gateway.main:start"
+dev = "byb_gateway.main:dev"
+test = "pytest:main"
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"

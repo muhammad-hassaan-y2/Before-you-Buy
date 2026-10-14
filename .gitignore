@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Poetry locks stay committed; local venvs do not.
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.pnpm-store/
+
+# Runtime state
+uploads/
+uploads-e2e/
+*.log
+
+# Scratch environments created by scripts/e2e-smoke.sh
+.venv-check/
+e2e.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

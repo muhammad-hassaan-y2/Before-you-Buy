@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
@@ -11,6 +10,14 @@ const nextConfig: NextConfig = {
         as: "*.css",
       },
     },
+  },
+  // Server-side only: the browser talks to /api/v1/*, never to the gateway origin.
+  rewrites() {
+    const gateway = process.env.API_GATEWAY_URL ?? "http://localhost:8001";
+    return [
+      { source: "/api/:path*", destination: `${gateway}/api/:path*` },
+      { source: "/healthz", destination: `${gateway}/healthz` },
+    ];
   },
 };
 
