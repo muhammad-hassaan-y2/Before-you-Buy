@@ -1,19 +1,25 @@
 #!/usr/bin/env bash
 set -u
 cd "$(dirname "$0")/.."
-PY=".venv-check/Scripts/python.exe"
 
 # Native paths: Git Bash `/c/...` is unreadable by a Windows Python, so use `pwd -W`.
 ROOT="$(pwd -W 2>/dev/null || pwd)"
+# Any Python with the service dependencies works: `PY=$(command -v python) bash scripts/e2e-smoke.sh`
+PY="${PY:-$ROOT/.venv-check/Scripts/python.exe}"
+[ -x "$PY" ] || PY=python
 export PYTHONPATH="$ROOT/services/api-gateway/src:$ROOT/services/inference-service/src:$ROOT/services/geometry-service/src:$ROOT/libs/byb-common/src"
-export DATABASE_URL="sqlite:///$ROOT/e2e.db"
-export UPLOAD_DIR="$ROOT/uploads-e2e"
+
+# Postgres is the target database: `docker compose up -d postgres` before running this.
+export DATABASE_URL="${DATABASE_URL:-postgresql+psycopg2://user:password@localhost:5432/beforeyoubuy}"
+export UPLOAD_DIR="${UPLOAD_DIR:-$ROOT/uploads-e2e}"
+mkdir -p "$UPLOAD_DIR"
 export INTERNAL_TOKEN=e2e-token
 export GATEWAY_URL=http://127.0.0.1:8001
 export INFERENCE_URL=http://127.0.0.1:8002
 export GEOMETRY_URL=http://127.0.0.1:8003
 
-rm -f e2e.db *.svc.log
+rm -f *.svc.log
+echo "database: ${DATABASE_URL%%@*}@<redacted>"
 "$PY" -m uvicorn byb_gateway.main:app --port 8001 --host 127.0.0.1 >gateway.svc.log 2>&1 &
 "$PY" -m uvicorn byb_inference.main:app --port 8002 --host 127.0.0.1 >inference.svc.log 2>&1 &
 "$PY" -m uvicorn byb_geometry.main:app --port 8003 --host 127.0.0.1 >geometry.svc.log 2>&1 &

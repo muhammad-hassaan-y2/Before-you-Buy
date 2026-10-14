@@ -49,8 +49,13 @@ volumes), `make rebuild`.
 
 ## Local development (no Docker)
 
-Postgres and Redis are optional in this mode; the gateway can use SQLite and the
-services talk over plain HTTP.
+Postgres is the only supported database at runtime. Start it on its own and point the
+gateway at it; the services then talk over plain HTTP.
+
+```bash
+docker compose up -d postgres redis       # :5432 and :6379
+export DATABASE_URL=postgresql+psycopg2://user:password@localhost:5432/beforeyoubuy
+```
 
 ```bash
 # each service has its own Poetry project
@@ -61,6 +66,10 @@ make install                                  # or run `poetry install` per dire
 (cd services/geometry-service  && poetry run dev) # :8003
 (cd frontend                 && pnpm dev)         # :3000
 ```
+
+`bash scripts/e2e-smoke.sh` boots all three services and drives one full simulation
+against that Postgres. SQLite appears only inside `services/api-gateway/tests`, so the
+suite needs no database server.
 
 `API_GATEWAY_URL=http://localhost:8001 pnpm dev` is the default; the proxy is defined in
 `frontend/next.config.ts`, so the browser never learns the gateway origin.
