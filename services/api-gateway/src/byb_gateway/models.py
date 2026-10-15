@@ -50,7 +50,7 @@ class Simulation(Base):
 
 
 class SimulationResult(Base):
-    """Snapshot of the product profile and the Shapely fit report, as JSON."""
+    """Snapshot of the catalog candidate, product profile, room scan and fit report, as JSON."""
 
     __tablename__ = "simulation_results"
 
@@ -59,6 +59,7 @@ class SimulationResult(Base):
 
     product_profile: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     catalog_candidate: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    room_scan: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     fit_report: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_now)

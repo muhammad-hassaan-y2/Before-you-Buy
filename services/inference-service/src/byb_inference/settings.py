@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     pubsub_name: str = "byb-pubsub"
     internal_token: str = "dev-internal-token"
 
-    geometry_url: str = "http://localhost:8003"
+    vision_url: str = "http://localhost:8005"
     gateway_url: str = "http://localhost:8001"
 
     # AMD ROCm vLLM endpoint (OpenAI-compatible). Override per cloud deployment.

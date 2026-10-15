@@ -16,9 +16,22 @@ const STEPS = [
   { key: "pending", label: "Queued" },
   { key: "cataloguing", label: "Matching the SKU" },
   { key: "enriching", label: "Reading the listing" },
-  { key: "measuring", label: "Fitting the room" },
+  { key: "scanning", label: "Measuring the room" },
+  { key: "fitting", label: "Fitting the floor plan" },
   { key: "completed", label: "Ready" },
 ] as const
+
+const PRODUCT_SOURCE: Record<string, string> = {
+  vllm: "vLLM",
+  catalog: "Catalog SKU",
+  heuristic: "Category heuristics",
+}
+
+const SCAN_LABEL: Record<string, string> = {
+  photo: "Room measured from the photo",
+  "photo-ignored": "Photo unreadable — using your numbers",
+  declared: "Using your numbers",
+}
 
 const VERDICT: Record<string, { label: string; variant: "success" | "warning" | "destructive" }> = {
   fits: { label: "Fits with room to move", variant: "success" },
@@ -75,6 +88,10 @@ export function RoomSimulator() {
 
   const report = simulation?.fit_report ?? null
   const profile = simulation?.product_profile ?? null
+  const scan = simulation?.room_scan ?? null
+  // Geometry measures the scanned room, which is the shopper's own when the photo could not be read.
+  const roomWidth = scan?.width_m ?? simulation?.room_width_m ?? 4
+  const roomDepth = scan?.depth_m ?? simulation?.room_depth_m ?? 3.5
   const activeSpot = report?.placements.find((spot) => spot.label === placement) ?? null
   const stepIndex = simulation ? STEPS.findIndex((step) => step.key === simulation.status) : busy ? 0 : -1
 
@@ -228,11 +245,12 @@ export function RoomSimulator() {
                     {profile.geometry.width_cm.toFixed(0)} × {profile.geometry.depth_cm.toFixed(0)} × {profile.geometry.height_cm.toFixed(0)} cm
                   </Badge>
                 )}
-                {profile && <Badge variant="secondary">{profile.source === "vllm" ? "vLLM" : "heuristic"}</Badge>}
+                {profile && <Badge variant="secondary">{PRODUCT_SOURCE[profile.source] ?? profile.source}</Badge>}
+                {scan && <Badge variant="outline">{SCAN_LABEL[scan.method] ?? scan.method}</Badge>}
               </div>
 
               <div className="rounded-lg border bg-muted/30 p-3">
-                <RoomPlan widthM={simulation!.room_width_m} depthM={simulation!.room_depth_m} report={report} placement={activeSpot} />
+                <RoomPlan widthM={roomWidth} depthM={roomDepth} report={report} placement={activeSpot} obstacles={scan?.obstacles ?? report.obstacles} />
               </div>
 
               <dl className="grid grid-cols-3 gap-3 text-sm">

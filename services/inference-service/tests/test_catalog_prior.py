@@ -80,7 +80,7 @@ def test_enrich_reports_progress_then_moves_on(client, transport, no_vllm):
     assert profile["name"] == "Ektorp 3-seat sofa"
     assert [(app_id, method) for app_id, method, _ in transport.calls] == [
         ("api-gateway", "/api/v1/internal/progress"),
-        ("geometry-service", "/v1/measure"),
+        ("vision-service", "/v1/scan"),
     ]
     assert transport.calls[0][2]["status"] == "enriching"
 

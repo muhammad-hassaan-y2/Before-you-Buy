@@ -1,5 +1,5 @@
 """Buy You Before API gateway: accepts a room image or product link, persists the job
-and drives the inference/geometry workers through Dapr."""
+and publishes it to the head of the worker chain."""
 
 from __future__ import annotations
 
@@ -35,11 +35,7 @@ async def lifespan(app: FastAPI):
     init_db()
     transport = DaprTransport(
         dapr_http_endpoint=settings.dapr_http_endpoint,
-        routes={
-            "catalog-service": settings.catalog_url,
-            "inference-service": settings.inference_url,
-            "geometry-service": settings.geometry_url,
-        },
+        routes={"catalog-service": settings.catalog_url},
         token=settings.internal_token,
     )
     async with httpx.AsyncClient() as client:
@@ -182,6 +178,7 @@ def get_simulation(simulation_id: str, db: Session = Depends(get_db)) -> Simulat
         updated_at=simulation.updated_at,
         product_profile=result.product_profile if result else None,
         catalog_candidate=result.catalog_candidate if result else None,
+        room_scan=result.room_scan if result else None,
         fit_report=result.fit_report if result else None,
     )
 
@@ -211,6 +208,9 @@ def record_result(completed: SimulationCompleted, db: Session = Depends(get_db))
         result = simulation.result or SimulationResult(simulation_id=simulation.id)
         result.product_profile = completed.profile.model_dump() if completed.profile else None
         result.catalog_candidate = completed.candidate.model_dump() if completed.candidate else None
+        if completed.scan:
+            # Only geometry reports a scan, so a stage callback must not blank it out.
+            result.room_scan = completed.scan.model_dump()
         result.fit_report = completed.fit.model_dump() if completed.fit else None
         result.duration_ms = _elapsed_ms(simulation.created_at)
         db.add(result)

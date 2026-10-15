@@ -54,12 +54,36 @@ export type SimulationStage =
   | "completed"
   | "failed"
 
+export type Obstacle = {
+  label: string
+  /** Polygon ring in metres, room-local. */
+  ring: [number, number][]
+  height_m: number
+  source: string
+}
+
+export type RoomScan = {
+  width_m: number
+  depth_m: number
+  height_m: number
+  obstacles: Obstacle[]
+  /** False when the photo could not be read and the shopper's own numbers stood. */
+  measured: boolean
+  method: "declared" | "photo" | "photo-ignored"
+  confidence: number
+}
+
 export type FitPlacement = {
   label: string
   ring: [number, number][]
   area_m2: number
   footprint_m2: number
   fits: boolean
+  centre_x_m: number
+  centre_y_m: number
+  rotation_deg: number
+  /** Gap in metres on each face: left, right, front, back. */
+  walkway_m: Record<string, number>
 }
 
 export type FitReport = {
@@ -69,6 +93,7 @@ export type FitReport = {
   conflicts: string[]
   coverage_pct: number
   verdict: "fits" | "tight" | "too_large" | "blocked"
+  obstacles: Obstacle[]
 }
 
 export type Simulation = {
@@ -85,6 +110,7 @@ export type Simulation = {
   shopper_notes?: string | null
   product_profile?: ProductProfile | null
   catalog_candidate?: CatalogCandidate | null
+  room_scan?: RoomScan | null
   fit_report?: FitReport | null
 }
 

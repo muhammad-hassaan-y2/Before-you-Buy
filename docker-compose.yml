@@ -88,8 +88,6 @@ services:
       DAPR_HTTP_ENDPOINT: ${DAPR_GATEWAY_ENDPOINT:-http://dapr-api-gateway:3500}
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}
       CATALOG_URL: http://catalog-service:8004
-      INFERENCE_URL: http://inference-service:8002
-      GEOMETRY_URL: http://geometry-service:8003
       UPLOAD_DIR: /uploads
       ALLOWED_ORIGINS: http://localhost:3000,http://frontend:3000
     volumes:
@@ -173,7 +171,7 @@ services:
     environment:
       DAPR_HTTP_ENDPOINT: ${DAPR_INFERENCE_ENDPOINT:-http://dapr-inference-service:3500}
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}
-      GEOMETRY_URL: http://geometry-service:8003
+      VISION_URL: http://vision-service:8005
       GATEWAY_URL: http://api-gateway:8001
       VLLM_BASE_URL: ${VLLM_BASE_URL:-http://vllm:8000/v1}
       VLLM_MODEL: ${VLLM_MODEL:-Qwen/Qwen2.5-3B-Instruct}
@@ -208,6 +206,49 @@ services:
       - ./services/inference-service/dapr:/subscriptions:ro
     depends_on:
       - inference-service
+
+  # ---------- vision-service ----------
+  vision-service:
+    <<: *service
+    build:
+      context: .
+      dockerfile: services/vision-service/Dockerfile
+    hostname: vision-service
+    environment:
+      DAPR_HTTP_ENDPOINT: ${DAPR_VISION_ENDPOINT:-http://dapr-vision-service:3500}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}
+      GEOMETRY_URL: http://geometry-service:8003
+      GATEWAY_URL: http://api-gateway:8001
+      UPLOAD_DIR: /uploads
+    volumes:
+      - *upload
+    ports:
+      - "${VISION_PORT:-8005}:8005"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  dapr-vision-service:
+    <<: *daprd
+    command:
+      - ./daprd
+      - --app-id
+      - vision-service
+      - --app-channel-address
+      - vision-service
+      - --app-port
+      - "8005"
+      - --dapr-http-port
+      - "3500"
+      - --resources-path
+      - /components
+      - --resources-path
+      - /subscriptions
+    volumes:
+      - ./components:/components:ro
+      - ./services/vision-service/dapr:/subscriptions:ro
+    depends_on:
+      - vision-service
 
   # ---------- geometry-service ----------
   geometry-service:

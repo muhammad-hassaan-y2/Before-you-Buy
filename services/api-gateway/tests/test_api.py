@@ -1,4 +1,11 @@
-from byb_common.contracts import FitPlacement, FitReport, ProductGeometry, ProductProfile, SimulationCompleted
+from byb_common.contracts import (
+    FitPlacement,
+    FitReport,
+    Obstacle,
+    ProductGeometry,
+    ProductProfile,
+    SimulationCompleted,
+)
 
 PROFILE = ProductProfile(
     name="Linen three-seater sofa",
@@ -166,6 +173,40 @@ def test_candidate_is_persisted_alongside_the_profile(client):
     detail = client.get(f"/api/v1/simulations/{simulation_id}").json()
     assert detail["catalog_candidate"]["sku"] == "BCK-101"
     assert detail["catalog_candidate"]["geometry"]["height_cm"] == 202
+
+
+def test_room_scan_survives_a_later_callback_without_one(client):
+    from byb_common.contracts import RoomScan
+
+    simulation_id = queue(client)
+    scan = RoomScan(
+        width_m=3.72,
+        depth_m=2.95,
+        height_m=2.4,
+        obstacles=[Obstacle(label="object 1 (photo)", ring=[(0.2, 0.2), (1.2, 0.2), (1.2, 0.9), (0.2, 0.9), (0.2, 0.2)])],
+        measured=True,
+        method="photo",
+        confidence=0.61,
+    )
+    fit = FitReport(room_area_m2=11.0, usable_area_m2=10.0, placements=[], conflicts=[], coverage_pct=12.0, verdict="fits")
+    headers = {"x-byb-token": "test-token"}
+
+    client.post(
+        "/api/v1/internal/results",
+        json=SimulationCompleted(simulation_id=simulation_id, status="completed", profile=PROFILE, scan=scan, fit=fit).model_dump(),
+        headers=headers,
+    )
+    detail = client.get(f"/api/v1/simulations/{simulation_id}").json()
+    assert detail["room_scan"]["method"] == "photo"
+    assert detail["room_scan"]["obstacles"][0]["label"] == "object 1 (photo)"
+
+    # A worker reporting only a profile (a failed run, say) must not erase the scan.
+    client.post(
+        "/api/v1/internal/results",
+        json=SimulationCompleted(simulation_id=simulation_id, status="completed", profile=PROFILE).model_dump(),
+        headers=headers,
+    )
+    assert client.get(f"/api/v1/simulations/{simulation_id}").json()["room_scan"]["measured"] is True
 
 
 class StubResponse:

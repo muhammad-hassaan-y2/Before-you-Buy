@@ -36,7 +36,7 @@ PROGRESS_METHOD = "/api/v1/internal/progress"
 async def lifespan(app: FastAPI):
     transport = DaprTransport(
         dapr_http_endpoint=settings.dapr_http_endpoint,
-        routes={"geometry-service": settings.geometry_url, "api-gateway": settings.gateway_url},
+        routes={"vision-service": settings.vision_url, "api-gateway": settings.gateway_url},
         token=settings.internal_token,
     )
     async with httpx.AsyncClient(follow_redirects=True) as client:
@@ -119,7 +119,7 @@ async def _forward(request: Request, measured: SimulationMeasured) -> None:
         request.app.state.http, settings.dapr_http_endpoint, settings.pubsub_name, TOPIC_MEASURED, payload
     ):
         return
-    response = await request.app.state.transport.request(request.app.state.http, "geometry-service", "/v1/measure", payload)
+    response = await request.app.state.transport.request(request.app.state.http, "vision-service", "/v1/scan", payload)
     response.raise_for_status()
 
 

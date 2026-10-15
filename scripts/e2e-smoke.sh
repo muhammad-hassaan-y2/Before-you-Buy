@@ -14,7 +14,7 @@ case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) SEP=";" ;;
   *) SEP=":" ;;
 esac
-SERVICES="api-gateway catalog-service inference-service geometry-service"
+SERVICES="api-gateway catalog-service inference-service vision-service geometry-service"
 PATHS=""
 for service in $SERVICES; do PATHS="${PATHS:+$PATHS$SEP}$ROOT/services/$service/src"; done
 export PYTHONPATH="$PATHS${SEP}$ROOT/libs/byb-common/src"
@@ -23,6 +23,7 @@ export PYTHONPATH="$PATHS${SEP}$ROOT/libs/byb-common/src"
 GATEWAY_PORT="${GATEWAY_PORT:-8001}"
 CATALOG_PORT="${CATALOG_PORT:-8004}"
 INFERENCE_PORT="${INFERENCE_PORT:-8002}"
+VISION_PORT="${VISION_PORT:-8005}"
 GEOMETRY_PORT="${GEOMETRY_PORT:-8003}"
 
 # Postgres is the target database: `docker compose up -d postgres` before running this.
@@ -33,6 +34,7 @@ export INTERNAL_TOKEN=e2e-token
 export GATEWAY_URL="http://127.0.0.1:$GATEWAY_PORT"
 export CATALOG_URL="http://127.0.0.1:$CATALOG_PORT"
 export INFERENCE_URL="http://127.0.0.1:$INFERENCE_PORT"
+export VISION_URL="http://127.0.0.1:$VISION_PORT"
 export GEOMETRY_URL="http://127.0.0.1:$GEOMETRY_PORT"
 
 rm -f *.svc.log
@@ -40,12 +42,13 @@ echo "database: ${DATABASE_URL%%@*}@<redacted>"
 "$PY" -m uvicorn byb_gateway.main:app --port "$GATEWAY_PORT" --host 127.0.0.1 >gateway.svc.log 2>&1 &
 "$PY" -m uvicorn byb_catalog.main:app --port "$CATALOG_PORT" --host 127.0.0.1 >catalog.svc.log 2>&1 &
 "$PY" -m uvicorn byb_inference.main:app --port "$INFERENCE_PORT" --host 127.0.0.1 >inference.svc.log 2>&1 &
+"$PY" -m uvicorn byb_vision.main:app --port "$VISION_PORT" --host 127.0.0.1 >vision.svc.log 2>&1 &
 "$PY" -m uvicorn byb_geometry.main:app --port "$GEOMETRY_PORT" --host 127.0.0.1 >geometry.svc.log 2>&1 &
 PIDS=$(jobs -p)
 cleanup() { kill $PIDS 2>/dev/null; wait $PIDS 2>/dev/null; }
 trap cleanup EXIT
 
-PORTS="$GATEWAY_PORT $CATALOG_PORT $INFERENCE_PORT $GEOMETRY_PORT"
+PORTS="$GATEWAY_PORT $CATALOG_PORT $INFERENCE_PORT $VISION_PORT $GEOMETRY_PORT"
 for port in $PORTS; do
   for _ in $(seq 1 30); do
     curl -sf "http://127.0.0.1:$port/healthz" >/dev/null && break
@@ -81,3 +84,7 @@ echo "$OUT" | "$PY" -m json.tool || echo "$OUT"
 
 echo "--- catalog passthrough ---"
 curl -s "http://127.0.0.1:$GATEWAY_PORT/api/v1/catalog" | "$PY" -c 'import json,sys; rows=json.load(sys.stdin); print(len(rows), "skus; first:", rows[0]["sku"])'
+
+echo "--- room scan ---"
+# The uploaded bytes are not a photo, so this must say declared: the pipeline degrades, it does not fail.
+echo "$OUT" | "$PY" -c 'import json,sys; scan=json.load(sys.stdin).get("room_scan") or {}; print("method:", scan.get("method"), "measured:", scan.get("measured"), "obstacles:", len(scan.get("obstacles") or []), "room:", scan.get("width_m"), "x", scan.get("depth_m"))'

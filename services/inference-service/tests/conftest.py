@@ -16,7 +16,7 @@ class StubResponse:
 
 
 class StubTransport:
-    """Records outbound hops instead of calling geometry-service over real HTTP."""
+    """Records outbound hops instead of calling vision-service over real HTTP."""
 
     def __init__(self) -> None:
         self.calls = []
