@@ -28,6 +28,8 @@ class SimulationDetail(SimulationSummary):
     catalog_candidate: dict | None = None
     room_scan: dict | None = None
     fit_report: dict | None = None
+    scene: dict | None = None
+    has_model: bool = False
 
 
 class SimulationAccepted(BaseModel):

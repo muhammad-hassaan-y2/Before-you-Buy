@@ -14,7 +14,7 @@ case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) SEP=";" ;;
   *) SEP=":" ;;
 esac
-SERVICES="api-gateway catalog-service inference-service vision-service geometry-service"
+SERVICES="api-gateway catalog-service inference-service vision-service geometry-service scene-service"
 PATHS=""
 for service in $SERVICES; do PATHS="${PATHS:+$PATHS$SEP}$ROOT/services/$service/src"; done
 export PYTHONPATH="$PATHS${SEP}$ROOT/libs/byb-common/src"
@@ -25,6 +25,7 @@ CATALOG_PORT="${CATALOG_PORT:-8004}"
 INFERENCE_PORT="${INFERENCE_PORT:-8002}"
 VISION_PORT="${VISION_PORT:-8005}"
 GEOMETRY_PORT="${GEOMETRY_PORT:-8003}"
+SCENE_PORT="${SCENE_PORT:-8006}"
 
 # Postgres is the target database: `docker compose up -d postgres` before running this.
 export DATABASE_URL="${DATABASE_URL:-postgresql+psycopg2://user:password@localhost:5432/beforeyoubuy}"
@@ -36,6 +37,7 @@ export CATALOG_URL="http://127.0.0.1:$CATALOG_PORT"
 export INFERENCE_URL="http://127.0.0.1:$INFERENCE_PORT"
 export VISION_URL="http://127.0.0.1:$VISION_PORT"
 export GEOMETRY_URL="http://127.0.0.1:$GEOMETRY_PORT"
+export SCENE_URL="http://127.0.0.1:$SCENE_PORT"
 
 rm -f *.svc.log
 echo "database: ${DATABASE_URL%%@*}@<redacted>"
@@ -44,11 +46,12 @@ echo "database: ${DATABASE_URL%%@*}@<redacted>"
 "$PY" -m uvicorn byb_inference.main:app --port "$INFERENCE_PORT" --host 127.0.0.1 >inference.svc.log 2>&1 &
 "$PY" -m uvicorn byb_vision.main:app --port "$VISION_PORT" --host 127.0.0.1 >vision.svc.log 2>&1 &
 "$PY" -m uvicorn byb_geometry.main:app --port "$GEOMETRY_PORT" --host 127.0.0.1 >geometry.svc.log 2>&1 &
+"$PY" -m uvicorn byb_scene.main:app --port "$SCENE_PORT" --host 127.0.0.1 >scene.svc.log 2>&1 &
 PIDS=$(jobs -p)
 cleanup() { kill $PIDS 2>/dev/null; wait $PIDS 2>/dev/null; }
 trap cleanup EXIT
 
-PORTS="$GATEWAY_PORT $CATALOG_PORT $INFERENCE_PORT $VISION_PORT $GEOMETRY_PORT"
+PORTS="$GATEWAY_PORT $CATALOG_PORT $INFERENCE_PORT $VISION_PORT $GEOMETRY_PORT $SCENE_PORT"
 for port in $PORTS; do
   for _ in $(seq 1 30); do
     curl -sf "http://127.0.0.1:$port/healthz" >/dev/null && break
@@ -88,3 +91,9 @@ curl -s "http://127.0.0.1:$GATEWAY_PORT/api/v1/catalog" | "$PY" -c 'import json,
 echo "--- room scan ---"
 # The uploaded bytes are not a photo, so this must say declared: the pipeline degrades, it does not fail.
 echo "$OUT" | "$PY" -c 'import json,sys; scan=json.load(sys.stdin).get("room_scan") or {}; print("method:", scan.get("method"), "measured:", scan.get("measured"), "obstacles:", len(scan.get("obstacles") or []), "room:", scan.get("width_m"), "x", scan.get("depth_m"))'
+
+echo "--- scene spec ---"
+echo "$OUT" | "$PY" -c 'import json,sys; scene=json.load(sys.stdin).get("scene") or {}; print("parts:", len(scene.get("parts") or []), "placements:", len(scene.get("placements") or []), "cameras:", [c["label"] for c in scene.get("cameras") or []])'
+
+echo "--- glTF download ---"
+curl -s "http://127.0.0.1:$GATEWAY_PORT/api/v1/simulations/$ID/model" | "$PY" -c 'import json,sys; doc=json.load(sys.stdin); print("glTF", doc["asset"]["version"], "|", len(doc["nodes"]), "nodes,", len(doc["meshes"]), "meshes,", len(doc["buffers"][0]["uri"]), "bytes of buffer")'

@@ -260,6 +260,7 @@ services:
     environment:
       DAPR_HTTP_ENDPOINT: ${DAPR_GEOMETRY_ENDPOINT:-http://dapr-geometry-service:3500}
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}
+      SCENE_URL: http://scene-service:8006
       GATEWAY_URL: http://api-gateway:8001
     ports:
       - "${GEOMETRY_PORT:-8003}:8003"
@@ -288,6 +289,45 @@ services:
       - ./services/geometry-service/dapr:/subscriptions:ro
     depends_on:
       - geometry-service
+
+  # ---------- scene-service ----------
+  scene-service:
+    <<: *service
+    build:
+      context: .
+      dockerfile: services/scene-service/Dockerfile
+    hostname: scene-service
+    environment:
+      DAPR_HTTP_ENDPOINT: ${DAPR_SCENE_ENDPOINT:-http://dapr-scene-service:3500}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}
+      GATEWAY_URL: http://api-gateway:8001
+    ports:
+      - "${SCENE_PORT:-8006}:8006"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  dapr-scene-service:
+    <<: *daprd
+    command:
+      - ./daprd
+      - --app-id
+      - scene-service
+      - --app-channel-address
+      - scene-service
+      - --app-port
+      - "8006"
+      - --dapr-http-port
+      - "3500"
+      - --resources-path
+      - /components
+      - --resources-path
+      - /subscriptions
+    volumes:
+      - ./components:/components:ro
+      - ./services/scene-service/dapr:/subscriptions:ro
+    depends_on:
+      - scene-service
 
   # ---------- frontend ----------
   frontend:

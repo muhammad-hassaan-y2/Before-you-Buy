@@ -209,6 +209,56 @@ def test_room_scan_survives_a_later_callback_without_one(client):
     assert client.get(f"/api/v1/simulations/{simulation_id}").json()["room_scan"]["measured"] is True
 
 
+def report_payload(simulation_id: str, **extra) -> dict:
+    fit = FitReport(room_area_m2=11.0, usable_area_m2=10.0, placements=[], conflicts=[], coverage_pct=12.0, verdict="fits")
+    return SimulationCompleted(simulation_id=simulation_id, status="completed", profile=PROFILE, fit=fit, **extra).model_dump()
+
+
+def test_the_scene_lands_in_the_detail_without_the_model(client):
+    from byb_common.contracts import SceneCamera, ScenePlacement, SceneSpec
+
+    simulation_id = queue(client)
+    scene = SceneSpec(
+        room_width_m=4.0,
+        room_depth_m=3.0,
+        room_height_m=2.4,
+        product_name="Linen three-seater sofa",
+        geometry=PROFILE.geometry,
+        placements=[ScenePlacement(label="centred on the back wall", fits=True, position_m=(2.0, 0.0, 2.55))],
+        cameras=[SceneCamera(label="overview", position_m=(5.8, 3.6, -1.95), target_m=(2.0, 0.45, 1.5))],
+    )
+    gltf = {"asset": {"version": "2.0"}, "nodes": [], "buffers": [{"byteLength": 648, "uri": "data:,x"}]}
+    client.post(
+        "/api/v1/internal/results",
+        json=report_payload(simulation_id, scene=scene, gltf=gltf),
+        headers={"x-byb-token": "test-token"},
+    )
+
+    detail = client.get(f"/api/v1/simulations/{simulation_id}").json()
+    assert detail["scene"]["placements"][0]["position_m"] == [2.0, 0.0, 2.55]
+    assert detail["scene"]["cameras"][0]["label"] == "overview"
+    assert detail["has_model"] is True
+    assert "gltf" not in detail, "the download document stays out of the polling payload"
+
+    model = client.get(f"/api/v1/simulations/{simulation_id}/model")
+    assert model.status_code == 200
+    assert model.headers["content-type"] == "model/gltf+json"
+    assert "room-fit" in model.headers["content-disposition"]
+    assert model.json()["asset"]["version"] == "2.0"
+
+
+def test_a_simulation_without_a_model_has_nothing_to_download(client):
+    simulation_id = queue(client)
+    client.post(
+        "/api/v1/internal/results",
+        json=report_payload(simulation_id),
+        headers={"x-byb-token": "test-token"},
+    )
+    assert client.get(f"/api/v1/simulations/{simulation_id}").json()["has_model"] is False
+    assert client.get(f"/api/v1/simulations/{simulation_id}/model").status_code == 404
+    assert client.get("/api/v1/simulations/deadbeef/model").status_code == 404
+
+
 class StubResponse:
     def __init__(self, payload, status_code=200):
         self._payload, self.status_code = payload, status_code

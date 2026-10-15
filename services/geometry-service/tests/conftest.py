@@ -16,7 +16,7 @@ class StubResponse:
 
 
 class StubTransport:
-    """Records what the worker reports back instead of calling the gateway over HTTP."""
+    """Records the hops the worker makes instead of calling scene-service or the gateway."""
 
     def __init__(self) -> None:
         self.calls = []

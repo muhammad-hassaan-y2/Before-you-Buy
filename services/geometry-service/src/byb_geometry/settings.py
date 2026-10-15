@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     internal_token: str = "dev-internal-token"
 
     gateway_url: str = "http://localhost:8001"
+    scene_url: str = "http://localhost:8006"
     # Room side is metres; product side arrives in centimetres.
     min_walkway_m: float = 0.6
     wall_padding_m: float = 0.05

@@ -19,17 +19,17 @@ def scan(**overrides) -> dict[str, Any]:
     return base | overrides
 
 
-def test_fit_reports_the_stage_then_the_result(client, transport):
+def test_fit_reports_the_stage_then_hands_on_to_scene(client, transport):
     report = client.post("/v1/fit", json=scan()).json()
     assert report["verdict"] in {"fits", "tight"}
     assert report["room_area_m2"] == 12.0
 
-    stage, result = transport.calls
+    stage, handed_on = transport.calls
     assert (stage[0], stage[1]) == ("api-gateway", "/api/v1/internal/progress")
     assert stage[2] == {"simulation_id": "cafe1234deadbeef", "status": "fitting"}
-    assert (result[0], result[1]) == ("api-gateway", "/api/v1/internal/results")
-    assert result[2]["status"] == "completed"
-    assert result[2]["scan"]["method"] == "declared"
+    assert (handed_on[0], handed_on[1]) == ("scene-service", "/v1/render")
+    assert handed_on[2]["scan"]["method"] == "declared"
+    assert handed_on[2]["fit"]["placements"][0]["centre_x_m"] > 0
 
 
 def test_the_scanned_room_is_the_room_that_gets_measured(client, transport):
@@ -67,7 +67,7 @@ def test_a_missing_profile_fails_the_simulation(client, transport):
 def test_events_route_accepts_a_cloud_envelope(client, transport):
     envelope = {"id": "1", "type": "com.dapr.event.sent", "data": scan()}
     assert client.post("/events", json=envelope).json() == {"status": "SUCCESS"}
-    assert transport.calls[-1][2]["status"] == "completed"
+    assert transport.calls[-1][:2] == ("scene-service", "/v1/render")
 
 
 def test_dapr_handshake_admits_the_scanned_topic(client):

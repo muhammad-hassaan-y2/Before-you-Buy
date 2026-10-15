@@ -1,5 +1,9 @@
-"""Geometry worker: consumes the scanned room, runs the Shapely fit analysis and
-reports the outcome back to the gateway."""
+"""Geometry worker: consumes the scanned room, runs the Shapely fit analysis and hands the
+result to scene-service, which is the worker that finishes the simulation.
+
+A simulation with no product profile dies here, so this is the one case where geometry
+reports straight to the gateway instead of passing the message on.
+"""
 
 from __future__ import annotations
 
@@ -13,11 +17,12 @@ from fastapi import FastAPI, Request
 from byb_common.contracts import (
     FitReport,
     SimulationCompleted,
+    SimulationFitted,
     SimulationProgress,
     SimulationRoomScanned,
     SimulationStatus,
 )
-from byb_common.dapr import DaprTransport
+from byb_common.dapr import DaprTransport, publish_event
 from byb_geometry.layout import analyse_fit
 from byb_geometry.settings import settings
 
@@ -27,13 +32,14 @@ logger = logging.getLogger("byb.geometry")
 RESULT_METHOD = "/api/v1/internal/results"
 PROGRESS_METHOD = "/api/v1/internal/progress"
 TOPIC_ROOM_SCANNED = "simulation.room_scanned"
+TOPIC_FITTED = "simulation.fitted"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     transport = DaprTransport(
         dapr_http_endpoint=settings.dapr_http_endpoint,
-        routes={"api-gateway": settings.gateway_url},
+        routes={"scene-service": settings.scene_url, "api-gateway": settings.gateway_url},
         token=settings.internal_token,
     )
     async with httpx.AsyncClient() as client:
@@ -78,15 +84,15 @@ async def _progress(client: httpx.AsyncClient, transport: DaprTransport, simulat
         logger.warning("simulation %s could not report progress: %s", simulation_id, exc)
 
 
-def _run_fit(message: SimulationRoomScanned) -> SimulationCompleted:
-    if message.profile is None:
-        return SimulationCompleted(
-            simulation_id=message.simulation_id,
-            status=SimulationStatus.failed,
-            candidate=message.candidate,
-            scan=message.scan,
-            error="no product profile reached geometry-service",
-        )
+async def _forward(client: httpx.AsyncClient, transport: DaprTransport, fitted: SimulationFitted) -> None:
+    payload = fitted.model_dump()
+    if await publish_event(client, settings.dapr_http_endpoint, settings.pubsub_name, TOPIC_FITTED, payload):
+        return
+    response = await transport.request(client, "scene-service", "/v1/render", payload)
+    response.raise_for_status()
+
+
+def _run_fit(message: SimulationRoomScanned) -> FitReport:
     fit: FitReport = analyse_fit(
         message.scan.width_m,
         message.scan.depth_m,
@@ -100,14 +106,7 @@ def _run_fit(message: SimulationRoomScanned) -> SimulationCompleted:
         "simulation %s verdict=%s coverage=%.1f%% room=%sx%s m [%s]",
         message.simulation_id, fit.verdict, fit.coverage_pct, message.scan.width_m, message.scan.depth_m, message.scan.method,
     )
-    return SimulationCompleted(
-        simulation_id=message.simulation_id,
-        status=SimulationStatus.completed,
-        profile=message.profile,
-        candidate=message.candidate,
-        scan=message.scan,
-        fit=fit,
-    )
+    return fit
 
 
 def _unwrap(payload: Any) -> dict[str, Any]:
@@ -117,19 +116,43 @@ def _unwrap(payload: Any) -> dict[str, Any]:
     return payload
 
 
-async def _process(request: Request, payload: dict) -> SimulationCompleted:
+async def _process(request: Request, payload: dict) -> FitReport | None:
     message = SimulationRoomScanned.model_validate(_unwrap(payload))
     client, transport = request.app.state.http, request.app.state.transport
     await _progress(client, transport, message.simulation_id)
-    completed = _run_fit(message)
-    await _report(client, transport, completed)
-    return completed
+
+    if message.profile is None:
+        await _report(
+            client,
+            transport,
+            SimulationCompleted(
+                simulation_id=message.simulation_id,
+                status=SimulationStatus.failed,
+                candidate=message.candidate,
+                scan=message.scan,
+                error="no product profile reached geometry-service",
+            ),
+        )
+        return None
+
+    fit = _run_fit(message)
+    await _forward(
+        client,
+        transport,
+        SimulationFitted(
+            simulation_id=message.simulation_id,
+            profile=message.profile,
+            candidate=message.candidate,
+            scan=message.scan,
+            fit=fit,
+        ),
+    )
+    return fit
 
 
 @app.post("/v1/fit", response_model=FitReport | None)
 async def fit(payload: dict, request: Request) -> FitReport | None:
-    completed = await _process(request, payload)
-    return completed.fit
+    return await _process(request, payload)
 
 
 @app.post("/events")

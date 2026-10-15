@@ -50,7 +50,7 @@ class Simulation(Base):
 
 
 class SimulationResult(Base):
-    """Snapshot of the catalog candidate, product profile, room scan and fit report, as JSON."""
+    """Snapshot of the catalog candidate, product profile, room scan, fit report and scene, as JSON."""
 
     __tablename__ = "simulation_results"
 
@@ -61,6 +61,8 @@ class SimulationResult(Base):
     catalog_candidate: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     room_scan: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     fit_report: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    scene_spec: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    model_gltf: Mapped[dict | None] = mapped_column(JSON, nullable=True, comment="Self-contained glTF 2.0 document for the download")
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_now)
 

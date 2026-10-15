@@ -23,8 +23,10 @@ gap on all four faces, which is what the browser engine draws.
 | POST | `/v1/fit` | synchronous `SimulationRoomScanned` -> `FitReport` |
 | POST | `/events` | Dapr subscription target for `simulation.room_scanned` |
 
-Results are always posted back to the gateway at `/api/v1/internal/results` with the
-`x-byb-token` header, in Dapr and direct modes alike.
+Outcomes are published to `simulation.fitted` for scene-service to finish, or POSTed
+straight to scene-service `/v1/render` when no sidecar is present. The one case that
+reports to the gateway itself is a message that arrived without a product profile: there
+is nothing downstream could do with it.
 
 ## Poetry
 

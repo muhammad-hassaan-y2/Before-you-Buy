@@ -137,6 +137,7 @@ def analyse_fit(
             coverage_pct=0.0,
             verdict="too_large",
             obstacles=list(obstacles),
+            door_swing_m=DOOR_SWING_M,
         )
 
     placements: list[FitPlacement] = []
@@ -190,4 +191,5 @@ def analyse_fit(
         coverage_pct=coverage,
         verdict=verdict,
         obstacles=list(obstacles),
+        door_swing_m=DOOR_SWING_M,
     )

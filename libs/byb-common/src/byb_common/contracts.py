@@ -117,6 +117,7 @@ class FitReport(JsonModel):
     coverage_pct: float
     verdict: str
     obstacles: list[Obstacle] = Field(default_factory=list)
+    door_swing_m: float = Field(default=0.85, description="Quarter-circle the room door sweeps; geometry owns the value.")
 
 
 class SceneCamera(JsonModel):
@@ -129,13 +130,14 @@ class SceneCamera(JsonModel):
 class ScenePlacement(JsonModel):
     label: str
     fits: bool
-    position_m: tuple[float, float, float] = Field(description="Product origin in room-local scene metres.")
-    rotation_deg: float = 0.0
+    position_m: tuple[float, float, float] = Field(description="Product origin in scene metres: x across the room, 0 on the floor, z away from the door wall.")
+    rotation_deg: float = Field(default=0.0, description="Turn about the room's vertical axis. Apply it as -rotation_deg on the scene y axis: product-local (x, y, z) maps to scene (x, z, y).")
     walkway_m: dict[str, float] = Field(default_factory=dict)
 
 
 class SceneSpec(JsonModel):
-    """Everything the browser engine needs, in metres, y-up, room origin at a corner."""
+    """Everything the browser engine needs, in metres, right-handed y-up, room origin in
+    the corner beside the hinge, product parts in centimetres (x width, y depth, z up)."""
 
     version: str = "1"
     room_width_m: float
@@ -205,6 +207,7 @@ class SimulationFitted(JsonModel):
 
     simulation_id: str = Field(min_length=8, max_length=40)
     profile: ProductProfile | None = None
+    candidate: CatalogCandidate | None = None
     scan: RoomScan | None = None
     fit: FitReport | None = None
 

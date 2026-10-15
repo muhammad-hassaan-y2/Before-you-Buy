@@ -3,13 +3,14 @@ and publishes it to the head of the worker chain."""
 
 from __future__ import annotations
 
+import json
 import logging
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -26,6 +27,7 @@ logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger("byb.gateway")
 
 MAX_CHUNK = 1024 * 512
+MODEL_MEDIA_TYPE = "model/gltf+json"
 
 
 @asynccontextmanager
@@ -180,6 +182,25 @@ def get_simulation(simulation_id: str, db: Session = Depends(get_db)) -> Simulat
         catalog_candidate=result.catalog_candidate if result else None,
         room_scan=result.room_scan if result else None,
         fit_report=result.fit_report if result else None,
+        scene=result.scene_spec if result else None,
+        has_model=bool(result and result.model_gltf),
+    )
+
+
+@app.get("/api/v1/simulations/{simulation_id}/model")
+def get_model(simulation_id: str, db: Session = Depends(get_db)) -> Response:
+    """The glTF document scene-service built. Kept out of the detail payload on purpose:
+    it is the one field large enough to make polling expensive."""
+    simulation = db.get(Simulation, simulation_id)
+    if simulation is None:
+        raise HTTPException(status_code=404, detail="Simulation not found")
+    gltf = simulation.result.model_gltf if simulation.result else None
+    if not gltf:
+        raise HTTPException(status_code=404, detail="No model for this simulation yet")
+    return Response(
+        content=json.dumps(gltf),
+        media_type=MODEL_MEDIA_TYPE,
+        headers={"Content-Disposition": f'attachment; filename="room-fit-{simulation_id}.gltf"'},
     )
 
 
@@ -209,9 +230,13 @@ def record_result(completed: SimulationCompleted, db: Session = Depends(get_db))
         result.product_profile = completed.profile.model_dump() if completed.profile else None
         result.catalog_candidate = completed.candidate.model_dump() if completed.candidate else None
         if completed.scan:
-            # Only geometry reports a scan, so a stage callback must not blank it out.
+            # A callback that carries no scan must not blank out the measured room.
             result.room_scan = completed.scan.model_dump()
         result.fit_report = completed.fit.model_dump() if completed.fit else None
+        if completed.scene:
+            result.scene_spec = completed.scene.model_dump()
+        if completed.gltf:
+            result.model_gltf = completed.gltf
         result.duration_ms = _elapsed_ms(simulation.created_at)
         db.add(result)
     db.commit()
