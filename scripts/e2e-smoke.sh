@@ -7,7 +7,14 @@ ROOT="$(pwd -W 2>/dev/null || pwd)"
 # Any Python with the service dependencies works: `PY=$(command -v python) bash scripts/e2e-smoke.sh`
 PY="${PY:-$ROOT/.venv-check/Scripts/python.exe}"
 [ -x "$PY" ] || PY=python
-export PYTHONPATH="$ROOT/services/api-gateway/src:$ROOT/services/inference-service/src:$ROOT/services/geometry-service/src:$ROOT/libs/byb-common/src"
+
+# PYTHONPATH must be joined with the platform's own path separator: `;` under Git Bash on
+# Windows, `:` on Linux/macOS. Using `:` on Windows makes Python see one bogus directory.
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) SEP=";" ;;
+  *) SEP=":" ;;
+esac
+export PYTHONPATH="$ROOT/services/api-gateway/src${SEP}$ROOT/services/inference-service/src${SEP}$ROOT/services/geometry-service/src${SEP}$ROOT/libs/byb-common/src"
 
 # Postgres is the target database: `docker compose up -d postgres` before running this.
 export DATABASE_URL="${DATABASE_URL:-postgresql+psycopg2://user:password@localhost:5432/beforeyoubuy}"

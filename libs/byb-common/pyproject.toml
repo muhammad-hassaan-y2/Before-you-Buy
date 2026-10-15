@@ -5,6 +5,7 @@ description = "Shared event contracts and Dapr transport helpers for Buy You Bef
 authors = [{ name = "Hassaan", email = "hassaan@example.com" }]
 readme = "README.md"
 requires-python = ">=3.11"
+dynamic = ["dependencies"]
 
 [tool.poetry]
 packages = [{ include = "byb_common", from = "src" }]

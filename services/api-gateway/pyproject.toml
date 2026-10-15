@@ -5,6 +5,7 @@ description = "Buy You Before - ingest, persistence and orchestration gateway"
 authors = [{ name = "Hassaan", email = "hassaan@example.com" }]
 readme = "README.md"
 requires-python = ">=3.11"
+dynamic = ["dependencies"]
 
 [tool.poetry]
 packages = [{ include = "byb_gateway", from = "src" }]
@@ -24,7 +25,7 @@ byb-common = { path = "../../libs/byb-common", develop = true }
 pytest = ">=8.2.0"
 ruff = ">=0.6.0"
 
-[tool.poetry.scripts]
+[project.scripts]
 start = "byb_gateway.main:start"
 dev = "byb_gateway.main:dev"
 test = "pytest:main"
