@@ -142,6 +142,10 @@ async def create_simulation(
         image_key=image_key,
         shopper_notes=shopper_notes,
     )
+    # Mark before fanning out: on the direct-HTTP path this await runs the whole
+    # worker chain, and a fast worker's callback would otherwise be reverted here.
+    simulation.status = SimulationStatus.enriching
+    db.commit()
     try:
         await app.state.dispatch.start(message)
     except (httpx.HTTPError, RuntimeError) as exc:
@@ -150,8 +154,6 @@ async def create_simulation(
         db.commit()
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    simulation.status = SimulationStatus.enriching
-    db.commit()
     return SimulationAccepted(id=simulation.id, status=simulation.status)
 
 

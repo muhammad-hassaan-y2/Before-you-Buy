@@ -68,3 +68,23 @@ def test_dispatches_then_records_result(client, dispatcher):
 
 def test_unknown_simulation(client):
     assert client.get("/api/v1/simulations/deadbeef").status_code == 404
+
+
+def test_worker_that_beats_the_response_is_not_reverted(client, dispatcher):
+    """The direct-HTTP dispatch awaits the whole chain, so a callback can land
+    while POST /simulations is still suspended. That callback must win."""
+    from byb_gateway import database, models
+
+    async def finish_fast(message):
+        with database.SessionLocal() as session:
+            row = session.get(models.Simulation, message.simulation_id)
+            row.status = "completed"
+            session.commit()
+
+    dispatcher.start = finish_fast
+    accepted = client.post(
+        "/api/v1/simulations",
+        data={"link": "https://example.com/sofa", "room_width_m": 4.5, "room_depth_m": 3.5, "room_height_m": 2.5},
+    )
+    assert accepted.status_code == 202
+    assert client.get(f"/api/v1/simulations/{accepted.json()['id']}").json()["status"] == "completed"
