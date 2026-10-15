@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils"
 
 const STEPS = [
   { key: "pending", label: "Queued" },
+  { key: "cataloguing", label: "Matching the SKU" },
   { key: "enriching", label: "Reading the listing" },
   { key: "measuring", label: "Fitting the room" },
   { key: "completed", label: "Ready" },

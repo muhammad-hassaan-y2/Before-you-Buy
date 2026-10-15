@@ -4,15 +4,18 @@ Check whether a piece of furniture actually fits your room **before** you buy it
 Paste a product link (or upload a room photo), and the stack works out the item's real
 dimensions and tests its footprint against your walls, door swing and walkway.
 
-Three FastAPI services, one Next.js app, Postgres for state, Dapr for the transport and
+Four FastAPI services, one Next.js app, Postgres for state, Dapr for the transport and
 vLLM (AMD ROCm) for product understanding.
 
 ```
 browser ──> Next.js :3000 ──/api/v1──> api-gateway :8001 ──SQLAlchemy──> Postgres
                                             │  simulation.requested (Dapr pub/sub)
                                             ▼
+                                     catalog-service :8004 ──SKU match──> candidate
+                                            │  simulation.catalogued
+                                            ▼
                                      inference-service :8002 ──HTTP──> vLLM (ROCm)
-                                            │  simulation.measured (Dapr pub/sub)
+                                            │  simulation.measured
                                             ▼
                                      geometry-service :8003 ──Shapely──> fit report
                                             │  POST /api/v1/internal/results
@@ -20,16 +23,21 @@ browser ──> Next.js :3000 ──/api/v1──> api-gateway :8001 ──SQLAl
                                        api-gateway (persists, browser polls)
 ```
 
+Each hop also posts to `/api/v1/internal/progress`, which is what moves the step
+indicator in the UI while the chain is running.
+
 ## Layout
 
 ```
 components/                     Dapr components (Redis pub/sub)
-libs/byb-common/                shared event contracts + Dapr transport shim
+libs/byb-common/                shared event contracts, part builders + Dapr transport shim
 services/api-gateway/           FastAPI, SQLAlchemy models, ingest and job state
-services/inference-service/     vLLM product dimensions, heuristic fallback
+services/catalog-service/       seeded furniture catalog, link/notes -> SKU
+services/inference-service/     vLLM product dimensions, catalog prior, heuristic fallback
 services/geometry-service/      Shapely fit analysis and placement candidates
 frontend/                       Next.js 16 app, page at /room-simulator
-docker-compose.yml              postgres + redis + 3 services + 3 daprd + vllm + frontend
+docker-compose.yml              postgres + redis + 4 services + 4 daprd + vllm + frontend
+ruff.toml                       one lint config for every Poetry project
 Makefile                        up / down / logs / build / test / install
 scripts/e2e-smoke.sh            drives one full simulation without Docker
 ```
@@ -62,14 +70,18 @@ export DATABASE_URL=postgresql+psycopg2://user:password@localhost:5432/beforeyou
 make install                                  # or run `poetry install` per directory
 
 (cd services/api-gateway     && poetry run dev)   # :8001
+(cd services/catalog-service && poetry run dev)   # :8004
 (cd services/inference-service && poetry run dev) # :8002
 (cd services/geometry-service  && poetry run dev) # :8003
 (cd frontend                 && pnpm dev)         # :3000
 ```
 
-`bash scripts/e2e-smoke.sh` boots all three services and drives one full simulation
-against that Postgres. SQLite appears only inside `services/api-gateway/tests`, so the
-suite needs no database server.
+`bash scripts/e2e-smoke.sh` boots all four services and drives one full simulation
+against that Postgres. Ports default to 8001-8004 and can be overridden
+(`GATEWAY_PORT=8101 CATALOG_PORT=8104 bash scripts/e2e-smoke.sh`) when something else
+holds them — Docker Desktop on Windows is good at holding ports it will not forward.
+SQLite appears only inside `services/api-gateway/tests`, so the suite needs no database
+server.
 
 `API_GATEWAY_URL=http://localhost:8001 pnpm dev` is the default; the proxy is defined in
 `frontend/next.config.ts`, so the browser never learns the gateway origin.
@@ -90,8 +102,8 @@ there is no Dapr state store to keep in sync (and daprd 1.18 no longer bundles
 | any service | `poetry run dev` | uvicorn with reload |
 | any service | `poetry run start` | single worker, what the container runs |
 | any service | `poetry run test` | that service's pytest suite |
-| repo root | `make test` | all three suites |
-| repo root | `make lint` | ruff over all three |
+| repo root | `make test` | all four service suites |
+| repo root | `make lint` | ruff over all four, using `ruff.toml` |
 
 Needs Poetry 2.x: metadata lives in the PEP 621 `[project]` table while the
 path dependency stays in `[tool.poetry.dependencies]`, which 1.8 rejects. The
@@ -103,9 +115,12 @@ images add `--no-root` because the dependency layer is built before `src/` exist
 | --- | --- | --- |
 | `GET` | `/healthz` | per service; reports `dapr` or `http` transport |
 | `POST` | `/api/v1/simulations` | `multipart/form-data`: `link` and/or `file`, `room_width_m`, `room_depth_m`, `room_height_m`, `shopper_notes` |
-| `GET` | `/api/v1/simulations/{id}` | status, `product_profile`, `fit_report` |
+| `GET` | `/api/v1/simulations/{id}` | status, `catalog_candidate`, `product_profile`, `fit_report` |
 | `GET` | `/api/v1/simulations` | recent jobs |
+| `GET` | `/api/v1/catalog` | gateway proxy of catalog-service's SKU list |
 | `POST` | `/api/v1/internal/results` | worker callback, needs `x-byb-token` |
+| `POST` | `/api/v1/internal/progress` | stage report, needs `x-byb-token`, ignored once settled |
+| `POST` | `/v1/catalogue` · `/events` | catalog-service sync and subscription entry points |
 | `POST` | `/v1/enrich` · `/events` | inference-service sync and subscription entry points |
 | `POST` | `/v1/measure` · `/events` | geometry-service sync and subscription entry points |
 
@@ -113,10 +128,14 @@ images add `--no-root` because the dependency layer is built before `src/` exist
 
 `services/api-gateway/src/byb_gateway/models.py`
 
-- **simulations** — id, status (`pending → enriching → measuring → completed/failed`),
-  product link, stored image key, shopper notes, room W/D/H, attempts, error, timestamps
-- **simulation_results** — id, simulation FK, `product_profile` JSON, `fit_report` JSON,
-  duration. Created by `docker compose up`; `Base.metadata.create_all` runs at startup.
+- **simulations** — id, status (`pending → cataloguing → enriching → measuring →
+  completed/failed`; `scanning`, `fitting` and `rendering` are reserved for the stages
+  still to come), product link, stored image key, shopper notes, room W/D/H, attempts,
+  error, timestamps
+- **simulation_results** — id, simulation FK, `catalog_candidate` JSON, `product_profile`
+  JSON, `fit_report` JSON, duration. Created by `docker compose up`;
+  `Base.metadata.create_all` runs at startup and `_add_missing_columns()` then ALTERs in
+  any column the model gained since that volume was created.
 
 ## The fit rules
 

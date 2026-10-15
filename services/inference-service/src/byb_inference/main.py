@@ -1,5 +1,5 @@
-"""Inference worker: reads the product listing, asks vLLM for real-world dimensions and
-hands the measurement to geometry-service."""
+"""Inference worker: takes the catalog candidate (if any), reads the listing, asks vLLM
+for real-world dimensions and hands the measurement on to the next stage."""
 
 from __future__ import annotations
 
@@ -13,24 +13,30 @@ from typing import Any
 import httpx
 from fastapi import FastAPI, Request
 
-from byb_common.contracts import ProductProfile, SimulationMeasured, SimulationRequested
+from byb_common.contracts import (
+    ProductProfile,
+    SimulationCatalogued,
+    SimulationMeasured,
+    SimulationStatus,
+)
 from byb_common.dapr import DaprTransport, publish_event
-from byb_inference.products import extract_context, fallback_profile
+from byb_inference.products import best_profile, extract_context, fallback_profile, profile_from_candidate
 from byb_inference.settings import settings
 from byb_inference.vllm_client import describe_product
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger("byb.inference")
 
-TOPIC_REQUESTED = "simulation.requested"
+TOPIC_CATALOGUED = "simulation.catalogued"
 TOPIC_MEASURED = "simulation.measured"
+PROGRESS_METHOD = "/api/v1/internal/progress"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     transport = DaprTransport(
         dapr_http_endpoint=settings.dapr_http_endpoint,
-        routes={"geometry-service": settings.geometry_url},
+        routes={"geometry-service": settings.geometry_url, "api-gateway": settings.gateway_url},
         token=settings.internal_token,
     )
     async with httpx.AsyncClient(follow_redirects=True) as client:
@@ -55,7 +61,7 @@ def health() -> dict[str, str]:
 @app.get("/dapr/subscribe")
 def dapr_subscriptions() -> list[dict[str, str]]:
     """daprd reads the topic but discards it unless the app confirms this list."""
-    return [{"pubsubname": settings.pubsub_name, "topic": TOPIC_REQUESTED, "route": "/events"}]
+    return [{"pubsubname": settings.pubsub_name, "topic": TOPIC_CATALOGUED, "route": "/events"}]
 
 
 async def _page_context(client: httpx.AsyncClient, link: str) -> str:
@@ -78,15 +84,33 @@ def _image_data_uri(image_key: str | None) -> str | None:
     return f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode()}"
 
 
-async def enrich(message: SimulationRequested, client: httpx.AsyncClient) -> ProductProfile:
+async def enrich(message: SimulationCatalogued, client: httpx.AsyncClient) -> ProductProfile:
     context = await _page_context(client, message.product_link) if message.product_link else ""
     if message.shopper_notes:
         context = f"{context}\nshopper notes: {message.shopper_notes}".strip()
-    profile = await describe_product(client, context, _image_data_uri(message.image_key))
-    if profile is None:
-        profile = fallback_profile(context, message.product_link)
+
+    vllm = await describe_product(client, context, _image_data_uri(message.image_key))
+    from_catalog = profile_from_candidate(message.candidate) if message.candidate else None
+    profile = best_profile(from_catalog, vllm) or fallback_profile(context, message.product_link)
+
+    # The engine always needs boxes, even when the winner came from vLLM.
+    if not profile.parts and message.candidate:
+        profile = profile.model_copy(
+            update={"parts": profile_from_candidate(message.candidate).parts, "category": profile.category or message.candidate.category}
+        )
     logger.info("simulation %s profiled as %r (%s)", message.simulation_id, profile.name, profile.source)
     return profile
+
+
+async def _progress(request: Request, simulation_id: str, status: SimulationStatus) -> None:
+    """Best-effort stage report so the browser can follow the chain."""
+    try:
+        response = await request.app.state.transport.request(
+            request.app.state.http, "api-gateway", PROGRESS_METHOD, {"simulation_id": simulation_id, "status": status}
+        )
+        response.raise_for_status()
+    except (httpx.HTTPError, RuntimeError) as exc:
+        logger.warning("simulation %s could not report %s: %s", simulation_id, status, exc)
 
 
 async def _forward(request: Request, measured: SimulationMeasured) -> None:
@@ -105,16 +129,19 @@ def _unwrap(payload: Any) -> dict[str, Any]:
     return payload
 
 
-async def _measure_and_forward(request: Request, message: SimulationRequested) -> ProductProfile:
+async def _measure_and_forward(request: Request, message: SimulationCatalogued) -> ProductProfile:
+    await _progress(request, message.simulation_id, SimulationStatus.enriching)
     profile = await enrich(message, request.app.state.http)
     await _forward(
         request,
         SimulationMeasured(
             simulation_id=message.simulation_id,
             profile=profile,
+            candidate=message.candidate,
             room_width_m=message.room_width_m,
             room_depth_m=message.room_depth_m,
             room_height_m=message.room_height_m,
+            image_key=message.image_key,
         ),
     )
     return profile
@@ -122,14 +149,14 @@ async def _measure_and_forward(request: Request, message: SimulationRequested) -
 
 @app.post("/v1/enrich")
 async def enrich_endpoint(payload: dict, request: Request) -> dict:
-    message = SimulationRequested.model_validate(_unwrap(payload))
+    message = SimulationCatalogued.model_validate(_unwrap(payload))
     return (await _measure_and_forward(request, message)).model_dump()
 
 
 @app.post("/events")
 async def subscription(payload: dict, request: Request) -> dict[str, str]:
-    """Dapr declarative subscription target for the `simulation.requested` topic."""
-    message = SimulationRequested.model_validate(_unwrap(payload))
+    """Dapr declarative subscription target for the `simulation.catalogued` topic."""
+    message = SimulationCatalogued.model_validate(_unwrap(payload))
     await _measure_and_forward(request, message)
     return {"status": "SUCCESS"}
 

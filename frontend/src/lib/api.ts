@@ -3,6 +3,13 @@
 
 const BASE = "/api/v1"
 
+export type ProductPart = {
+  label: string
+  size_cm: [number, number, number]
+  offset_cm: [number, number, number]
+  tone: string
+}
+
 export type ProductGeometry = {
   width_cm: number
   depth_cm: number
@@ -20,7 +27,32 @@ export type ProductProfile = {
   confidence: number
   summary: string
   source: string
+  parts?: ProductPart[]
 }
+
+export type CatalogCandidate = {
+  sku: string
+  name: string
+  brand: string
+  category: string
+  material?: string | null
+  price_band?: string | null
+  geometry: ProductGeometry
+  parts?: ProductPart[]
+  score: number
+  source: string
+}
+
+export type SimulationStage =
+  | "pending"
+  | "cataloguing"
+  | "enriching"
+  | "measuring"
+  | "scanning"
+  | "fitting"
+  | "rendering"
+  | "completed"
+  | "failed"
 
 export type FitPlacement = {
   label: string
@@ -41,7 +73,7 @@ export type FitReport = {
 
 export type Simulation = {
   id: string
-  status: "pending" | "enriching" | "measuring" | "completed" | "failed"
+  status: SimulationStage
   product_link?: string | null
   image_key?: string | null
   created_at: string
@@ -52,6 +84,7 @@ export type Simulation = {
   room_height_m: number
   shopper_notes?: string | null
   product_profile?: ProductProfile | null
+  catalog_candidate?: CatalogCandidate | null
   fit_report?: FitReport | null
 }
 
@@ -96,6 +129,23 @@ export async function createSimulation(input: SimulationInput): Promise<{ id: st
 
 export async function fetchSimulation(id: string): Promise<Simulation> {
   const response = await fetch(`${BASE}/simulations/${id}`, { cache: "no-store" })
+  if (!response.ok) throw new ApiError(await message(response))
+  return response.json()
+}
+
+export type CatalogRow = {
+  sku: string
+  name: string
+  brand: string
+  category: string
+  material?: string | null
+  price_band?: string | null
+  geometry: ProductGeometry
+}
+
+/** The gateway proxies catalog-service, so the browser still talks to one origin. */
+export async function fetchCatalog(): Promise<CatalogRow[]> {
+  const response = await fetch(`${BASE}/catalog`, { cache: "no-store" })
   if (!response.ok) throw new ApiError(await message(response))
   return response.json()
 }

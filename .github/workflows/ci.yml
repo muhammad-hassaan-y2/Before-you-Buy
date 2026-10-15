@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [api-gateway, inference-service, geometry-service]
+        service: [api-gateway, catalog-service, inference-service, geometry-service]
     defaults:
       run:
         working-directory: services/${{ matrix.service }}

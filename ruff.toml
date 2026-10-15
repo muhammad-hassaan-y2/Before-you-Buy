@@ -1,0 +1,21 @@
+# Shared lint settings for every Poetry project in this repo.
+# `byb_*` packages are local path dependencies, so they sort as first-party, not with httpx.
+line-length = 160
+target-version = "py311"
+src = ["libs", "services"]
+
+[lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[lint.flake8-bugbear]
+# FastAPI declares its injections as argument defaults; that is the framework idiom.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.File", "fastapi.Form", "fastapi.Header"]
+
+[lint.isort]
+known-first-party = ["byb_common", "byb_gateway", "byb_catalog", "byb_inference", "byb_geometry", "byb_vision", "byb_scene"]
+
+[lint.per-file-ignores]
+# Test modules set PYTHONPATH/sys.path before importing, which ruff reads as E402.
+"**/tests/*" = ["E402"]
+# SQLAlchemy resolves Mapped["OtherTable | None"] strings through its own registry.
+"**/models.py" = ["UP037"]

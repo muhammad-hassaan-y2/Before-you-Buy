@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     internal_token: str = "dev-internal-token"
 
     geometry_url: str = "http://localhost:8003"
+    gateway_url: str = "http://localhost:8001"
 
     # AMD ROCm vLLM endpoint (OpenAI-compatible). Override per cloud deployment.
     vllm_base_url: str = "http://vllm:8000/v1"

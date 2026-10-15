@@ -6,9 +6,8 @@ from __future__ import annotations
 import html
 import re
 
-import httpx
-
-from byb_common.contracts import ProductGeometry, ProductProfile
+from byb_common.contracts import CatalogCandidate, ProductGeometry, ProductProfile
+from byb_common.parts import build_parts
 
 _TAG = re.compile(r"<[^>]+>")
 _META = re.compile(
@@ -67,19 +66,45 @@ def category_for(text: str) -> str:
 
 
 def fallback_profile(context: str, link: str | None) -> ProductProfile:
-    width, depth, height, clearance = HEURISTICS.get(category_for(context), (100, 60, 80, 60))
+    category = category_for(context)
+    width, depth, height, clearance = HEURISTICS.get(category, (100, 60, 80, 60))
     title = next(
         (line.split(":", 1)[1].strip() for line in context.splitlines() if line.startswith(("og:title", "title"))),
         None,
     )
-    name = title or (f"{category_for(context).title()} from {link}" if link else "Unidentified product")
+    name = title or (f"{category.title()} from {link}" if link else "Unidentified product")
     return ProductProfile(
         name=name[:120],
-        category=category_for(context),
+        category=category,
         geometry=ProductGeometry(
             width_cm=float(width), depth_cm=float(depth), height_cm=float(height), clearance_cm=float(clearance)
         ),
+        parts=build_parts(category, float(width), float(depth), float(height)),
         confidence=0.25,
         summary="Dimensions come from the built-in category heuristics because no vLLM endpoint answered.",
         source="heuristic",
     )
+
+
+def profile_from_candidate(candidate: CatalogCandidate) -> ProductProfile:
+    """A catalog hit is a published box size, so it outranks a guess."""
+    return ProductProfile(
+        name=candidate.name,
+        brand=candidate.brand,
+        category=candidate.category,
+        material=candidate.material,
+        price_band=candidate.price_band,
+        geometry=candidate.geometry,
+        parts=candidate.parts,
+        confidence=max(0.6, candidate.score),
+        summary=f"Matched catalog SKU {candidate.sku} from the listing text; the room is sized around those published dimensions.",
+        source="catalog",
+    )
+
+
+def best_profile(*profiles: ProductProfile | None) -> ProductProfile | None:
+    """Highest confidence wins, ties going to the earlier argument."""
+    ranked = [profile for profile in profiles if profile is not None]
+    if not ranked:
+        return None
+    return max(enumerate(ranked), key=lambda pair: (pair[1].confidence, -pair[0]))[1]

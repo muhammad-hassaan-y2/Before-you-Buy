@@ -1,7 +1,7 @@
-"""Fan-out from the gateway to the worker services.
+"""Fan-out from the gateway to the first worker in the chain.
 
-Dapr pub/sub is the preferred transport. Without a sidecar the gateway calls the
-same methods over direct HTTP so `docker compose up` still works in dev.
+Dapr pub/sub is the preferred transport. Without a sidecar the gateway calls the same
+method over direct HTTP so `docker compose up` still works in dev.
 """
 
 from __future__ import annotations
@@ -29,6 +29,6 @@ class Dispatcher:
             self._client, settings.dapr_http_endpoint, settings.pubsub_name, TOPIC_REQUESTED, message.model_dump()
         ):
             return
-        logger.info("no daprd sidecar, invoking inference-service directly")
-        response = await self._transport.request(self._client, "inference-service", "/v1/enrich", message.model_dump())
+        logger.info("no daprd sidecar, invoking catalog-service directly")
+        response = await self._transport.request(self._client, "catalog-service", "/v1/catalogue", message.model_dump())
         response.raise_for_status()

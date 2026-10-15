@@ -62,6 +62,7 @@ def _run_measurement(message: SimulationMeasured) -> SimulationCompleted:
         return SimulationCompleted(
             simulation_id=message.simulation_id,
             status=SimulationStatus.failed,
+            candidate=message.candidate,
             error="no product profile reached geometry-service",
         )
     fit: FitReport = analyse_fit(
@@ -74,7 +75,11 @@ def _run_measurement(message: SimulationMeasured) -> SimulationCompleted:
     )
     logger.info("simulation %s verdict=%s coverage=%.1f%%", message.simulation_id, fit.verdict, fit.coverage_pct)
     return SimulationCompleted(
-        simulation_id=message.simulation_id, status=SimulationStatus.completed, profile=message.profile, fit=fit
+        simulation_id=message.simulation_id,
+        status=SimulationStatus.completed,
+        profile=message.profile,
+        candidate=message.candidate,
+        fit=fit,
     )
 
 

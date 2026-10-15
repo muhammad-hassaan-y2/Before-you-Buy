@@ -87,6 +87,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-beforeyoubuy}
       DAPR_HTTP_ENDPOINT: ${DAPR_GATEWAY_ENDPOINT:-http://dapr-api-gateway:3500}
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}
+      CATALOG_URL: http://catalog-service:8004
       INFERENCE_URL: http://inference-service:8002
       GEOMETRY_URL: http://geometry-service:8003
       UPLOAD_DIR: /uploads
@@ -122,6 +123,46 @@ services:
     depends_on:
       - api-gateway
 
+  # ---------- catalog-service ----------
+  catalog-service:
+    <<: *service
+    build:
+      context: .
+      dockerfile: services/catalog-service/Dockerfile
+    hostname: catalog-service
+    environment:
+      DAPR_HTTP_ENDPOINT: ${DAPR_CATALOG_ENDPOINT:-http://dapr-catalog-service:3500}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}
+      INFERENCE_URL: http://inference-service:8002
+      GATEWAY_URL: http://api-gateway:8001
+    ports:
+      - "${CATALOG_PORT:-8004}:8004"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  dapr-catalog-service:
+    <<: *daprd
+    command:
+      - ./daprd
+      - --app-id
+      - catalog-service
+      - --app-channel-address
+      - catalog-service
+      - --app-port
+      - "8004"
+      - --dapr-http-port
+      - "3500"
+      - --resources-path
+      - /components
+      - --resources-path
+      - /subscriptions
+    volumes:
+      - ./components:/components:ro
+      - ./services/catalog-service/dapr:/subscriptions:ro
+    depends_on:
+      - catalog-service
+
   # ---------- inference-service ----------
   inference-service:
     <<: *service
@@ -133,6 +174,7 @@ services:
       DAPR_HTTP_ENDPOINT: ${DAPR_INFERENCE_ENDPOINT:-http://dapr-inference-service:3500}
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}
       GEOMETRY_URL: http://geometry-service:8003
+      GATEWAY_URL: http://api-gateway:8001
       VLLM_BASE_URL: ${VLLM_BASE_URL:-http://vllm:8000/v1}
       VLLM_MODEL: ${VLLM_MODEL:-Qwen/Qwen2.5-3B-Instruct}
       VLLM_SUPPORTS_VISION: ${VLLM_SUPPORTS_VISION:-false}

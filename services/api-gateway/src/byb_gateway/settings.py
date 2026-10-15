@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     pubsub_name: str = "byb-pubsub"
     internal_token: str = "dev-internal-token"
 
+    catalog_url: str = "http://localhost:8004"
     inference_url: str = "http://localhost:8002"
     geometry_url: str = "http://localhost:8003"
 

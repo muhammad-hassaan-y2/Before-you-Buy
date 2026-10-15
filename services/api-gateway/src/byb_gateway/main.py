@@ -9,13 +9,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
-from fastapi import Depends, FastAPI, Header, HTTPException, UploadFile, File, Form
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from byb_common.contracts import SimulationCompleted, SimulationRequested, SimulationStatus
-from byb_common.dapr import DaprTransport, INTERNAL_TOKEN_HEADER
+from byb_common.contracts import SimulationCompleted, SimulationProgress, SimulationRequested, SimulationStatus
+from byb_common.dapr import INTERNAL_TOKEN_HEADER, DaprTransport
 from byb_gateway.database import get_db, init_db
 from byb_gateway.dispatch import Dispatcher
 from byb_gateway.models import Simulation, SimulationResult
@@ -35,11 +35,16 @@ async def lifespan(app: FastAPI):
     init_db()
     transport = DaprTransport(
         dapr_http_endpoint=settings.dapr_http_endpoint,
-        routes={"inference-service": settings.inference_url, "geometry-service": settings.geometry_url},
+        routes={
+            "catalog-service": settings.catalog_url,
+            "inference-service": settings.inference_url,
+            "geometry-service": settings.geometry_url,
+        },
         token=settings.internal_token,
     )
     async with httpx.AsyncClient() as client:
         app.state.http = client
+        app.state.transport = transport
         app.state.dispatch = Dispatcher(client, transport)
         yield
 
@@ -144,7 +149,7 @@ async def create_simulation(
     )
     # Mark before fanning out: on the direct-HTTP path this await runs the whole
     # worker chain, and a fast worker's callback would otherwise be reverted here.
-    simulation.status = SimulationStatus.enriching
+    simulation.status = SimulationStatus.cataloguing
     db.commit()
     try:
         await app.state.dispatch.start(message)
@@ -176,6 +181,7 @@ def get_simulation(simulation_id: str, db: Session = Depends(get_db)) -> Simulat
         shopper_notes=simulation.shopper_notes,
         updated_at=simulation.updated_at,
         product_profile=result.product_profile if result else None,
+        catalog_candidate=result.catalog_candidate if result else None,
         fit_report=result.fit_report if result else None,
     )
 
@@ -204,11 +210,40 @@ def record_result(completed: SimulationCompleted, db: Session = Depends(get_db))
     if completed.profile or completed.fit:
         result = simulation.result or SimulationResult(simulation_id=simulation.id)
         result.product_profile = completed.profile.model_dump() if completed.profile else None
+        result.catalog_candidate = completed.candidate.model_dump() if completed.candidate else None
         result.fit_report = completed.fit.model_dump() if completed.fit else None
         result.duration_ms = _elapsed_ms(simulation.created_at)
         db.add(result)
     db.commit()
     logger.info("simulation %s -> %s", simulation.id, completed.status)
+
+
+@app.post("/api/v1/internal/progress", status_code=204, dependencies=[Depends(require_internal_token)])
+def record_progress(progress: SimulationProgress, db: Session = Depends(get_db)) -> None:
+    """A worker announcing the stage it reached. Never moves a settled simulation."""
+    simulation = db.get(Simulation, progress.simulation_id)
+    if simulation is None:
+        raise HTTPException(status_code=404, detail="Unknown simulation")
+    if simulation.status in {SimulationStatus.completed, SimulationStatus.failed}:
+        return
+    simulation.status = progress.status
+    db.commit()
+    logger.info("simulation %s reached %s", simulation.id, progress.status)
+
+
+@app.get("/api/v1/catalog")
+async def catalog_examples(request: Request) -> list[dict]:
+    """Read-only catalog passthrough so the browser never learns a second origin."""
+    transport: DaprTransport = request.app.state.transport
+    try:
+        response = await request.app.state.http.get(
+            transport.url("catalog-service", "/api/v1/catalog"), headers=transport.headers(), timeout=10
+        )
+        response.raise_for_status()
+    except httpx.HTTPError as exc:
+        logger.warning("catalog-service unreachable: %s", exc)
+        raise HTTPException(status_code=502, detail="catalog-service unavailable") from exc
+    return response.json()
 
 
 def start() -> None:
