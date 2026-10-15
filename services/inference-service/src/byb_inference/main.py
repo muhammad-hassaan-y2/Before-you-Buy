@@ -22,6 +22,7 @@ from byb_inference.vllm_client import describe_product
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger("byb.inference")
 
+TOPIC_REQUESTED = "simulation.requested"
 TOPIC_MEASURED = "simulation.measured"
 
 
@@ -49,6 +50,12 @@ def health() -> dict[str, str]:
         "model": settings.vllm_model,
         "transport": "dapr" if settings.dapr_http_endpoint else "http",
     }
+
+
+@app.get("/dapr/subscribe")
+def dapr_subscriptions() -> list[dict[str, str]]:
+    """daprd reads the topic but discards it unless the app confirms this list."""
+    return [{"pubsubname": settings.pubsub_name, "topic": TOPIC_REQUESTED, "route": "/events"}]
 
 
 async def _page_context(client: httpx.AsyncClient, link: str) -> str:

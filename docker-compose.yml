@@ -12,8 +12,8 @@ x-service: &service
 x-daprd: &daprd
   image: daprio/daprd:latest
   <<: *service
-  volumes:
-    - ./components:/components:ro
+  # Deliberately no volumes here: a merge override below would discard this list
+  # instead of appending to it, leaving daprd without its components directory.
 
 x-upload: &upload
   type: volume
@@ -113,8 +113,12 @@ services:
       - "8001"
       - --dapr-http-port
       - "3500"
-      - --components-path
+      # --resources-path replaces --components-path; passing both silently drops
+      # the components directory, and the sidecar starts with no pub/sub.
+      - --resources-path
       - /components
+    volumes:
+      - ./components:/components:ro
     depends_on:
       - api-gateway
 
@@ -153,7 +157,7 @@ services:
       - "8002"
       - --dapr-http-port
       - "3500"
-      - --components-path
+      - --resources-path
       - /components
       - --resources-path
       - /subscriptions
@@ -192,7 +196,7 @@ services:
       - "8003"
       - --dapr-http-port
       - "3500"
-      - --components-path
+      - --resources-path
       - /components
       - --resources-path
       - /subscriptions
@@ -207,6 +211,9 @@ services:
     <<: *service
     build:
       context: ./frontend
+      args:
+        # next.config.ts reads this when the rewrite rules are built.
+        API_GATEWAY_URL: http://api-gateway:8001
     environment:
       API_GATEWAY_URL: http://api-gateway:8001
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}

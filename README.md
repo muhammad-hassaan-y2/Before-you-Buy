@@ -23,7 +23,7 @@ browser ──> Next.js :3000 ──/api/v1──> api-gateway :8001 ──SQLAl
 ## Layout
 
 ```
-components/                     Dapr components (Redis pub/sub, Postgres state store)
+components/                     Dapr components (Redis pub/sub)
 libs/byb-common/                shared event contracts + Dapr transport shim
 services/api-gateway/           FastAPI, SQLAlchemy models, ingest and job state
 services/inference-service/     vLLM product dimensions, heuristic fallback
@@ -78,6 +78,10 @@ Without `DAPR_HTTP_ENDPOINT`, `libs/byb-common/src/byb_common/dapr.py` routes ca
 straight to each service URL. Set it to the sidecar (`http://127.0.0.1:3500`) and the
 same code publishes to the Dapr topics instead.
 
+Only pub/sub is configured as a Dapr component. Rows are written by SQLAlchemy, so
+there is no Dapr state store to keep in sync (and daprd 1.18 no longer bundles
+`state.postgresql.postgres`, which would crash-loop every sidecar).
+
 ## Poetry commands
 
 | Where | Command | Does |
@@ -88,6 +92,10 @@ same code publishes to the Dapr topics instead.
 | any service | `poetry run test` | that service's pytest suite |
 | repo root | `make test` | all three suites |
 | repo root | `make lint` | ruff over all three |
+
+Needs Poetry 2.x: metadata lives in the PEP 621 `[project]` table while the
+path dependency stays in `[tool.poetry.dependencies]`, which 1.8 rejects. The
+images add `--no-root` because the dependency layer is built before `src/` exists.
 
 ## API
 

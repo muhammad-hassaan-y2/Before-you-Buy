@@ -19,6 +19,7 @@ logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger("byb.geometry")
 
 RESULT_METHOD = "/api/v1/internal/results"
+TOPIC_MEASURED = "simulation.measured"
 
 
 @asynccontextmanager
@@ -40,6 +41,12 @@ app = FastAPI(title="Buy You Before - Geometry Service", version="0.1.0", lifesp
 @app.get("/healthz")
 def health() -> dict[str, str]:
     return {"service": settings.service_name, "status": "ok", "transport": "dapr" if settings.dapr_http_endpoint else "http"}
+
+
+@app.get("/dapr/subscribe")
+def dapr_subscriptions() -> list[dict[str, str]]:
+    """daprd reads the topic but discards it unless the app confirms this list."""
+    return [{"pubsubname": settings.pubsub_name, "topic": TOPIC_MEASURED, "route": "/events"}]
 
 
 async def _report(client: httpx.AsyncClient, transport: DaprTransport, completed: SimulationCompleted) -> None:

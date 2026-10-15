@@ -15,7 +15,8 @@ WORKDIR /app
 
 COPY libs/ ./libs/
 COPY services/geometry-service/pyproject.toml services/geometry-service/README.md ./services/geometry-service/
-RUN cd services/geometry-service && poetry install --without dev --no-interaction --no-ansi
+# The dependency layer cannot see src/, so --no-root skips installing the service itself.
+RUN cd services/geometry-service && poetry install --no-root --without dev --no-interaction --no-ansi
 
 COPY services/geometry-service/src/ ./services/geometry-service/src/
 ENV PYTHONPATH=/app/services/geometry-service/src:/app/libs/byb-common/src

@@ -15,11 +15,14 @@ WORKDIR /app
 
 COPY libs/ ./libs/
 COPY services/inference-service/pyproject.toml services/inference-service/README.md ./services/inference-service/
-RUN cd services/inference-service && poetry install --without dev --no-interaction --no-ansi
+# The dependency layer cannot see src/, so --no-root skips installing the service itself.
+RUN cd services/inference-service && poetry install --no-root --without dev --no-interaction --no-ansi
 
 COPY services/inference-service/src/ ./services/inference-service/src/
 ENV PYTHONPATH=/app/services/inference-service/src:/app/libs/byb-common/src
 
+# The uploads volume is shared by services running as different uids.
+RUN mkdir -p /uploads && chmod 1777 /uploads
 RUN useradd --create-home --uid 10002 byb
 USER byb
 

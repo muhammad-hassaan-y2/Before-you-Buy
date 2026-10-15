@@ -6,5 +6,3 @@ spec:
   pubsubname: byb-pubsub
   topic: simulation.measured
   route: /events
-scopes:
-  - geometry-service

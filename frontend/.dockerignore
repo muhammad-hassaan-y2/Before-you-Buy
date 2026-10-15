@@ -1,0 +1,9 @@
+node_modules
+.next
+.out
+.git
+*.log
+.env
+.env.local
+Dockerfile
+.dockerignore
