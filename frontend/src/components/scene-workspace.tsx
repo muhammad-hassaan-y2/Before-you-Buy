@@ -3,6 +3,7 @@
 import { AlertTriangle, Box, Download, Loader2, Ruler, Sofa } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
+import { DeliveryPath } from "@/components/delivery-path"
 import { RoomPlan } from "@/components/room-plan"
 import { SceneViewer } from "@/components/scene-viewer"
 import { Badge } from "@/components/ui/badge"
@@ -204,6 +205,9 @@ export function SceneWorkspace() {
                   report={simulation.fit_report}
                   obstacles={simulation.room_scan?.obstacles ?? simulation.fit_report.obstacles}
                 />
+              </div>
+              <div className="rounded-lg border p-3">
+                <DeliveryPath report={simulation.fit_report} />
               </div>
             </div>
           )}

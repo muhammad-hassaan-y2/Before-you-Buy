@@ -3,6 +3,7 @@
 import { AlertTriangle, CheckCircle2, ImageIcon, Link2, Loader2, Ruler, Sofa, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
+import { DeliveryPath } from "@/components/delivery-path"
 import { RoomPlan } from "@/components/room-plan"
 import { SceneViewer } from "@/components/scene-viewer"
 import { Badge } from "@/components/ui/badge"
@@ -273,6 +274,10 @@ export function RoomSimulator() {
                   </div>
                 ))}
               </dl>
+
+              <div className="rounded-lg border p-3">
+                <DeliveryPath report={report} />
+              </div>
 
               {profile && (
                 <div className="rounded-lg border p-3 text-sm">

@@ -86,13 +86,29 @@ export type FitPlacement = {
   walkway_m: Record<string, number>
 }
 
-export type FitReport = {  room_area_m2: number
+/** Everything geometry-service says about one piece in one room. The verdict is the engine's;
+ *  the delivery-path fields are what turns it from "fits on the plan" into "you can get it in
+ *  and still walk around it". */
+export type FitReport = {
+  room_area_m2: number
   usable_area_m2: number
   placements: FitPlacement[]
   conflicts: string[]
   coverage_pct: number
   verdict: "fits" | "tight" | "too_large" | "blocked"
   obstacles: Obstacle[]
+  /** Quarter-circle the room door sweeps. */
+  door_swing_m: number
+  /** Can the box get through the doorway at all: pass | tight | blocked | unknown. */
+  door_pass: "pass" | "tight" | "blocked" | "unknown"
+  /** False when the entrance is cut off at the required clearance. */
+  walkway_connected: boolean
+  /** Floor areas the piece seals off from the door. */
+  isolated_pockets: number
+  /** Passes on these numbers, fails inside the survey tolerance. */
+  fragile: boolean
+  tolerance_cm: number
+  suggestions: string[]
 }
 
 /** What scene-service publishes for the browser engine: metres, right-handed y-up, room
