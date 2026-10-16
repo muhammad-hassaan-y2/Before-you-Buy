@@ -40,5 +40,11 @@ class Settings(BaseSettings):
     # Below this the agent stops guessing and hands the case to a person.
     handoff_confidence: float = 0.35
 
+    # A multi-piece brief is a bigger claim than a single fit, so it is capped and judged
+    # against the same walkway the geometry engine uses.
+    max_joint_pieces: int = 4
+    max_joint_coverage: float = 0.6
+    min_walkway_m: float = 0.6
+
 
 settings = Settings()
