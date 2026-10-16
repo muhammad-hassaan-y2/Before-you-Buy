@@ -14,7 +14,7 @@ case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) SEP=";" ;;
   *) SEP=":" ;;
 esac
-SERVICES="api-gateway catalog-service inference-service vision-service geometry-service scene-service"
+SERVICES="api-gateway catalog-service inference-service vision-service geometry-service scene-service agent-service"
 PATHS=""
 for service in $SERVICES; do PATHS="${PATHS:+$PATHS$SEP}$ROOT/services/$service/src"; done
 export PYTHONPATH="$PATHS${SEP}$ROOT/libs/byb-common/src"
@@ -26,6 +26,8 @@ INFERENCE_PORT="${INFERENCE_PORT:-8002}"
 VISION_PORT="${VISION_PORT:-8005}"
 GEOMETRY_PORT="${GEOMETRY_PORT:-8003}"
 SCENE_PORT="${SCENE_PORT:-8006}"
+AGENT_PORT="${AGENT_PORT:-8007}"
+AGENT_PORT="${AGENT_PORT:-8007}"
 
 # Postgres is the target database: `docker compose up -d postgres` before running this.
 export DATABASE_URL="${DATABASE_URL:-postgresql+psycopg2://user:password@localhost:5432/beforeyoubuy}"
@@ -47,11 +49,12 @@ echo "database: ${DATABASE_URL%%@*}@<redacted>"
 "$PY" -m uvicorn byb_vision.main:app --port "$VISION_PORT" --host 127.0.0.1 >vision.svc.log 2>&1 &
 "$PY" -m uvicorn byb_geometry.main:app --port "$GEOMETRY_PORT" --host 127.0.0.1 >geometry.svc.log 2>&1 &
 "$PY" -m uvicorn byb_scene.main:app --port "$SCENE_PORT" --host 127.0.0.1 >scene.svc.log 2>&1 &
+"$PY" -m uvicorn byb_agent.main:app --port "$AGENT_PORT" --host 127.0.0.1 >agent.svc.log 2>&1 &
 PIDS=$(jobs -p)
 cleanup() { kill $PIDS 2>/dev/null; wait $PIDS 2>/dev/null; }
 trap cleanup EXIT
 
-PORTS="$GATEWAY_PORT $CATALOG_PORT $INFERENCE_PORT $VISION_PORT $GEOMETRY_PORT $SCENE_PORT"
+PORTS="$GATEWAY_PORT $CATALOG_PORT $INFERENCE_PORT $VISION_PORT $GEOMETRY_PORT $SCENE_PORT $AGENT_PORT"
 for port in $PORTS; do
   for _ in $(seq 1 30); do
     curl -sf "http://127.0.0.1:$port/healthz" >/dev/null && break
@@ -97,3 +100,42 @@ echo "$OUT" | "$PY" -c 'import json,sys; scene=json.load(sys.stdin).get("scene")
 
 echo "--- glTF download ---"
 curl -s "http://127.0.0.1:$GATEWAY_PORT/api/v1/simulations/$ID/model" | "$PY" -c 'import json,sys; doc=json.load(sys.stdin); print("glTF", doc["asset"]["version"], "|", len(doc["nodes"]), "nodes,", len(doc["meshes"]), "meshes,", len(doc["buffers"][0]["uri"]), "bytes of buffer")'
+
+echo "--- agent capabilities ---"
+curl -s "http://127.0.0.1:$AGENT_PORT/agent/tools" | "$PY" -c 'import json,sys; t=json.load(sys.stdin)["tools"]; print(len(t), "tools;", ", ".join(x["name"] for x in t))'
+
+echo "--- POST /agent/brief (fit-assurance journey) ---"
+# No Evolus key and no vLLM endpoint here on purpose: the journey must still complete on
+# the deterministic pipeline, with the brief read by the heuristic and the trace showing it.
+RUN=$(curl -s -X POST "http://127.0.0.1:$AGENT_PORT/agent/brief" -H 'Content-Type: application/json' \
+  -d '{"brief":"a three seat fabric sofa under 900 for a 4 by 3.5 room","room_width_m":4.0,"room_depth_m":3.5}')
+echo "$RUN"
+RID=$(printf '%s' "$RUN" | "$PY" -c "import json,sys;print(json.load(sys.stdin).get('run_id',''))")
+for i in $(seq 1 40); do
+  TRACE=$(curl -s "http://127.0.0.1:$AGENT_PORT/agent/runs/$RID")
+  ST=$(printf '%s' "$TRACE" | "$PY" -c "import json,sys;print(json.load(sys.stdin).get('status',''))" 2>/dev/null || echo parse-error)
+  echo "journey $i: $ST"
+  case "$ST" in done|failed|awaiting_human) break ;; esac
+  sleep 1
+done
+echo "$TRACE" | "$PY" -c 'import json,sys
+run = json.load(sys.stdin)
+steps, dec = run["steps"], run.get("decision") or {}
+kinds = [s["kind"] for s in steps]
+print("trace   :", " -> ".join(kinds))
+print("agent   :", [s.get("tool") for s in steps if s["kind"] == "agent"], "| brief read by", (run.get("brief") or {}).get("source"))
+print("parallel:", len({s.get("group") for s in steps if s.get("group")}), "group(s),", kinds.count("simulate"), "fits fan-out,", kinds.count("branch"), "branch(es)")
+print("decision:", dec.get("action"), dec.get("sku"), "confidence", dec.get("confidence"))
+print("reply   :", (run.get("reply") or "")[:100])'
+
+echo "--- MCP tools/list over /mcp ---"
+curl -s -X POST "http://127.0.0.1:$AGENT_PORT/mcp/" \
+  -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
+  | "$PY" -c 'import json,sys; r=json.load(sys.stdin)["result"]["tools"]; print(len(r), "MCP tools;", ", ".join(t["name"] for t in r))'
+
+echo "--- MCP tools/call catalog_search ---"
+curl -s -X POST "http://127.0.0.1:$AGENT_PORT/mcp/" \
+  -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"catalog_search","arguments":{"query":"sofa","limit":3}}}' \
+  | "$PY" -c 'import json,sys; r=json.load(sys.stdin)["result"]; print("isError:", r.get("isError", False), "|", json.dumps(r["structuredContent"])[:120])'

@@ -18,6 +18,10 @@ out/
 *.tsbuildinfo
 .pnpm-store/
 
+# Test output
+test-results/
+playwright-report/
+
 # Runtime state
 uploads/
 uploads-e2e/

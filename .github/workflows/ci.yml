@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [api-gateway, catalog-service, inference-service, vision-service, geometry-service, scene-service]
+        service: [api-gateway, catalog-service, inference-service, vision-service, geometry-service, scene-service, agent-service]
     defaults:
       run:
         working-directory: services/${{ matrix.service }}
@@ -46,7 +46,30 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile=false
       - run: pnpm exec tsc --noEmit
+      - run: pnpm test
       - run: pnpm build
+
+  # Every route the two pages call is stubbed in e2e/fixtures.ts, so this job needs
+  # no backend — a red run means the UI broke, not the network.
+  frontend-e2e:
+    name: frontend (browser)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.8.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
 
   compose:
     name: compose config
