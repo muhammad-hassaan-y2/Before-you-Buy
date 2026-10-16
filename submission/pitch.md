@@ -87,9 +87,10 @@ The agent is then scored against those labels through the real journey:
 - decisions matching the labels: **15 / 15**
 - **false fits: 0** across thirteen recommendations — the gate, and it fails the build
 
-The set includes a piece that sits on the floor but cannot get through the door, a brief vague
-enough that the right answer is to spend nothing on it, a room where nothing fits and the search
-has to widen and still hand off, and a shopper who wrote their room in centimetres.
+The set includes a sectional whose footprint fills half the floor plan and whose doorway pass comes
+back `blocked` — the candidate the agent has to look past — a brief vague enough that the right
+answer is to spend nothing on it, a room where nothing fits and the search has to widen and still
+hand off, and a shopper who wrote their room in centimetres.
 
 ## 8. The five Evolus building blocks — Application of Technology
 
