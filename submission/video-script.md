@@ -4,9 +4,10 @@ The spine of this video is the run trace: a brief goes in, a verdict comes out, 
 between them is named, timed and re-runnable. Every claim below is something the camera can see on
 our own pages, and nothing is narrated that is not on screen.
 
-**Target length** 5:00. **Aspect** 16:9, 1080p or better. **Captions** burned in or a sidecar `.srt`
-— judging includes Presentation, and a silent autoplay on a shared screen still has to land.
-**No music under the voice**; the typing is the soundtrack.
+**Target length** 4:55 — the form caps the walkthrough at five minutes and 300 MB, so export at 1080p
+and check the file size before uploading, not after. **Aspect** 16:9. **Captions** burned in or a
+sidecar `.srt` — judging includes Presentation, and a silent autoplay on a shared screen still has to
+land. **No music under the voice**; the typing is the soundtrack.
 
 ---
 
@@ -103,9 +104,9 @@ the agent scored against them.
 > of fifteen, and zero false fits across thirteen recommendations. Zero false fits is the gate, and
 > it fails the build."
 
-Say "thirteen recommendations" plainly. The set deliberately includes a piece that sits on the
-floor but cannot pass the door, and a brief vague enough that the right answer is to spend nothing
-on it.
+Say "thirteen recommendations" plainly. The set deliberately includes a sectional whose footprint
+fills half the floor plan and whose doorway pass comes back `blocked` — the candidate the agent has
+to look past — and a brief vague enough that the right answer is to spend nothing on it.
 
 ## 4:10 – 4:45 · What it is worth, and how it closes
 
@@ -118,7 +119,7 @@ holds list.
 > the close: an offer only a proven fit can back, and a hold that appears only because the shopper
 > said yes in their own words — and those words stay on the row. Nothing is charged, nothing ships."
 
-## 4:45 – 5:00 · The one line
+## 4:45 – 4:55 · The one line
 
 **On screen:** the trace header again, or the title card.
 

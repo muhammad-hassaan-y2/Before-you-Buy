@@ -95,7 +95,8 @@ page does not watch a cold container start.
 
 ## 6. Record
 
-Follow `submission/video-script.md`. Target 5:00, 16:9, 1080p, captions on, no music under the
+Follow `submission/video-script.md`. Target 4:55 — the form caps the link at five minutes and 300
+MB, so check the exported size before uploading. 16:9, 1080p, captions on, no music under the
 voice. The load-bearing shot is `fit_report` called over REST returning the same JSON the page read —
 it is the evidence that the agent has no private door into the pipeline.
 
@@ -114,7 +115,8 @@ lablab's submission form wants these; have them written before opening it.
 | Tags | `agents`, `mcp`, `ecommerce`, `computer-vision`, `geometry`, `vllm`, `amd`, `evolus`, `three.js` |
 | Prototype URL | the live demo from step 5 |
 | Cover image | `submission/cover.png`, 16:9 |
-| Demo video | the 5:00 file from step 6 |
+| Demo video | the 4:55 file from step 6, under 300 MB |
+| Slides | `submission/buy-you-before-pitch.pptx` — twelve slides, exported to PDF if the form asks for a link it can open without Office |
 | Repo | the GitHub URL, **public**, with the Evolus and AMD sections in the README visible |
 | Team | everyone who authored commits — Abeeha Farrukh included |
 
