@@ -395,6 +395,8 @@ stubs the services it talks to, so a red run means the front end broke rather th
 - [ ] Live demo URL: expose the stack and set `PUBLIC_BASE_URL` to the same origin, or the workflow callback and the MCP connector will not reach you.
 - [ ] Pitch slides and walkthrough video: record `/room-simulator` end to end — brief, trace, verdict — then the same piece in `/workspace`.
 
+`submission/` holds the pitch, the timed walkthrough script, the pre-deadline runbook and the 16:9
+cover, so the form has something to paste from and the recording has an order to follow.
 
 ## Notes
 
