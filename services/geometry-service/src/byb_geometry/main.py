@@ -23,6 +23,7 @@ from byb_common.contracts import (
     SimulationStatus,
 )
 from byb_common.dapr import DaprTransport, publish_event
+from byb_geometry.access import check_access
 from byb_geometry.layout import analyse_fit
 from byb_geometry.settings import settings
 
@@ -102,11 +103,64 @@ def _run_fit(message: SimulationRoomScanned) -> FitReport:
         min_walkway_m=settings.min_walkway_m,
         obstacles=message.scan.obstacles,
     )
+    fit = _with_access(fit, message)
     logger.info(
         "simulation %s verdict=%s coverage=%.1f%% room=%sx%s m [%s]",
         message.simulation_id, fit.verdict, fit.coverage_pct, message.scan.width_m, message.scan.depth_m, message.scan.method,
     )
     return fit
+
+
+def _with_access(fit: FitReport, message: SimulationRoomScanned) -> FitReport:
+    """Fold the delivery path - doorway, walkway, measurement margin - into the report.
+
+    A box that cannot be carried in is not a fit, whatever the floor area says, so that one
+    outcome is allowed to override the verdict. The rest is reported beside it and the agent
+    decides how much weight to give it.
+    """
+    scan, profile = message.scan, message.profile
+    access = check_access(
+        scan,
+        profile,
+        fit.placements,
+        wall_padding_m=settings.wall_padding_m,
+        min_walkway_m=settings.min_walkway_m,
+        tolerance_cm=settings.tolerance_cm,
+    )
+
+    conflicts = list(fit.conflicts)
+    verdict = fit.verdict
+    if access.door_pass == "blocked":
+        conflicts.append(
+            f"{profile.name} cannot pass the {scan.door_width_m * 100:.0f} cm by "
+            f"{scan.door_height_m * 100:.0f} cm doorway, even tilted."
+        )
+        verdict = "blocked"
+    elif access.door_pass == "tight":
+        conflicts.append(
+            f"{profile.name} only clears the doorway by the measurement margin (+/{access.tolerance_cm:g} cm) - re-measure the opening."
+        )
+    if not access.walkway_connected:
+        conflicts.append(
+            f"With it placed here there is less than {profile.geometry.clearance_cm / 100:.2f} m to walk from the door."
+        )
+    if access.isolated_pockets:
+        conflicts.append(f"It cuts {access.isolated_pockets} area(s) of the room off from the door.")
+    if access.fragile and verdict == "fits":
+        conflicts.append(f"It fits on the stated numbers, but a {access.tolerance_cm:g} cm measurement error breaks it.")
+
+    return fit.model_copy(
+        update={
+            "verdict": verdict,
+            "conflicts": conflicts,
+            "door_pass": access.door_pass,
+            "walkway_connected": access.walkway_connected,
+            "isolated_pockets": access.isolated_pockets,
+            "fragile": access.fragile,
+            "tolerance_cm": access.tolerance_cm,
+            "suggestions": access.suggestions,
+        }
+    )
 
 
 def _unwrap(payload: Any) -> dict[str, Any]:

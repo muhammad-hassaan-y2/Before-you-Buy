@@ -1,7 +1,8 @@
 """
-BeforeYouBuy AI - Simulation & Geometry Engine (Part 2, Shapely version)
+The delivery-path fit engine, in centimetres.
 
-Deterministic checks:
+`layout.py` answers "does it sit on the floor"; this answers "can you actually get it
+home and live around it":
   1. Room boundary (all four walls) + tight-fit tolerance
   2. Ceiling height
   3. Doorway pass-through (item may be tilted; height-aware)
@@ -22,7 +23,7 @@ Statuses: FAIL < FRAGILE PASS < PASS WITH WARNINGS < PASS
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from shapely.geometry import Point, Polygon, box
 from shapely.ops import unary_union
@@ -41,7 +42,7 @@ class Door:
     offset_cm: float = 0.0           # distance from the wall's start corner to the hinge
     width_cm: float = 80.0
     height_cm: float = 200.0
-    swing_radius_cm: Optional[float] = None   # defaults to door width
+    swing_radius_cm: float | None = None   # defaults to door width
 
 
 @dataclass
@@ -66,7 +67,7 @@ class Room:
     ceiling_height_cm: float = 250.0
     min_walkway_clearance_cm: float = 60.0
     tolerance_margin_cm: float = 2.0
-    obstacles: List[Obstacle] = field(default_factory=list)
+    obstacles: list[Obstacle] = field(default_factory=list)
 
     def __post_init__(self):
         if self.length_cm <= 0 or self.width_cm <= 0:
@@ -101,14 +102,14 @@ def _wall_frame(wall: str, length: float, width: float):
     }[wall]
 
 
-def _parts(geom) -> List[Polygon]:
+def _parts(geom) -> list[Polygon]:
     if geom.is_empty:
         return []
     parts = list(geom.geoms) if hasattr(geom, "geoms") else [geom]
     return [p for p in parts if p.geom_type == "Polygon" and p.area > EPS]
 
 
-def _coords(poly) -> List[Tuple[float, float]]:
+def _coords(poly) -> list[tuple[float, float]]:
     if poly is None or poly.is_empty:
         return []
     return [(round(x, 2), round(y, 2)) for x, y in poly.exterior.coords]
@@ -138,7 +139,7 @@ class SimulationEngine:
             (p0[0] + nx * r, p0[1] + ny * r),
         ])
         self.swing_zone = Point(p0).buffer(r, 64).intersection(quadrant).intersection(self.room_poly)
-        self._base_cache: Dict[float, Tuple[bool, int]] = {}
+        self._base_cache: dict[float, tuple[bool, int]] = {}
 
     # ----------------------------- validation ------------------------------ 
     def _validate(self, item: FurnitureItem, x: float, y: float, rotation: int):
@@ -162,7 +163,7 @@ class SimulationEngine:
         return (a <= w and b <= h) or (b <= w and a <= h)
 
     # ------------------------------- walkway -------------------------------- 
-    def _reach(self, footprint: Optional[Polygon], clearance: float) -> Tuple[bool, int]:
+    def _reach(self, footprint: Polygon | None, clearance: float) -> tuple[bool, int]:
         """
         Erode the free floor by clearance/2 (a person `clearance` wide).
         Returns (entrance_is_walkable, number_of_isolated_pockets).
@@ -183,7 +184,7 @@ class SimulationEngine:
         pockets = sum(1 for i, c in enumerate(comps) if i != entry_idx and c.area >= min_area)
         return True, pockets
 
-    def _baseline(self, clearance: float) -> Tuple[bool, int]:
+    def _baseline(self, clearance: float) -> tuple[bool, int]:
         if clearance not in self._base_cache:
             self._base_cache[clearance] = self._reach(None, clearance)
         return self._base_cache[clearance]
@@ -199,7 +200,7 @@ class SimulationEngine:
             "-x": box(x0 - depth, y0, x0, y1),
         }[front]
 
-    def _clash(self, a: Polygon, b: Polygon) -> Optional[str]:
+    def _clash(self, a: Polygon, b: Polygon) -> str | None:
         """'overlap', 'tight' (gap smaller than tolerance) or None."""
         if a.intersection(b).area > EPS:
             return "overlap"
@@ -209,7 +210,7 @@ class SimulationEngine:
         return None
 
     # ------------------------------ core check ------------------------------ #
-    def _evaluate(self, item: FurnitureItem, x: float, y: float, rotation: int) -> Dict[str, Any]:
+    def _evaluate(self, item: FurnitureItem, x: float, y: float, rotation: int) -> dict[str, Any]:
         self._validate(item, x, y, rotation)
         room, tol = self.room, self.room.tolerance_margin_cm
         L, W = room.length_cm, room.width_cm
@@ -219,7 +220,7 @@ class SimulationEngine:
         fp = box(x, y, x + length, y + width)
         gaps = {"-x": x, "+x": L - (x + length), "-y": y, "+y": W - (y + width)}
 
-        checks: List[Dict[str, str]] = []
+        checks: list[dict[str, str]] = []
 
         def add(code: str, severity: str, message: str):
             checks.append({"code": code, "severity": severity, "message": message})
@@ -268,14 +269,14 @@ class SimulationEngine:
             elif front_gap - d < tol:
                 add("drawer_tight", "fragile",
                     f"Drawers fit with only {front_gap - d:.1f} cm to spare (within +/-{tol} cm).")
-            for ob, poly in zip(room.obstacles, self._obstacle_polys):
+            for ob, poly in zip(room.obstacles, self._obstacle_polys, strict=True):
                 if drawer_zone.intersection(poly).area > EPS:
                     add("drawer_blocked", "fail", f"Drawers would hit '{ob.name}'.")
             if drawer_zone.intersection(self.swing_zone).area > EPS:
                 add("drawer_in_swing", "warning", "Drawer zone overlaps the door swing area.")
 
         # 6. Obstacles -------------------------------------------------------
-        for ob, poly in zip(room.obstacles, self._obstacle_polys):
+        for ob, poly in zip(room.obstacles, self._obstacle_polys, strict=True):
             clash = self._clash(fp, poly)
             if clash == "overlap":
                 add("obstacle_overlap", "fail", f"Item overlaps '{ob.name}'.")
@@ -334,20 +335,20 @@ class SimulationEngine:
                 "footprint": _coords(fp),
                 "drawer_zone": _coords(drawer_zone),
                 "door_swing_zone": _coords(self.swing_zone),
-                "obstacles": {o.name: _coords(p) for o, p in zip(room.obstacles, self._obstacle_polys)},
+                "obstacles": {o.name: _coords(p) for o, p in zip(room.obstacles, self._obstacle_polys, strict=True)},
             },
         }
 
     # ------------------------------ public API ------------------------------ 
     def evaluate_fit(self, item: FurnitureItem, x_cm: float, y_cm: float,
-                     rotation_deg: int = 0, suggest: bool = True) -> Dict[str, Any]:
+                     rotation_deg: int = 0, suggest: bool = True) -> dict[str, Any]:
         result = self._evaluate(item, x_cm, y_cm, rotation_deg)
         if suggest and result["status"] != "PASS":
             result["suggestions"] = self._suggest(item, result, x_cm, y_cm, rotation_deg)
         return result
 
     def find_placements(self, item: FurnitureItem, step_cm: float = 20.0,
-                        limit: int = 3) -> List[Dict[str, Any]]:
+                        limit: int = 3) -> list[dict[str, Any]]:
         """Grid-search positions and both rotations; best statuses first."""
         if not self._doorway_ok(item, 0):
             return []  # no placement can fix a doorway failure
@@ -369,8 +370,8 @@ class SimulationEngine:
         return [{"x_cm": px, "y_cm": py, "rotation_deg": rot, "status": st}
                 for _, px, py, rot, st in found[:limit]]
 
-    def _suggest(self, item, result, x, y, rotation) -> List[str]:
-        tips: List[str] = []
+    def _suggest(self, item, result, x, y, rotation) -> list[str]:
+        tips: list[str] = []
         codes = {c["code"] for c in result["checks"]}
         gaps = result["gaps_cm"]
 
@@ -403,17 +404,21 @@ class SimulationEngine:
                 tips.append("No placement of this item works in this room: try a smaller model.")
         return tips
 
-
-# --------------------------------------------------------------------------- #
-if __name__ == "__main__":
-    room = Room(length_cm=400, width_cm=300,
-                door=Door(wall="-y", offset_cm=50, width_cm=80, height_cm=200))
-    desk = FurnitureItem("Executive Standing Desk", 160, 80, 75, drawer_depth_cm=40, front_faces="+y")
-
-    engine = SimulationEngine(room)
-    res = engine.evaluate_fit(desk, 0, 80)
-    print("=== Simulation Result ===")
-    print("Status:", res["status"])
-    print("Failures:", res["failures"])
-    print("Warnings:", res["warnings"])
-    print("Suggestions:", res["suggestions"])
+    # --------------------------- walkway probe ------------------------------ 
+    def walkway_reach(self, item: FurnitureItem, x_cm: float, y_cm: float,
+                      rotation_deg: int = 0) -> dict[str, Any]:
+        """Is the door still reachable at the required clearance, and does the item carve
+        the floor into pockets? Exposed so the service can report the pocket count as a
+        number instead of reading it back out of a message."""
+        length, width = (item.length_cm, item.width_cm) if rotation_deg == 0 else (item.width_cm, item.length_cm)
+        footprint = box(x_cm, y_cm, x_cm + length, y_cm + width)
+        clearance = self.room.min_walkway_clearance_cm
+        base_ok, base_pockets = self._baseline(clearance)
+        if not base_ok:
+            return {"entrance_walkable": False, "isolated_pockets": 0, "skipped": True}
+        ok, pockets = self._reach(footprint, clearance)
+        return {
+            "entrance_walkable": ok,
+            "isolated_pockets": max(0, pockets - base_pockets),
+            "skipped": False,
+        }

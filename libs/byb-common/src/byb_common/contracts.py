@@ -37,6 +37,9 @@ class ProductGeometry(JsonModel):
     depth_cm: float = Field(gt=0, description="Product depth in centimetres.")
     height_cm: float = Field(gt=0, description="Product height in centimetres.")
     clearance_cm: float = Field(default=10.0, ge=0, description="Walkway to keep around the product.")
+    drawer_depth_cm: float = Field(
+        default=0.0, ge=0, description="Pull-out depth in front of the facing side; 0 means nothing extends."
+    )
 
 
 class ProductPart(JsonModel):
@@ -105,6 +108,9 @@ class RoomScan(JsonModel):
     measured: bool = False
     method: str = "declared"
     confidence: float = Field(default=0.0, ge=0, le=1)
+    door_width_m: float = Field(default=0.85, gt=0, description="Clear opening width; a box has to pass through it.")
+    door_height_m: float = Field(default=2.0, gt=0, description="Clear opening height.")
+    door_offset_m: float = Field(default=0.0, ge=0, description="Hinge distance along the front wall.")
 
 
 class FitPlacement(JsonModel):
@@ -128,6 +134,13 @@ class FitReport(JsonModel):
     verdict: str
     obstacles: list[Obstacle] = Field(default_factory=list)
     door_swing_m: float = Field(default=0.85, description="Quarter-circle the room door sweeps; geometry owns the value.")
+    # The delivery path: can the box get in, and can you still walk around it once it is in.
+    door_pass: str = Field(default="unknown", description="pass | tight | blocked | unknown.")
+    walkway_connected: bool = Field(default=True, description="False when the entrance is cut off at the required clearance.")
+    isolated_pockets: int = Field(default=0, description="Floor areas the item seals off from the door.")
+    fragile: bool = Field(default=False, description="Passes on the stated numbers but breaks inside the survey tolerance.")
+    tolerance_cm: float = Field(default=2.0, description="Measurement margin the fragile check is judged against.")
+    suggestions: list[str] = Field(default_factory=list, description="What to change, from the same rules that produced the verdict.")
 
 
 class SceneCamera(JsonModel):

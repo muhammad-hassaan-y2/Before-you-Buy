@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     # Room side is metres; product side arrives in centimetres.
     min_walkway_m: float = 0.6
     wall_padding_m: float = 0.05
+    # How far off a photo or declared measurement may be before a pass stops counting as a pass.
+    tolerance_cm: float = 2.0
 
 
 settings = Settings()

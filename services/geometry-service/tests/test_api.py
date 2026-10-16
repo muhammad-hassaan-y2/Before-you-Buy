@@ -57,6 +57,31 @@ def test_photo_obstacles_are_reasons_in_the_report(client):
     assert any("object 1 (photo)" in conflict for conflict in report["conflicts"])
 
 
+def test_a_box_that_cannot_clear_the_doorway_is_not_a_fit(client, transport):
+    body = scan(
+        profile={
+            "name": "Wardrobe",
+            "category": "wardrobe",
+            "geometry": {"width_cm": 120, "depth_cm": 100, "height_cm": 130, "clearance_cm": 60},
+        }
+    )
+    report = client.post("/v1/fit", json=body).json()
+    assert report["door_pass"] == "blocked"
+    assert report["verdict"] == "blocked"
+    assert any("doorway" in conflict for conflict in report["conflicts"])
+    handed_on = transport.calls[-1][2]["fit"]
+    assert handed_on["door_pass"] == "blocked"
+    assert handed_on["suggestions"]
+
+
+def test_the_measurement_margin_travels_with_the_report(client):
+    report = client.post("/v1/fit", json=scan()).json()
+    assert report["tolerance_cm"] == 2.0
+    # 85 cm through an 85 cm door: it passes, and the report says that is inside the margin.
+    assert report["door_pass"] == "tight"
+    assert report["fragile"] is True
+
+
 def test_a_missing_profile_fails_the_simulation(client, transport):
     report = client.post("/v1/fit", json=scan(profile=None)).json()
     assert report is None
