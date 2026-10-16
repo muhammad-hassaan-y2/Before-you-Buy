@@ -1,21 +1,26 @@
 # Buy You Before - Inference Service
 
 Turns a product URL (or a shopper's notes about a photo) into a real-world
-`ProductProfile` with centimetre dimensions, using a vLLM OpenAI-compatible endpoint.
+`ProductProfile` with centimetre dimensions, using an **AMD Token Factory**
+OpenAI-compatible chat endpoint (`VLLM_BASE_URL` / `VLLM_API_KEY` / `VLLM_MODEL`).
 
 ## Routes
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| GET | `/healthz` | model + transport status |
-| POST | `/v1/enrich` | synchronous `SimulationRequested` -> `ProductProfile` |
+| GET | `/healthz` | model, `llm_configured`, transport |
+| POST | `/v1/profile` | enrich only (Token Factory prove; no geometry forward) |
+| POST | `/v1/enrich` | synchronous `SimulationRequested` -> `ProductProfile` + forward |
 | POST | `/events` | Dapr subscription target for `simulation.requested` |
+
+Token Factory wiring: see `scripts/amd-layer-a.md`. Paste base URL and model id only from official Token Factory documentation.
 
 ## Degradation
 
-When no vLLM endpoint answers, `products.fallback_profile` supplies category
-heuristics at `confidence=0.25` and tags the profile `source="heuristic"`, so a demo
-still completes end to end and the UI shows where the numbers came from.
+Successful enrichments set `source` / `provider` to `amd_token_factory` and
+`model` to `VLLM_MODEL`. When Token Factory is unset, unauthorized, times out,
+or returns invalid JSON, `fallback_profile` uses listing/category heuristics
+with `source="heuristic"`.
 
 ## Poetry
 
@@ -25,9 +30,3 @@ poetry run dev            # :8002
 poetry run start
 poetry run test
 ```
-
-## AMD ROCm
-
-The compose stack starts vLLM from the `vllm/vllm-openai-rocm` image under the `gpu`
-profile. Point `VLLM_BASE_URL` at a managed/remote AMD instance instead and leave the
-profile off to run this service without local GPUs.

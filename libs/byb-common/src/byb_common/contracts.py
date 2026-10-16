@@ -57,7 +57,17 @@ class ProductProfile(JsonModel):
     geometry: ProductGeometry
     confidence: float = Field(default=0.5, ge=0, le=1)
     summary: str = ""
-    source: str = "vllm"
+    # Provenance: "amd_token_factory" | "heuristic" | "catalog" (not self-hosted vLLM).
+    source: str = "heuristic"
+    provider: str | None = Field(default=None, description="e.g. amd_token_factory")
+    model: str | None = Field(default=None, description="Configured model id when LLM-backed")
+    # Per-axis reliability for geometry values that must remain numeric for consumers:
+    # verified | extracted | estimated (never claim estimated axes as verified).
+    dimension_reliability: dict[str, str] = Field(default_factory=dict)
+    measurement_basis: str | None = Field(
+        default=None,
+        description="listing_verified | listing_partial | category_estimate | amd_token_factory",
+    )
     parts: list[ProductPart] = Field(default_factory=list, description="Empty means the engine builds one box.")
 
 
