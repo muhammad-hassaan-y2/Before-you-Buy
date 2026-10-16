@@ -86,14 +86,48 @@ export type FitPlacement = {
   walkway_m: Record<string, number>
 }
 
-export type FitReport = {
-  room_area_m2: number
+export type FitReport = {  room_area_m2: number
   usable_area_m2: number
   placements: FitPlacement[]
   conflicts: string[]
   coverage_pct: number
   verdict: "fits" | "tight" | "too_large" | "blocked"
   obstacles: Obstacle[]
+}
+
+/** What scene-service publishes for the browser engine: metres, right-handed y-up, room
+ *  origin in the corner beside the door hinge. Parts stay in centimetres. */
+export type ScenePlacement = {
+  label: string
+  fits: boolean
+  position_m: [number, number, number]
+  rotation_deg: number
+  walkway_m: Record<string, number>
+}
+
+export type SceneCamera = {
+  label: string
+  position_m: [number, number, number]
+  target_m: [number, number, number]
+  fov_deg: number
+}
+
+export type SceneSpec = {
+  version: string
+  room_width_m: number
+  room_depth_m: number
+  room_height_m: number
+  walls: Obstacle[]
+  door_swing_m: number
+  product_name: string
+  product_category: string
+  parts: ProductPart[]
+  geometry: ProductGeometry
+  clearance_m: number
+  placements: ScenePlacement[]
+  cameras: SceneCamera[]
+  verdict: FitReport["verdict"]
+  coverage_pct: number
 }
 
 export type Simulation = {
@@ -112,6 +146,8 @@ export type Simulation = {
   catalog_candidate?: CatalogCandidate | null
   room_scan?: RoomScan | null
   fit_report?: FitReport | null
+  scene?: SceneSpec | null
+  has_model?: boolean
 }
 
 export type SimulationInput = {

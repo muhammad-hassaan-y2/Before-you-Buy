@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle2, ImageIcon, Link2, Loader2, Ruler, Sofa, X 
 import { useEffect, useRef, useState } from "react"
 
 import { RoomPlan } from "@/components/room-plan"
+import { SceneViewer } from "@/components/scene-viewer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -252,6 +253,13 @@ export function RoomSimulator() {
               <div className="rounded-lg border bg-muted/30 p-3">
                 <RoomPlan widthM={roomWidth} depthM={roomDepth} report={report} placement={activeSpot} obstacles={scan?.obstacles ?? report.obstacles} />
               </div>
+
+              {simulation?.scene && (
+                <div className="space-y-2">
+                  <p className="text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase">In the room, to scale</p>
+                  <SceneViewer spec={simulation.scene} />
+                </div>
+              )}
 
               <dl className="grid grid-cols-3 gap-3 text-sm">
                 {[
