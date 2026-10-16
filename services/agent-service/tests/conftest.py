@@ -92,24 +92,55 @@ class StubPipeline:
         verdict = self._verdicts.get(sku or "", self._verdicts.get("default", "fits"))
         if sku in self._crash:
             return {"id": simulation_id, "status": "failed", "error": "geometry-service unavailable", "has_model": False, "fit_report": None}
+        row = next((item for item in self._rows if str(item["sku"]) == sku), None)
+        geometry = (row or {}).get("geometry") or {"width_cm": 200, "depth_cm": 90, "height_cm": 85}
+        fits = verdict in {"fits", "tight"}
         return {
             "id": simulation_id,
             "status": "completed",
             "error": None,
             "has_model": True,
+            "product_link": f"https://shop.example.com/p/{sku.lower()}/",
             "room_width_m": 4.0,
             "room_depth_m": 3.5,
             "room_height_m": 2.4,
-            "product_profile": {"name": sku, "geometry": {"width_cm": 200, "depth_cm": 90, "height_cm": 85}, "confidence": 0.7},
+            "product_profile": {"name": sku, "geometry": geometry, "confidence": 0.7},
+            "catalog_candidate": {
+                "sku": sku,
+                "name": (row or {}).get("name", sku),
+                "brand": (row or {}).get("brand", ""),
+                "category": (row or {}).get("category", "furniture"),
+                "price_band": (row or {}).get("price_band"),
+                "geometry": geometry,
+                "score": 1.0,
+            },
             "room_scan": {"width_m": 4.0, "depth_m": 3.5, "method": "declared", "obstacles": []},
             "fit_report": {
+                "room_area_m2": 14.0,
+                "usable_area_m2": 13.3,
                 "verdict": verdict,
                 "coverage_pct": 12.5,
-                "conflicts": [] if verdict == "fits" else ["the door swing is blocked"],
+                "conflicts": [] if fits else ["the door swing is blocked"],
+                "suggestions": [] if fits else ["try a piece no wider than 180 cm"],
                 "door_swing_m": 0.85,
+                "door_pass": "pass" if fits else "blocked",
+                "walkway_connected": fits,
+                "isolated_pockets": 0 if fits else 1,
+                "fragile": False,
+                "tolerance_cm": 2.0,
                 "placements": [
-                    {"label": "back wall", "fits": verdict in {"fits", "tight"}, "walkway_m": {"left": 0.9, "right": 0.7, "front": 1.2, "back": 0.0}},
-                    {"label": "side wall", "fits": False, "walkway_m": {"left": 0.2, "right": 0.2, "front": 0.2, "back": 0.2}},
+                    {
+                        "label": "back wall",
+                        "fits": fits,
+                        "footprint_m2": round(float(geometry["width_cm"]) * float(geometry["depth_cm"]) / 10000, 3),
+                        "walkway_m": {"left": 0.9, "right": 0.7, "front": 1.2, "back": 0.0},
+                    },
+                    {
+                        "label": "side wall",
+                        "fits": False,
+                        "footprint_m2": 1.0,
+                        "walkway_m": {"left": 0.2, "right": 0.2, "front": 0.2, "back": 0.2},
+                    },
                 ],
             },
         }

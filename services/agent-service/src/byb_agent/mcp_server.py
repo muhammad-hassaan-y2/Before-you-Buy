@@ -25,11 +25,13 @@ logger = logging.getLogger("byb.mcp")
 INSTRUCTIONS = (
     "Buy You Before checks whether a piece of furniture fits a real room before it is bought. "
     "Read a shopper's brief with read_brief, search catalog_search, then measure with "
-    "simulate_product or start_journey. Trust only a verdict that came back from "
+    "simulate_product, joint_fit or start_journey. Trust only a verdict that came back from "
     "simulate_product, fit_report or journey_status: those run a geometry engine over the "
-    "measured room, the door swing and the walkways. Report the verdict, the coverage "
-    "percentage and the tightest walkway, and hand the case to a person when the decision is "
-    "handoff."
+    "measured room, the doorway, the door swing and the walkways. explain_fit turns a verdict "
+    "into the facts behind it. proven_fit_offer issues a purchasable offer only over a fit the "
+    "engine proved, and reserve_fit holds that piece only on the shopper's own confirmation - "
+    "never invent those words. Report the verdict, the coverage percentage and the tightest "
+    "walkway, and hand the case to a person when the decision is handoff."
 )
 
 
@@ -64,6 +66,20 @@ def register(server: MCPServer, tools: Tools) -> None:
     async def fit_report(simulation_id: str) -> dict[str, Any]:
         return await _answer(tools.fit_report, simulation_id=simulation_id)
 
+    @server.tool(name="explain_fit", description="Read a fit report back in words: the facts behind the verdict and what to change.")
+    async def explain_fit(simulation_id: str) -> dict[str, Any]:
+        return await _answer(tools.explain_fit, simulation_id=simulation_id)
+
+    @server.tool(name="joint_fit", description="Two or more pieces the shopper wants together, judged as one purchase.")
+    async def joint_fit(
+        skus: list[str],
+        room_width_m: float = 4.0,
+        room_depth_m: float = 3.5,
+        room_height_m: float = 2.4,
+        notes: str = "",
+    ) -> dict[str, Any]:
+        return await _answer(tools.joint_fit, skus=skus, notes=notes, room_width_m=room_width_m, room_depth_m=room_depth_m, room_height_m=room_height_m)
+
     @server.tool(name="find_alternatives", description="Same-category pieces no wider than this one, each measured against the room.")
     async def find_alternatives(
         room_width_m: float = 4.0,
@@ -77,6 +93,33 @@ def register(server: MCPServer, tools: Tools) -> None:
         room = {"room_width_m": room_width_m, "room_depth_m": room_depth_m, "room_height_m": room_height_m}
         found = await _answer(tools.find_alternatives, sku=sku, link=link, notes=notes, limit=limit, **room)
         return {"alternatives": found}
+
+    @server.tool(name="proven_fit_offer", description="A purchasable offer over a fit the geometry engine proved. Refuses an unproven piece.")
+    async def proven_fit_offer(simulation_id: str) -> dict[str, Any]:
+        return await _answer(tools.proven_fit_offer, simulation_id=simulation_id)
+
+    @server.tool(name="reserve_fit", description="Hold a proven-fitting piece. Needs the shopper's own yes, never the agent's.")
+    async def reserve_fit(simulation_id: str, confirmation: str) -> dict[str, Any]:
+        return await _answer(tools.reserve_fit, simulation_id=simulation_id, confirmation=confirmation)
+
+    @server.tool(name="returns_estimate", description="What a fit check is worth, as arithmetic over assumptions the caller can change.")
+    async def returns_estimate(
+        orders_per_month: float = 1000,
+        price_band: str | None = None,
+        price_eur: float | None = None,
+        return_rate: float | None = None,
+        fit_share: float | None = None,
+        prevention: float | None = None,
+    ) -> dict[str, Any]:
+        return await _answer(
+            tools.returns_estimate,
+            orders_per_month=orders_per_month,
+            price_band=price_band,
+            price_eur=price_eur,
+            return_rate=return_rate,
+            fit_share=fit_share,
+            prevention=prevention,
+        )
 
     @server.tool(name="start_journey", description="Run the whole fit-assurance process for a shopper brief. Returns a run id to poll.")
     async def start_journey(

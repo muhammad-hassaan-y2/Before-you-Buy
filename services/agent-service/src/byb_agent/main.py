@@ -1,10 +1,11 @@
 """Agent service: the surface an Evolus agent works through.
 
-Three doors, one set of capabilities:
+One set of capabilities, reachable through several doors:
 
 * `/agent/tools` and `/agent/tools/{name}` - REST, for an Evolus workflow step or a webhook.
 * `/mcp/` - the MCP connector, for the agent itself.
 * `/agent/brief`, `/agent/runs`, `/agent/chat` - the shop's own UI.
+* `/agent/reservations` - the holds a human agreed to, waiting on a person at the shop.
 
 Everything upstream is configured by environment: the Evolus workspace, the open model served
 on AMD, and the six-service pipeline. Absent credentials degrade, they do not stall.
@@ -26,7 +27,7 @@ from byb_agent.evolus import Evolus, EvolusError
 from byb_agent.mcp_server import build_server, http_app
 from byb_agent.model import AMDModel
 from byb_agent.pipeline import Pipeline
-from byb_agent.runs import RunStore
+from byb_agent.runs import Reservations, RunStore
 from byb_agent.settings import settings
 from byb_agent.tools import SPEC, Tools
 
@@ -38,10 +39,11 @@ INTERNAL_TOKEN_HEADER = "x-byb-token"
 # Built once, at import, so the MCP app can be mounted before the first request arrives.
 HTTP = httpx.AsyncClient(timeout=httpx.Timeout(30.0, read=120.0))
 STORE = RunStore()
+RESERVATIONS = Reservations()
 PIPELINE = Pipeline(HTTP, settings)
 EVOLUS = Evolus(HTTP, settings)
 MODEL = AMDModel(HTTP, settings)
-TOOLS = Tools(PIPELINE, EVOLUS, MODEL, STORE, settings)
+TOOLS = Tools(PIPELINE, EVOLUS, MODEL, STORE, settings, RESERVATIONS)
 MCP_SERVER = build_server(TOOLS)
 MCP_APP = http_app(MCP_SERVER, settings)
 
@@ -78,6 +80,7 @@ def health() -> dict[str, Any]:
         "mcp": "/mcp",
         "runs": str(len(STORE)),
         "tools": str(len(SPEC)),
+        "reservations": str(len(RESERVATIONS)),
     }
 
 
@@ -120,6 +123,12 @@ def get_run(run_id: str) -> dict[str, Any]:
     if run is None:
         raise HTTPException(status_code=404, detail="unknown run")
     return run.model_dump()
+
+
+@app.get("/agent/reservations")
+def list_reservations(limit: int = 20) -> list[dict[str, Any]]:
+    """Holds the agent took on a shopper's own yes, newest first, waiting on a person."""
+    return TOOLS.list_reservations(limit)
 
 
 @app.post("/agent/webhooks/evolus", status_code=202)

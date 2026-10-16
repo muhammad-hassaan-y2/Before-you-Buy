@@ -1,6 +1,6 @@
 """The MCP connector: what an Evolus agent sees when it attaches to /mcp.
 
-Same seven capabilities as REST, reachable over JSON-RPC, with schemas the model can call.
+Same capabilities as REST, reachable over JSON-RPC, with schemas the model can call.
 """
 
 import asyncio
@@ -12,17 +12,30 @@ from conftest import StubEvolus, StubModel, StubPipeline
 from httpx import ASGITransport
 
 from byb_agent.mcp_server import INSTRUCTIONS, build_server, http_app
-from byb_agent.runs import RunStore
+from byb_agent.runs import Reservations, RunStore
 from byb_agent.tools import Tools, _new_run_id
 
-TOOL_NAMES = {"catalog_search", "read_brief", "simulate_product", "fit_report", "find_alternatives", "start_journey", "journey_status"}
+TOOL_NAMES = {
+    "catalog_search",
+    "read_brief",
+    "simulate_product",
+    "fit_report",
+    "explain_fit",
+    "joint_fit",
+    "find_alternatives",
+    "proven_fit_offer",
+    "reserve_fit",
+    "returns_estimate",
+    "start_journey",
+    "journey_status",
+}
 INITIALIZE = {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "evolus", "version": "test"}}
 HEADERS = {"accept": "application/json, text/event-stream", "content-type": "application/json"}
 
 
 @pytest.fixture
 def server(rows, settings):
-    tools = Tools(StubPipeline(rows, verdicts={"default": "fits"}), StubEvolus(), StubModel(), RunStore(), settings)
+    tools = Tools(StubPipeline(rows, verdicts={"default": "fits"}), StubEvolus(), StubModel(), RunStore(), settings, Reservations())
     return build_server(tools)
 
 
@@ -30,9 +43,10 @@ def test_the_server_is_named_and_tells_the_agent_what_to_trust(server):
     assert server.name == "buy-you-before"
     assert server.instructions == INSTRUCTIONS
     assert "Trust only a verdict" in INSTRUCTIONS
+    assert "never invent those words" in INSTRUCTIONS
 
 
-async def test_the_agent_is_offered_the_same_seven_capabilities_as_rest(server):
+async def test_the_agent_is_offered_the_same_capabilities_as_rest(server):
     assert {tool.name for tool in await server.list_tools()} == TOOL_NAMES
 
 
@@ -47,6 +61,9 @@ async def test_required_arguments_are_required(server):
     by_name = {tool.name: tool for tool in await server.list_tools()}
     assert by_name["read_brief"].input_schema["required"] == ["brief"]
     assert by_name["fit_report"].input_schema["required"] == ["simulation_id"]
+    assert by_name["explain_fit"].input_schema["required"] == ["simulation_id"]
+    assert by_name["reserve_fit"].input_schema["required"] == ["simulation_id", "confirmation"]
+    assert by_name["joint_fit"].input_schema["required"] == ["skus"]
     assert by_name["journey_status"].input_schema["required"] == ["run_id"]
     assert "sku" in by_name["simulate_product"].input_schema["properties"]
 
@@ -79,13 +96,37 @@ async def test_a_journey_started_over_mcp_is_pollable_over_mcp(server):
     assert {step["kind"] for step in run["steps"]} >= {"intake", "agent", "brief", "shortlist", "simulate", "fit", "compare", "reply"}
 
 
+async def test_two_pieces_are_judged_as_one_purchase_over_mcp(server):
+    joint = _payload(await server.call_tool("joint_fit", {"skus": ["SOF-001", "ARM-001"], "room_width_m": 4.2, "room_depth_m": 3.4}))
+    assert joint["tested"] == ["SOF-001", "ARM-001"]
+    assert joint["combined"]["verdict"] == "fits"
+    assert joint["combined"]["footprint_m2"] > 0
+
+
+async def test_an_offer_and_a_hold_share_the_same_gate_over_mcp(server):
+    measured = _payload(await server.call_tool("simulate_product", {"sku": "SOF-002"}))
+    simulation_id = measured["attempt"]["simulation_id"]
+
+    offer = _payload(await server.call_tool("proven_fit_offer", {"simulation_id": simulation_id}))
+    assert offer["offer"]["sku"] == "SOF-002"
+    assert offer["fit_evidence"]["verdict"] == "fits"
+
+    refused = await _expect_error(server.call_tool("reserve_fit", {"simulation_id": simulation_id, "confirmation": "i think so"}))
+    assert "shopper's own yes" in refused
+    held = _payload(await server.call_tool("reserve_fit", {"simulation_id": simulation_id, "confirmation": "yes"}))
+    assert held["status"] == "pending_merchant"
+    assert held["confirmation"] == "yes"
+
+
+async def test_the_business_math_is_a_tool_the_agent_can_quote(server):
+    figures = _payload(await server.call_tool("returns_estimate", {"orders_per_month": 500, "price_band": "$$$"}))
+    assert figures["returns_prevented_per_month"] == 16.8
+    assert figures["assumptions"]["average_order_value_eur"] == 1500.0
+
+
 async def test_an_unknown_run_is_told_to_the_model_in_words(server):
-    try:
-        result = await server.call_tool("journey_status", {"run_id": _new_run_id()})
-        assert result.is_error
-        assert "unknown run" in str(result.content)
-    except Exception as exc:  # the SDK raises an anticipated tool failure at this level
-        assert "unknown run" in str(exc)
+    refused = await _expect_error(server.call_tool("journey_status", {"run_id": _new_run_id()}))
+    assert "unknown run" in refused
 
 
 async def test_the_http_endpoint_answers_initialize(server, settings):
@@ -117,6 +158,16 @@ async def test_a_tunnel_host_is_accepted_and_another_origin_is_not(settings):
             refused = await client.post("/", json=_envelope("initialize", INITIALIZE), headers={**HEADERS, "origin": "https://somewhere-else.test"})
     assert accepted.status_code == 200, accepted.text
     assert refused.status_code == 403, "a foreign Origin is refused, not served"
+
+
+async def _expect_error(call) -> str:
+    """The words a refused tool call puts in front of the model, whichever way the SDK carried it."""
+    try:
+        result = await call
+    except Exception as exc:  # the SDK raises an anticipated tool failure at this level
+        return str(exc)
+    assert result.is_error, "the tool answered instead of refusing"
+    return str(result.content)
 
 
 def _payload(result) -> dict:

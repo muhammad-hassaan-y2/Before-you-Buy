@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 
 from byb_agent import main
 from byb_agent.contracts import AgentRun
-from byb_agent.runs import RunStore
+from byb_agent.runs import Reservations, RunStore
 from byb_agent.tools import SPEC, Tools
 
 
@@ -35,12 +35,14 @@ def api(client, rows, settings, monkeypatch):
     evolus = StubEvolus()
     model = StubModel()
     store = RunStore()
+    reservations = Reservations()
     monkeypatch.setattr(main, "STORE", store)
+    monkeypatch.setattr(main, "RESERVATIONS", reservations)
     monkeypatch.setattr(main, "PIPELINE", pipeline)
     monkeypatch.setattr(main, "EVOLUS", evolus)
     monkeypatch.setattr(main, "MODEL", model)
-    monkeypatch.setattr(main, "TOOLS", Tools(pipeline, evolus, model, store, settings))
-    return SimpleNamespace(client=client, pipeline=pipeline, evolus=evolus, model=model, store=store)
+    monkeypatch.setattr(main, "TOOLS", Tools(pipeline, evolus, model, store, settings, reservations))
+    return SimpleNamespace(client=client, pipeline=pipeline, evolus=evolus, model=model, store=store, reservations=reservations)
 
 
 def settled(client: TestClient, run_id: str, timeout: float = 5.0) -> dict:
@@ -94,6 +96,35 @@ def test_a_tool_that_needs_a_product_says_what_is_missing(api):
     response = api.client.post("/agent/tools/simulate_product", json={})
     assert response.status_code == 422
     assert "sku" in response.json()["detail"]
+
+
+def test_the_new_capabilities_are_callable_over_rest(api):
+    """Same numbers through the workflow door as through the connector, including the human gate."""
+    measured = api.client.post("/agent/tools/simulate_product", json={"sku": "SOF-001"}).json()["result"]
+    simulation_id = measured["attempt"]["simulation_id"]
+
+    explained = api.client.post("/agent/tools/explain_fit", json={"simulation_id": simulation_id}).json()["result"]
+    assert explained["verdict"] == "fits"
+    assert explained["door_pass"] == "pass"
+
+    offer = api.client.post("/agent/tools/proven_fit_offer", json={"simulation_id": simulation_id}).json()["result"]
+    assert offer["offer"]["sku"] == "SOF-001"
+    assert offer["fit_evidence"]["verify"] == f"/api/v1/simulations/{simulation_id}"
+
+    refused = api.client.post("/agent/tools/reserve_fit", json={"simulation_id": simulation_id, "confirmation": "maybe?"})
+    assert refused.status_code == 422
+    assert "own yes" in refused.json()["detail"]
+
+    held = api.client.post("/agent/tools/reserve_fit", json={"simulation_id": simulation_id, "confirmation": "yes"}).json()["result"]
+    assert held["status"] == "pending_merchant"
+    assert [item["id"] for item in api.client.get("/agent/reservations").json()] == [held["id"]]
+    assert api.client.get("/healthz").json()["reservations"] == "1"
+
+
+def test_a_multi_piece_brief_is_answered_over_rest(api):
+    body = api.client.post("/agent/tools/joint_fit", json={"skus": ["SOF-001", "BCK-001"]}).json()["result"]
+    assert [piece["sku"] for piece in body["pieces"]] == ["SOF-001", "BCK-001"]
+    assert body["combined"]["verdict"] == "fits"
 
 
 def test_a_brief_starts_a_journey_the_browser_can_poll(api):

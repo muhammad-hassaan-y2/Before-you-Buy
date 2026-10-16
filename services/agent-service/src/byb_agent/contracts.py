@@ -85,6 +85,23 @@ class AgentRun(JsonModel):
     error: str | None = None
 
 
+class Reservation(JsonModel):
+    """A hold a shopper asked for on a piece the pipeline proved fits.
+
+    Not an order: nothing is charged and nothing ships. It is the record a merchant accepts,
+    and it carries the words the confirmation came in, so a person can audit the gate.
+    """
+
+    id: str
+    simulation_id: str
+    sku: str | None = None
+    name: str | None = None
+    verdict: str | None = None
+    confirmation: str = Field(description="What the human said, verbatim.")
+    status: str = Field(default="pending_merchant", description="pending_merchant, accepted or released.")
+    created_at: str = ""
+
+
 class BriefRequest(JsonModel):
     """The input the UI, the widget or a webhook posts to start a run."""
 
