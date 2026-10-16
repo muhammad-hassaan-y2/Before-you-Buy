@@ -59,6 +59,7 @@ async def test_a_blocked_room_widens_the_band_once_then_loops(rows, evolus, mode
     assert branch, "the widening decision has to be visible in the trace"
     assert "widening" in branch[0].detail
     assert {step.iteration for step in steps(finished, "fit")} == {1, 2}
+    assert finished.brief.price_band == "$$", "the trace keeps the band the shopper asked for, not the widened one"
     assert finished.decision.action == "handoff"
 
 

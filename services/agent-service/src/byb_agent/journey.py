@@ -281,20 +281,25 @@ class Journey:
 
     async def _search(self, run: AgentRun, brief: ShopperBrief) -> None:
         """Two passes at most - the shopper's band, then the band below it - and at most
-        `max_candidates` simulations per pass."""
+        `max_candidates` simulations per pass.
+
+        The second pass searches a copy. The brief in the run trace is what the shopper asked
+        for, and widening the search must not quietly rewrite what they said.
+        """
         original_band = brief.price_band
         for iteration in (1, 2):
+            search = brief
             if iteration == 2:
                 next_band = widen(original_band)
                 if next_band is None:
                     add_step(run, "shortlist", status="skipped", iteration=iteration, detail="no lower price band to widen into")
                     return
-                brief.price_band = next_band
+                search = brief.model_copy(update={"price_band": next_band})
                 add_step(run, "branch", status="branch", iteration=iteration, detail=f"nothing in {original_band} fit; widening to {next_band}")
 
             at = _started()
             try:
-                ranked = await self._rank(brief)
+                ranked = await self._rank(search)
             except Exception as exc:  # noqa: BLE001 - catalog down is a failed step, not a crash
                 add_step(run, "shortlist", status="failed", iteration=iteration, detail=str(exc)[:200], tool="GET /api/v1/catalog", ms=_elapsed(at))
                 return
