@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AgentError, chat, fetchTools, pollRun, startJourney, type AgentRun } from "@/lib/agent"
+import { AgentError, chat, fetchReservations, fetchTools, pollRun, returnsEstimate, runCost, startJourney, type AgentRun, type AgentStep } from "@/lib/agent"
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -95,5 +95,83 @@ describe("fetchTools", () => {
   it("unwraps the catalog the agent service publishes", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ tools: [{ name: "simulate_product", description: "Measure one product." }] })))
     await expect(fetchTools()).resolves.toEqual([{ name: "simulate_product", description: "Measure one product." }])
+  })
+})
+
+describe("returnsEstimate", () => {
+  it("spells the assumptions the way the tool does and unwraps its result", async () => {
+    const result = {
+      orders_per_month: 2000,
+      returns_per_month: 600,
+      fit_driven_returns_per_month: 402,
+      returns_prevented_per_month: 40.2,
+      handling_saved_eur_per_month: 402,
+      revenue_kept_eur_per_month: 60300,
+      per_simulation_value_eur: 30.35,
+      assumptions: {
+        return_rate: 0.3,
+        fit_driven_share_of_returns: 0.67,
+        handling_cost_eur_per_return: 10,
+        average_order_value_eur: 1500,
+        share_of_fit_returns_prevented: 0.1,
+        note: "Band prices stand in for the merchant feed until it is wired.",
+      },
+    }
+    const fetch = vi.fn().mockResolvedValue(jsonResponse({ tool: "returns_estimate", result }))
+    vi.stubGlobal("fetch", fetch)
+
+    await expect(returnsEstimate({ ordersPerMonth: 2000, priceBand: "$$$", returnRate: 0.3, prevention: 0.1 })).resolves.toEqual(result)
+    const [url, init] = fetch.mock.calls[0]
+    expect(url).toBe("/agent/tools/returns_estimate")
+    expect(JSON.parse(String(init.body))).toEqual({
+      orders_per_month: 2000,
+      price_band: "$$$",
+      price_eur: null,
+      return_rate: 0.3,
+      fit_share: null,
+      prevention: 0.1,
+    })
+  })
+
+  it("keeps a refused call readable", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ detail: "return_rate must be between 0 and 1" }, 422)))
+    await expect(returnsEstimate({ returnRate: 3 })).rejects.toThrow(AgentError)
+  })
+})
+
+describe("fetchReservations", () => {
+  it("reads the holds a person still has to accept", async () => {
+    const holds = [
+      { id: "r1", simulation_id: "s1", sku: "SOFA-302", name: "Ektorp 3-seat sofa", verdict: "fits", confirmation: "yes hold it", status: "pending_merchant", created_at: "2026-10-16T09:00:00Z" },
+    ]
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(holds)))
+    await expect(fetchReservations(5)).resolves.toEqual(holds)
+  })
+})
+
+describe("runCost", () => {
+  const step = (over: Partial<AgentStep>): AgentStep => ({ index: 0, kind: "fit", status: "ok", detail: "", tool: "geometry-service", group: null, iteration: 1, ms: 100, output: null, ...over })
+
+  it("counts the geometry the worker measured and the calls that went to a model", () => {
+    const finished: AgentRun = {
+      ...run("done"),
+      evolus_execution_id: "exec-9",
+      steps: [
+        step({ kind: "agent", tool: "POST /v1/chat/completions", ms: 700 }),
+        step({ kind: "agent", tool: "POST /v1/chat/completions", status: "skipped", ms: 0 }),
+        step({ kind: "brief", tool: "heuristics", ms: 4 }),
+        step({ kind: "shortlist", tool: "GET /api/v1/catalog", ms: 21 }),
+        step({ kind: "simulate", tool: "POST /api/v1/simulations", ms: 3000 }),
+        step({ detail: "SOFA-302 -> fits", ms: 1500, iteration: 2 }),
+        step({ detail: "SOFA-401 -> tight", ms: 900, iteration: 2 }),
+        step({ kind: "reply", tool: "evolus", ms: 300, iteration: 2 }),
+      ],
+    }
+
+    expect(runCost(finished)).toMatchObject({ total_ms: 6425, fits: 2, model_calls: 2, passes: 2, slowest: { label: "simulate", ms: 3000 } })
+  })
+
+  it("says so when nothing was timed", () => {
+    expect(runCost({ ...run("running"), steps: [step({ ms: 0 })] })).toMatchObject({ total_ms: 0, fits: 1, model_calls: 0, passes: 1, slowest: null })
   })
 })

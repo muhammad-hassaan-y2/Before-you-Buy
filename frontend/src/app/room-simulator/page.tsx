@@ -3,7 +3,9 @@ import type { Metadata } from "next"
 import { AgentChat } from "@/components/agent-chat"
 import { AgentSurface } from "@/components/agent-surface"
 import { FitAgent } from "@/components/fit-agent"
+import { ReservationList } from "@/components/reservation-list"
 import { RoomSimulator } from "@/components/room-simulator"
+import { ValuePanel } from "@/components/value-panel"
 
 export const metadata: Metadata = {
   title: "Buy You Before — Room Simulator",
@@ -42,6 +44,18 @@ export default function RoomSimulatorPage() {
           the same call the agent makes when it tests a candidate.
         </p>
         <RoomSimulator />
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-1 text-lg font-semibold tracking-tight">What the shop gets out of it</h2>
+        <p className="mb-5 max-w-2xl text-sm text-muted-foreground">
+          The same arithmetic the <span className="font-mono text-xs">returns_estimate</span> capability hands an agent, and
+          the holds the agent has taken on a shopper&apos;s own yes. Both are the service&apos;s numbers, not the browser&apos;s.
+        </p>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+          <ValuePanel />
+          <ReservationList />
+        </div>
       </section>
     </div>
   )

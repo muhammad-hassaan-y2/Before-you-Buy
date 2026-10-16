@@ -4,7 +4,7 @@ import { Bot, Check, CircleSlash, GitBranch, Layers, Loader2, MessagesSquare, Se
 
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import type { AgentRun, AgentStep } from "@/lib/agent"
+import { runCost, type AgentRun, type AgentStep } from "@/lib/agent"
 
 const KIND: Record<string, { label: string; icon: typeof Bot }> = {
   intake: { label: "Shopper brief received", icon: MessagesSquare },
@@ -38,6 +38,7 @@ export function AgentRunTrace({ run }: { run: AgentRun }) {
   const passes = [...new Set(run.steps.map((step) => step.iteration))]
   return (
     <div className="space-y-4">
+      <RunCostStrip run={run} />
       {passes.map((pass) => (
         <div key={pass} className="space-y-2">
           {passes.length > 1 && (
@@ -72,6 +73,37 @@ export function AgentRunTrace({ run }: { run: AgentRun }) {
       )}
     </div>
   )
+}
+
+/** What the journey spent, read off its own trace. The verdicts are not token spend: every one
+ *  of them came out of the geometry worker, so the only calls a model took are counted here. */
+export function RunCostStrip({ run }: { run: AgentRun }) {
+  const cost = runCost(run)
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+      <span className="font-mono tabular-nums">{duration(cost.total_ms)} measured</span>
+      <span className="font-mono tabular-nums">
+        {cost.fits} {cost.fits === 1 ? "fit" : "fits"} by the geometry worker
+      </span>
+      <span className="font-mono tabular-nums">
+        {cost.model_calls} model call{cost.model_calls === 1 ? "" : "s"}
+      </span>
+      <span className="font-mono tabular-nums">
+        {cost.passes} search pass{cost.passes === 1 ? "" : "es"}
+      </span>
+      {cost.slowest && <span className="font-mono">slowest {cost.slowest.label} · {cost.slowest.ms} ms</span>}
+      {run.evolus_execution_id && (
+        <Badge variant="outline" className="ml-auto font-mono text-[10px]">
+          evolus {run.evolus_execution_id}
+        </Badge>
+      )}
+    </div>
+  )
+}
+
+function duration(ms: number): string {
+  if (ms < 1000) return `${ms} ms`
+  return `${(ms / 1000).toFixed(1)} s`
 }
 
 function TraceRow({ step }: { step: AgentStep }) {

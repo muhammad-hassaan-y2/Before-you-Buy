@@ -89,6 +89,17 @@ describe("FitAgent", () => {
     expect(screen.getByText("Pass 2")).toBeInTheDocument()
   })
 
+  it("totals what the journey spent, off its own trace", async () => {
+    respondingTo(() => run)
+    render(<FitAgent />)
+    fireEvent.click(screen.getByRole("button", { name: /Find what fits/i }))
+
+    expect(await screen.findByText("4.0 s measured")).toBeInTheDocument()
+    expect(screen.getByText("1 model call")).toBeInTheDocument()
+    expect(screen.getByText("2 search passes")).toBeInTheDocument()
+    expect(screen.getByText("evolus exec-9")).toBeInTheDocument()
+  })
+
   it("marks the recommendation and the evidence behind it", async () => {
     respondingTo(() => run)
     render(<FitAgent />)
