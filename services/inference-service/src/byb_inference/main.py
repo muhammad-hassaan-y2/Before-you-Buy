@@ -1,5 +1,6 @@
-"""Inference worker: reads the product listing, asks vLLM for real-world dimensions and
-hands the measurement to geometry-service."""
+"""Inference worker: reads the product listing, asks an AMD Token Factory
+OpenAI-compatible model for real-world dimensions, then hands the measurement
+to geometry-service."""
 
 from __future__ import annotations
 
@@ -16,6 +17,7 @@ from fastapi import FastAPI, Request
 from byb_common.contracts import ProductProfile, SimulationMeasured, SimulationRequested
 from byb_common.dapr import DaprTransport, publish_event
 from byb_inference.products import extract_context, fallback_profile
+from byb_inference.safe_fetch import FetchError, fetch_product_html
 from byb_inference.settings import settings
 from byb_inference.vllm_client import describe_product
 
@@ -46,19 +48,24 @@ def health() -> dict[str, str]:
     return {
         "service": settings.service_name,
         "status": "ok",
-        "model": settings.vllm_model,
+        "model": settings.vllm_model or "unset",
+        "llm_configured": "true" if settings.llm_configured else "false",
         "transport": "dapr" if settings.dapr_http_endpoint else "http",
     }
 
 
 async def _page_context(client: httpx.AsyncClient, link: str) -> str:
     try:
-        response = await client.get(link, headers={"User-Agent": settings.user_agent}, timeout=settings.scrape_timeout_s)
-        response.raise_for_status()
-    except httpx.HTTPError as exc:
-        logger.warning("could not read %s: %s", link, exc)
+        html_body = await fetch_product_html(
+            client,
+            link,
+            timeout_s=settings.scrape_timeout_s,
+            user_agent=settings.user_agent,
+        )
+    except FetchError as exc:
+        logger.warning("could not safely read %s: %s", link, exc)
         return ""
-    return extract_context(response.text)
+    return extract_context(html_body)
 
 
 def _image_data_uri(image_key: str | None) -> str | None:
@@ -74,12 +81,17 @@ def _image_data_uri(image_key: str | None) -> str | None:
 async def enrich(message: SimulationRequested, client: httpx.AsyncClient) -> ProductProfile:
     context = await _page_context(client, message.product_link) if message.product_link else ""
     if message.shopper_notes:
-        context = f"{context}\nshopper notes: {message.shopper_notes}".strip()
+        note_line = f"shopper notes: {message.shopper_notes.strip()}"
+        context = f"{context}\n{note_line}".strip() if context else note_line
+
     profile = await describe_product(client, context, _image_data_uri(message.image_key))
     if profile is None:
         profile = fallback_profile(context, message.product_link)
     logger.info("simulation %s profiled as %r (%s)", message.simulation_id, profile.name, profile.source)
     return profile
+
+
+
 
 
 async def _forward(request: Request, measured: SimulationMeasured) -> None:
@@ -111,6 +123,13 @@ async def _measure_and_forward(request: Request, message: SimulationRequested) -
         ),
     )
     return profile
+
+
+@app.post("/v1/profile")
+async def profile_endpoint(payload: dict, request: Request) -> dict:
+    """Enrich only (no geometry forward). Used to prove AMD vLLM wiring."""
+    message = SimulationRequested.model_validate(_unwrap(payload))
+    return (await enrich(message, request.app.state.http)).model_dump()
 
 
 @app.post("/v1/enrich")

@@ -55,11 +55,17 @@ services:
     image: vllm/vllm-openai-rocm:latest
     command:
       - --model
-      - ${VLLM_MODEL:-Qwen/Qwen2.5-3B-Instruct}
+      - ${VLLM_MODEL:-Qwen/Qwen2.5-7B-Instruct}
       - --max-model-len
       - "8192"
       - --gpu-memory-utilization
       - "0.85"
+      - --dtype
+      - float16
+      - --api-key
+      - ${VLLM_API_KEY:-byb-amd-hackathon}
+      - --tool-call-parser
+      - hermes
     environment:
       HSA_ENABLE_SDMA: "0"
       HF_HOME: /cache/huggingface
@@ -129,8 +135,11 @@ services:
       DAPR_HTTP_ENDPOINT: ${DAPR_INFERENCE_ENDPOINT:-http://dapr-inference-service:3500}
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}
       GEOMETRY_URL: http://geometry-service:8003
-      VLLM_BASE_URL: ${VLLM_BASE_URL:-http://vllm:8000/v1}
-      VLLM_MODEL: ${VLLM_MODEL:-Qwen/Qwen2.5-3B-Instruct}
+      # OpenAI-compatible AMD Token Factory (or any compatible host). Values from .env only.
+      VLLM_BASE_URL: ${VLLM_BASE_URL:-}
+      VLLM_MODEL: ${VLLM_MODEL:-}
+      VLLM_API_KEY: ${VLLM_API_KEY:-}
+      VLLM_TIMEOUT_S: ${VLLM_TIMEOUT_S:-60}
       VLLM_SUPPORTS_VISION: ${VLLM_SUPPORTS_VISION:-false}
       UPLOAD_DIR: /uploads
     volumes:
