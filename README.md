@@ -153,13 +153,14 @@ images add `--no-root` because the dependency layer is built before `src/` exist
 | `POST` | `/v1/scan` · `/events` | vision-service sync and subscription entry points |
 | `POST` | `/v1/fit` · `/events` | geometry-service sync and subscription entry points |
 | `POST` | `/v1/render` · `/events` | scene-service sync and subscription entry points |
-| `GET` | `/agent/tools` | the seven capabilities, in the shape an Evolus AI Tool list wants |
+| `GET` | `/agent/tools` | the capabilities, in the shape an Evolus AI Tool list wants |
 | `POST` | `/agent/tools/{name}` | invoke one capability with a JSON body — the endpoint Evolus calls |
 | `POST` | `/agent/brief` | start a journey from a shopper's words, returns a run id to poll |
 | `GET` | `/agent/runs` · `/agent/runs/{id}` | the trace: every step, its driver, its duration, the decision |
 | `POST` | `/agent/chat` | talk to the Evolus agent, or to the AMD model when Evolus is not configured |
 | `POST` | `/agent/webhooks/evolus?run={id}` | where an Evolus workflow puts its result |
-| `POST` | `/mcp/` | the same seven capabilities as an MCP connector (streamable HTTP, stateless) |
+| `GET` | `/agent/reservations` | the holds the agent took, waiting on a person at the shop |
+| `POST` | `/mcp/` | the same capabilities as an MCP connector (streamable HTTP, stateless) |
 
 ## Data model
 
@@ -249,7 +250,7 @@ each step records its own driver.
 
 ## The agent, and the Evolus building blocks it uses
 
-`agent-service` is one FastAPI app with three doors and no privileged path into the
+`agent-service` is one FastAPI app with several doors and no privileged path into the
 pipeline:
 
 | Door | Shape | Used by |
@@ -258,10 +259,19 @@ pipeline:
 | REST tools | `/agent/tools`, `/agent/tools/{name}` | an Evolus workflow step or AI Tool |
 | Webhook | `/agent/webhooks/evolus?run={id}` | a workflow putting its result back |
 | Shop UI | `/agent/brief`, `/agent/runs`, `/agent/chat` | the Next.js page, proxied so keys stay server-side |
+| Holds | `/agent/reservations` | the shop's own queue of holds a human agreed to |
 
-The seven capabilities are `catalog_search`, `read_brief`, `simulate_product`, `fit_report`,
-`find_alternatives`, `start_journey` and `journey_status`. A foreseeable failure (unknown
-SKU, unknown run) is reported to the model in words, not as a crash.
+Twelve capabilities, one implementation behind every door. Measuring: `catalog_search`,
+`read_brief`, `simulate_product`, `fit_report`, `explain_fit`, `joint_fit`,
+`find_alternatives`. Deciding: `start_journey`, `journey_status`. Acting and costing:
+`proven_fit_offer`, `reserve_fit`, `returns_estimate`. A foreseeable failure (unknown SKU, an
+unproven piece, a hold without a yes) is reported to the model in words, not as a crash.
+
+The three that carry the commerce are deliberately conservative. An **offer** can only be
+raised over a fit the geometry engine signed; a **hold** re-reads that proof and refuses unless
+the caller passes the shopper's own confirmation words, and what it writes is a request a
+person at the shop accepts or releases - nothing is charged and nothing ships. The business
+number is arithmetic over assumptions the caller can see and override, never a model's guess.
 
 Five Evolus building blocks are in play: the **custom MCP server**, **custom REST
 endpoints/webhooks**, a **workflow** with a conditional branch (recommend vs. handoff), a

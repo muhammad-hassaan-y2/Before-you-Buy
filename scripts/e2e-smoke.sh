@@ -128,6 +128,26 @@ print("parallel:", len({s.get("group") for s in steps if s.get("group")}), "grou
 print("decision:", dec.get("action"), dec.get("sku"), "confidence", dec.get("confidence"))
 print("reply   :", (run.get("reply") or "")[:100])'
 
+echo "--- POST /agent/tools/{name} (the commercial surface) ---"
+# The same fit report the widget shows, read back in words, then priced, held and costed.
+PROVEN=$(curl -s -X POST "http://127.0.0.1:$AGENT_PORT/agent/tools/simulate_product" -H 'Content-Type: application/json' \
+  -d '{"sku":"SOFA-301","room_width_m":4.0,"room_depth_m":3.5}')
+SIM=$(printf '%s' "$PROVEN" | "$PY" -c "import json,sys;print(json.load(sys.stdin)['result']['attempt']['simulation_id'])")
+curl -s -X POST "http://127.0.0.1:$AGENT_PORT/agent/tools/explain_fit" -H 'Content-Type: application/json' \
+  -d "{\"simulation_id\":\"$SIM\"}" | "$PY" -c 'import json,sys; r=json.load(sys.stdin)["result"]; print("explain:", r["plain"][:160]); print("        door", r["door_pass"], "| fragile", r["fragile"], "| walkway", r["tightest_walkway_m"], "m")'
+curl -s -X POST "http://127.0.0.1:$AGENT_PORT/agent/tools/joint_fit" -H 'Content-Type: application/json' \
+  -d '{"skus":["SOFA-301","CHR-101"],"room_width_m":4.0,"room_depth_m":3.5}' | "$PY" -c 'import json,sys; r=json.load(sys.stdin)["result"]; c=r["combined"]; print("joint   :", c["verdict"], "|", c["footprint_m2"], "m2 of", c["usable_area_m2"], "| walkway", c["tightest_walkway_m"], "m"); [print("        ", p["sku"], p["verdict"]) for p in r["pieces"]]'
+curl -s -X POST "http://127.0.0.1:$AGENT_PORT/agent/tools/proven_fit_offer" -H 'Content-Type: application/json' \
+  -d "{\"simulation_id\":\"$SIM\"}" | "$PY" -c 'import json,sys; r=json.load(sys.stdin)["result"]; o=r["offer"]; print("offer   :", o["sku"], o["price_band"], o["price_eur"], o["currency"], "| proof", r["fit_evidence"]["verify"])'
+GATE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$AGENT_PORT/agent/tools/reserve_fit" -H 'Content-Type: application/json' \
+  -d "{\"simulation_id\":\"$SIM\",\"confirmation\":\"the agent thinks they would like it\"}")
+echo "gate    : a hold without the shopper's own yes -> HTTP $GATE"
+curl -s -X POST "http://127.0.0.1:$AGENT_PORT/agent/tools/reserve_fit" -H 'Content-Type: application/json' \
+  -d "{\"simulation_id\":\"$SIM\",\"confirmation\":\"yes\"}" | "$PY" -c 'import json,sys; r=json.load(sys.stdin)["result"]; print("hold    :", r["id"], r["status"], "| confirmed with", repr(r["confirmation"]))'
+echo "queue   : $(curl -s "http://127.0.0.1:$AGENT_PORT/agent/reservations" | "$PY" -c 'import json,sys;print(len(json.load(sys.stdin)), "reservation(s) waiting on a person")')"
+curl -s -X POST "http://127.0.0.1:$AGENT_PORT/agent/tools/returns_estimate" -H 'Content-Type: application/json' \
+  -d '{"orders_per_month":2000,"price_band":"$$"}' | "$PY" -c 'import json,sys; r=json.load(sys.stdin)["result"]; print("value   :", r["returns_prevented_per_month"], "of", r["returns_per_month"], "returns prevented/mo =", r["revenue_kept_eur_per_month"], "EUR kept +", r["handling_saved_eur_per_month"], "EUR handling")'
+
 echo "--- MCP tools/list over /mcp ---"
 curl -s -X POST "http://127.0.0.1:$AGENT_PORT/mcp/" \
   -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \

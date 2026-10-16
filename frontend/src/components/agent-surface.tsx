@@ -40,8 +40,8 @@ export function AgentSurface() {
           <Wrench className="size-4 text-primary" /> What the agent is allowed to do
         </CardTitle>
         <CardDescription>
-          Same seven capabilities over three doors: the MCP connector for the agent, REST for an Evolus workflow step, and
-          this page. The agent can only ever do what a shopper's browser can do.
+          Every capability is the same function behind three doors: the MCP connector for the agent, REST for an Evolus
+          workflow step, and this page. The agent can only ever do what a shopper&apos;s browser can do.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

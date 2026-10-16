@@ -7,7 +7,18 @@ export const tools = {
     { name: "read_brief", description: "Turn a shopper's own words into a category, a price band and a room size." },
     { name: "simulate_product", description: "Measure one product against one room and wait for the fit verdict." },
     { name: "fit_report", description: "The verdict, placements and walkways for a simulation already run." },
+    {
+      name: "explain_fit",
+      description: "Read a fit report back in words: the facts behind the verdict and what to change.",
+    },
+    {
+      name: "joint_fit",
+      description: "Judge two or more pieces as one purchase, measuring each and combining the footprints.",
+    },
     { name: "find_alternatives", description: "Pieces in the same category that are no wider, each tested against the room." },
+    { name: "proven_fit_offer", description: "An agent-readable offer that only a proven fit can back." },
+    { name: "reserve_fit", description: "Hold a proven-fitting piece, gated behind the shopper's own confirmation." },
+    { name: "returns_estimate", description: "What a fit check is worth, as arithmetic over stated assumptions." },
     { name: "start_journey", description: "Run the whole fit-assurance process for a shopper brief." },
     { name: "journey_status", description: "The trace of a journey, including the final decision." },
   ],

@@ -1,16 +1,18 @@
 # agent-service
 
 The agent layer. It gives the Evolus agent the ability to act on this shop: search the
-catalog, measure a product against a real room, widen the search when nothing fits, and hand
-the case to a person when it should.
+catalog, measure a product against a real room, widen the search when nothing fits, explain a
+verdict in words, price the purchase, hold a piece on the shopper's own word, and hand the case
+to a person when it should.
 
-Three doors, one set of capabilities:
+One set of capabilities, reachable through several doors:
 
 | Door | For | Purpose |
 | --- | --- | --- |
 | `/mcp/` | the Evolus MCP connector, Claude Code, Evolus Studio | the tools the agent calls while it reasons |
 | `/agent/tools/{name}` | an Evolus workflow step or webhook | the same tools over plain REST |
 | `/agent/brief`, `/agent/runs/{id}`, `/agent/chat` | the shop's own UI | start a journey, watch its trace, talk to the agent |
+| `/agent/reservations` | the shop | the holds a human agreed to, still waiting on a person |
 
 ## The process it runs
 
@@ -30,6 +32,15 @@ produced it, its duration and its loop pass:
 A verdict is only ever what geometry-service reported for the measured room. The agent never
 claims a fit it did not test.
 
+The capabilities that go past measuring are held to the same rule. `explain_fit` turns a
+report into facts a shopper can read; `joint_fit` judges a set of pieces as one purchase by
+adding their footprints and walkways, and says so when it estimated one. `proven_fit_offer`
+raises an offer only over a fit the engine signed, and carries the simulation id so another
+agent can verify it. `reserve_fit` re-reads that proof and refuses unless the caller passes the
+shopper's own confirmation words - the result is a request a person at the shop accepts or
+releases, never a charge. `returns_estimate` is arithmetic over assumptions the caller sees and
+can override.
+
 ## Configuration
 
 | Variable | Meaning |
@@ -43,6 +54,7 @@ claims a fit it did not test.
 | `VLLM_BASE_URL`, `VLLM_MODEL`, `VLLM_API_KEY` | the open model served on AMD hardware |
 | `PUBLIC_BASE_URL` | this service's reachable URL, used as the workflow `callbackUrl` |
 | `MAX_CANDIDATES`, `PARALLEL_FITS`, `SETTLE_TIMEOUT_S` | loop and fan-out boundaries |
+| `MAX_JOINT_PIECES`, `MAX_JOINT_COVERAGE`, `MIN_WALKWAY_M` | how many pieces a multi-piece verdict may add up, and the room it must leave clear |
 
 Nothing is required to be set. With no Evolus key the run still completes against the
 pipeline and the trace says which steps were skipped; with no model endpoint the heuristics
@@ -59,6 +71,7 @@ read the brief and the trace says so too.
 | GET | `/agent/runs` / `/agent/runs/{id}` | recent runs, one run's full trace |
 | POST | `/agent/webhooks/evolus` | where a workflow puts its result (`?run=<id>`) |
 | POST | `/agent/chat` | chat with the agent; Evolus when configured, the AMD model otherwise |
+| GET | `/agent/reservations` | the holds a human agreed to, newest first |
 | POST | `/mcp/` | MCP over streamable HTTP |
 
 ## Poetry
