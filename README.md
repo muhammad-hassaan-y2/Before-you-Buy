@@ -1,14 +1,21 @@
-# Buy You Before — Room Simulator
+# Buy You Before — the fit agent
 
-Check whether a piece of furniture actually fits your room **before** you buy it.
-Paste a product link (or upload a room photo), and the stack works out the item's real
-dimensions and tests its footprint against your walls, door swing and walkway.
+An e-commerce agent that answers the one question that stops a purchase: **will it fit my
+room?** A shopper says it in their own words — "three-seater sofa under 900, and I need to
+walk past it to the balcony" — and the agent shortlists the catalog, runs a real fit
+simulation for every candidate through the same API a shopper's browser uses, and only then
+recommends. Every step it took is on screen, including the ones it skipped.
 
-Six FastAPI services, one Next.js app, Postgres for state, Dapr for the transport,
-OpenCV for the room and vLLM (AMD ROCm) for product understanding.
+Seven FastAPI services, one Next.js app, Postgres for state, Dapr for the transport, OpenCV
+for the room, Shapely for the geometry, vLLM on AMD for product understanding and listing
+reading, and Evolus for the agent, its workflows and its widget.
 
 ```
-browser ──> Next.js :3000 ──/api/v1──> api-gateway :8001 ──SQLAlchemy──> Postgres
+                        ┌─ Next.js :3000 ─/agent──> agent-service :8007
+                        │                                 │  MCP / REST / webhooks
+browser ────────────────┤                                 ▼
+                        │                          Evolus + AMD-hosted model
+                        └─/api/v1──> api-gateway :8001 ──SQLAlchemy──> Postgres
                                             │  simulation.requested (Dapr pub/sub)
                                             ▼
                                      catalog-service :8004 ──SKU match──> candidate
@@ -29,6 +36,11 @@ browser ──> Next.js :3000 ──/api/v1──> api-gateway :8001 ──SQLAl
                                        api-gateway (persists, browser polls)
 ```
 
+The agent does not get a private door into the pipeline. It posts to
+`/api/v1/simulations` and polls `/api/v1/simulations/{id}` exactly like the front page does,
+which is what makes a recommendation defensible to a merchant: the fit it reports is the fit
+the geometry worker computed, not one a model asserted.
+
 Each hop also posts to `/api/v1/internal/progress`, which is what moves the step
 indicator in the UI while the chain is running.
 
@@ -43,8 +55,9 @@ services/inference-service/     vLLM product dimensions, catalog prior, heuristi
 services/vision-service/        OpenCV room photo -> dimensions and floor obstacles
 services/geometry-service/      Shapely fit analysis and placement candidates
 services/scene-service/         SceneSpec + glTF 2.0 document for the 3D view and download
-frontend/                       Next.js 16 app, page at /room-simulator
-docker-compose.yml              postgres + redis + 6 services + 6 daprd + vllm + frontend
+services/agent-service/         the agent: MCP connector, REST tools, Evolus client, journeys
+frontend/                       Next.js 16 app: /room-simulator (agent) and /workspace (3D)
+docker-compose.yml              postgres + redis + 7 services + daprd sidecars + vllm + frontend
 ruff.toml                       one lint config for every Poetry project
 Makefile                        up / down / logs / build / test / install
 scripts/e2e-smoke.sh            drives one full simulation without Docker
@@ -83,18 +96,20 @@ make install                                  # or run `poetry install` per dire
 (cd services/vision-service  && poetry run dev)   # :8005
 (cd services/geometry-service  && poetry run dev) # :8003
 (cd services/scene-service     && poetry run dev) # :8006
+(cd services/agent-service     && poetry run dev) # :8007, no sidecar needed
 (cd frontend                 && pnpm dev)         # :3000
 ```
 
-`bash scripts/e2e-smoke.sh` boots all six services and drives one full simulation
-against that Postgres. Ports default to 8001-8006 and can be overridden
-(`GATEWAY_PORT=8101 VISION_PORT=8105 bash scripts/e2e-smoke.sh`) when something else
-holds them — Docker Desktop on Windows is good at holding ports it will not forward.
+`bash scripts/e2e-smoke.sh` boots all seven services and drives one full simulation
+and one agent journey against that Postgres. Ports default to 8001-8007 and can be
+overridden (`GATEWAY_PORT=8101 VISION_PORT=8105 bash scripts/e2e-smoke.sh`) when something
+else holds them — Docker Desktop on Windows is good at holding ports it will not forward.
 SQLite appears only inside `services/api-gateway/tests`, so the suite needs no database
 server.
 
-`API_GATEWAY_URL=http://localhost:8001 pnpm dev` is the default; the proxy is defined in
-`frontend/next.config.ts`, so the browser never learns the gateway origin.
+`API_GATEWAY_URL=http://localhost:8001 AGENT_SERVICE_URL=http://localhost:8007 pnpm dev` is
+the default; both proxies are defined in `frontend/next.config.ts`, so the browser never
+learns the gateway origin and never sees the Evolus key.
 
 Without `DAPR_HTTP_ENDPOINT`, `libs/byb-common/src/byb_common/dapr.py` routes calls
 straight to each service URL. Set it to the sidecar (`http://127.0.0.1:3500`) and the
@@ -112,8 +127,10 @@ there is no Dapr state store to keep in sync (and daprd 1.18 no longer bundles
 | any service | `poetry run dev` | uvicorn with reload |
 | any service | `poetry run start` | single worker, what the container runs |
 | any service | `poetry run test` | that service's pytest suite |
-| repo root | `make test` | all six service suites |
-| repo root | `make lint` | ruff over all six, using `ruff.toml` |
+| repo root | `make test` | all seven service suites |
+| repo root | `make lint` | ruff over all seven, using `ruff.toml` |
+| `frontend/` | `pnpm test` | Vitest unit tests for the client, the engine maths and the panels |
+| `frontend/` | `pnpm test:e2e` | Playwright against `/room-simulator` and `/workspace` |
 
 Needs Poetry 2.x: metadata lives in the PEP 621 `[project]` table while the
 path dependency stays in `[tool.poetry.dependencies]`, which 1.8 rejects. The
@@ -136,6 +153,13 @@ images add `--no-root` because the dependency layer is built before `src/` exist
 | `POST` | `/v1/scan` · `/events` | vision-service sync and subscription entry points |
 | `POST` | `/v1/fit` · `/events` | geometry-service sync and subscription entry points |
 | `POST` | `/v1/render` · `/events` | scene-service sync and subscription entry points |
+| `GET` | `/agent/tools` | the seven capabilities, in the shape an Evolus AI Tool list wants |
+| `POST` | `/agent/tools/{name}` | invoke one capability with a JSON body — the endpoint Evolus calls |
+| `POST` | `/agent/brief` | start a journey from a shopper's words, returns a run id to poll |
+| `GET` | `/agent/runs` · `/agent/runs/{id}` | the trace: every step, its driver, its duration, the decision |
+| `POST` | `/agent/chat` | talk to the Evolus agent, or to the AMD model when Evolus is not configured |
+| `POST` | `/agent/webhooks/evolus?run={id}` | where an Evolus workflow puts its result |
+| `POST` | `/mcp/` | the same seven capabilities as an MCP connector (streamable HTTP, stateless) |
 
 ## Data model
 
@@ -191,15 +215,141 @@ served on demand — the polling payload only carries `has_model`.
 
 ## vLLM on AMD
 
-`inference-service` calls an OpenAI-compatible endpoint (`VLLM_BASE_URL`, default
-`http://vllm:8000/v1`). The compose `gpu` profile runs `vllm/vllm-openai-rocm` with
-`/dev/kfd` and `/dev/dri` passed through — that needs an AMD MI-series host, so on a
-laptop leave the profile off. Set `VLLM_MODEL` to a vision model and
-`VLLM_SUPPORTS_VISION=true` to feed the uploaded room photo to the model as well.
+Two services use a model, and both speak to one OpenAI-compatible endpoint:
+`inference-service` reads product listings for dimensions, `agent-service` uses the same
+endpoint for brief reading, replies and the fallback chat. Both read `VLLM_BASE_URL`
+(default `http://vllm:8000/v1`), `VLLM_MODEL` and `VLLM_API_KEY`.
+
+The compose `gpu` profile runs `vllm/vllm-openai-rocm` with `/dev/kfd` and `/dev/dri`
+passed through — that needs an AMD MI-series host, so on a laptop leave the profile off.
+Set `VLLM_MODEL` to a vision model and `VLLM_SUPPORTS_VISION=true` to feed the uploaded room
+photo to the model as well.
+
+On an AMD Developer Cloud droplet (MI300X) the serving line is:
+
+```bash
+docker run --rm --network host --device=/dev/kfd --device=/dev/dri --group-add video \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  vllm/vllm-openai-rocm:latest \
+  --model Qwen/Qwen2.5-7B-Instruct --host 0.0.0.0 --port 8000 \
+  --dtype float16 --max-model-len 16384 \
+  --api-key "$VLLM_API_KEY" --tool-call-parser hermes
+```
+
+`--api-key` because an exposed endpoint would otherwise be open to the internet, and
+`--tool-call-parser hermes` because that is what makes Qwen's function calling legible to
+vLLM — without it the Evolus agent's tool calls come back as prose. Point the Evolus
+workspace at `https://<droplet>:8000/v1` and its own OpenAI-compatible chat surface at
+`/v1/chat/completions`; calls to your model do not spend workspace credits.
 
 When no endpoint answers, `products.fallback_profile` returns category heuristics tagged
-`source="heuristic"` with `confidence=0.25`, and the UI badge says so. Nothing in the
-demo path depends on a GPU.
+`source="heuristic"` with `confidence=0.25`, and the UI badge says so. Nothing in the demo
+path depends on a GPU, and nothing in the agent path pretends a model spoke when it did not:
+each step records its own driver.
+
+## The agent, and the Evolus building blocks it uses
+
+`agent-service` is one FastAPI app with three doors and no privileged path into the
+pipeline:
+
+| Door | Shape | Used by |
+| --- | --- | --- |
+| MCP connector | `/mcp/` — streamable HTTP, stateless, JSON responses | the Evolus agent, as a custom MCP server |
+| REST tools | `/agent/tools`, `/agent/tools/{name}` | an Evolus workflow step or AI Tool |
+| Webhook | `/agent/webhooks/evolus?run={id}` | a workflow putting its result back |
+| Shop UI | `/agent/brief`, `/agent/runs`, `/agent/chat` | the Next.js page, proxied so keys stay server-side |
+
+The seven capabilities are `catalog_search`, `read_brief`, `simulate_product`, `fit_report`,
+`find_alternatives`, `start_journey` and `journey_status`. A foreseeable failure (unknown
+SKU, unknown run) is reported to the model in words, not as a crash.
+
+Five Evolus building blocks are in play: the **custom MCP server**, **custom REST
+endpoints/webhooks**, a **workflow** with a conditional branch (recommend vs. handoff), a
+parallel fan-out (two fits at a time) and a loop boundary (a widened budget is pass two), the
+**knowledge library** the catalog is uploaded to, and the **chat widget** embedded in the
+front end as one script tag.
+
+A journey is the auditable unit. `GET /agent/runs/{id}` returns the trace the UI draws:
+intake → agent → brief → shortlist → parallel fits → branch → compare → reply, each with its
+`tool`, `ms`, `group` and `iteration`. If the geometry worker never produced a verdict, the
+agent hands the shopper to a person rather than inventing one.
+
+### Setting up the Evolus workspace
+
+```bash
+EVOLUS_BASE_URL=https://api.evolus.ai/api/v1
+EVOLUS_API_KEY=...            # workspace key, never committed
+EVOLUS_APP_ID=...             # X-Application-Id
+EVOLUS_AGENT_ID=...           # agent id for <app>:<agent> model calls
+EVOLUS_WORKFLOW_ID=...        # fit-assurance workflow: branch + parallel fits
+EVOLUS_LIBRARY_ID=...         # knowledge library the catalog is uploaded to
+PUBLIC_BASE_URL=https://<tunnel>   # so callbackUrl and /mcp/ reach us
+```
+
+1. Create the workspace, connect the AMD-hosted model endpoint (base URL + API key). Add an
+   agent and note its id.
+2. Add a **knowledge library** and upload the catalog: `POST /api/v1/memories/{libraryId}/documents`.
+   `poetry -C services/agent-service run python -m byb_agent.evolus_seed` does it from the
+   same 36 SKUs the catalog service serves.
+3. Build the **workflow**: input = shopper brief, a parallel step that calls
+   `POST /agent/tools/simulate_product` per candidate, a conditional branch on the verdict,
+   and a webhook out to `{PUBLIC_BASE_URL}/agent/webhooks/evolus?run={id}`. The REST call is
+   `multipart` — `input`, `parameters` (JSON string) and `callbackUrl` — and Evolus returns
+   `202 { executionId, jobId, traceId }`.
+4. Register the **MCP connector** at `{PUBLIC_BASE_URL}/mcp/`. Set `PUBLIC_BASE_URL` to the
+   tunnel host: the connector turns on DNS-rebinding protection when it knows its own origin,
+   and a foreign `Origin` is then refused with `403`.
+5. Copy the **widget** snippet into `NEXT_PUBLIC_EVOLUS_WIDGET_URL` and it appears on every
+   page. With the variable empty the page renders no widget, which is what a local clone does.
+
+Without `EVOLUS_API_KEY` the service degrades on purpose: briefs are read by the shipped
+heuristics, replies are written from the fit report, and `answered_by` in `/agent/chat` says
+which of the two spoke.
+
+## The shop's own UI
+
+Two pages, both fed only through the proxies in `frontend/next.config.ts` — the browser
+never learns the gateway origin and never sees the Evolus key.
+
+`/room-simulator` is the agent-first page. A shopper writes their brief in their own words;
+the panel then shows what the agent heard (category, band, budget, must-haves, and *which
+reader* produced it), the trace of the journey with each step's driver and duration, parallel
+fan-out marked as such, loop passes as "Pass 2", the verdict for every tested piece with its
+tightest walkway, and the reply. Below it, the classic single-piece simulator, and a chat
+panel that names which brain answered.
+
+`/workspace` is the 3D one: pick a SKU off the shelf, give it a room, and stand it there with
+three.js — floor, walls, the obstacles vision-service found, the door's quarter-circle sweep,
+the product as the part boxes `byb-common` builds for its category, and the clearance
+envelope the geometry worker insisted on. Views are the presets scene-service chose, the
+placement buttons are the fit report's own candidates, and the glTF download is the same
+document. Where WebGL is missing the viewport says so and the measured 2D plan stays.
+
+The Evolus widget is one script tag, loaded only when `NEXT_PUBLIC_EVOLUS_WIDGET_URL` is set.
+
+## Tests
+
+```bash
+make test                        # seven pytest suites
+(cd frontend && pnpm test)       # Vitest: client, engine maths, panels
+(cd frontend && pnpm test:e2e)   # Playwright against both pages
+(cd frontend && pnpm build)      # the type check the images are built with
+bash scripts/e2e-smoke.sh        # one full simulation and one journey, no Docker
+```
+
+`pnpm test:e2e` boots its own `next dev` unless `E2E_BASE_URL` points at a running stack, and
+stubs the services it talks to, so a red run means the front end broke rather than the network.
+
+## Hackathon submission checklist
+
+- [x] Public repo: agent tooling, MCP connector, workflow webhook, configs (`docker-compose.yml`, `.env.example`, `components/`) and this README.
+- [x] Containerized: `docker compose up --build` runs the whole stack, no GPU required.
+- [x] AMD layer: an open model served on ROCm/vLLM and exposed as an OpenAI-compatible endpoint; the workspace points at it, so its calls cost no Evolus credits.
+- [x] Five Evolus building blocks: MCP connector, REST endpoints, a workflow with a conditional branch, a parallel step and a loop boundary, the knowledge library, and the chat widget.
+- [x] No committed keys: everything lands in `.env`, and `.env.example` documents each name.
+- [ ] Live demo URL: expose the stack and set `PUBLIC_BASE_URL` to the same origin, or the workflow callback and the MCP connector will not reach you.
+- [ ] Pitch slides and walkthrough video: record `/room-simulator` end to end — brief, trace, verdict — then the same piece in `/workspace`.
+
 
 ## Notes
 
