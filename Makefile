@@ -1,6 +1,6 @@
 SERVICES := api-gateway catalog-service inference-service vision-service geometry-service scene-service agent-service
 
-.PHONY: up down logs build rebuild test lint install clean
+.PHONY: up down logs build rebuild test lint eval install clean
 
 up: ## run the full stack (add `PROFILE=gpu` to start vLLM)
 	docker compose $(if $(PROFILE),--profile $(PROFILE),--profile none) up --build -d
@@ -30,6 +30,12 @@ lint: ## ruff over all services with host Poetry
 	@for s in $(SERVICES); do \
 		(cd services/$$s && poetry run ruff check src tests) || exit 1; \
 	done
+
+eval: ## score the agent against the golden set (host Poetry)
+	@echo "== geometry-service: re-derive every label"; \
+	(cd services/geometry-service && poetry run pytest -q tests/test_golden_labels.py) || exit 1; \
+	echo "== agent-service: the gate"; \
+	(cd services/agent-service && poetry run eval) || exit 1
 
 install: ## poetry install locally in each service (needs Poetry on the host)
 	(cd libs/byb-common && poetry install)

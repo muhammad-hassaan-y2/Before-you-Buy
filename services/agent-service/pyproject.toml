@@ -28,6 +28,7 @@ ruff = ">=0.6.0"
 start = "byb_agent.main:start"
 dev = "byb_agent.main:dev"
 test = "pytest:main"
+eval = "byb_agent.eval:main"
 
 [tool.pytest.ini_options]
 # Windows: a stale, unreadable %TEMP%\pytest-of-<user> makes the tmp_path fixture fail.

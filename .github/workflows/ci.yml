@@ -28,6 +28,11 @@ jobs:
         run: poetry install
       - name: Test
         run: poetry run pytest -q
+      # geometry-service re-derives the golden labels in the step above; this prints the score
+      # the pitch quotes, and a red run means the agent got worse at saying yes.
+      - name: Golden set
+        if: matrix.service == 'agent-service'
+        run: poetry run eval
 
   frontend:
     runs-on: ubuntu-latest

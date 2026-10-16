@@ -41,6 +41,18 @@ shopper's own confirmation words - the result is a request a person at the shop 
 releases, never a charge. `returns_estimate` is arithmetic over assumptions the caller sees and
 can override.
 
+## The golden set
+
+`poetry run eval` runs the journey over `evals/golden_briefs.json` - fifteen briefs, each with
+the catalog rows it shortlists and the verdict geometry-service gave each box in that room - and
+prints a scoreboard. It reads no network: with no Evolus key and no model endpoint, the
+heuristics do the reading and the labels do the measuring, so a red run is a judgement that got
+worse, not a wire that came loose.
+
+Three numbers are gated: brief accuracy, decision accuracy, and false fits, which must be zero.
+The labels themselves are re-derived by `services/geometry-service/tests/test_golden_labels.py`,
+so the file is engine output under test rather than a set of opinions someone typed.
+
 ## Configuration
 
 | Variable | Meaning |
@@ -81,4 +93,5 @@ poetry install
 poetry run dev            # :8007
 poetry run start
 poetry run test
+poetry run eval           # score the agent against the golden set
 ```

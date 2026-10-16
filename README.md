@@ -129,6 +129,7 @@ there is no Dapr state store to keep in sync (and daprd 1.18 no longer bundles
 | any service | `poetry run test` | that service's pytest suite |
 | repo root | `make test` | all seven service suites |
 | repo root | `make lint` | ruff over all seven, using `ruff.toml` |
+| repo root | `make eval` | the golden set: labels re-derived by geometry, then the agent scored against them |
 | `frontend/` | `pnpm test` | Vitest unit tests for the client, the engine maths and the panels |
 | `frontend/` | `pnpm test:e2e` | Playwright against `/room-simulator` and `/workspace` |
 
@@ -283,6 +284,23 @@ A journey is the auditable unit. `GET /agent/runs/{id}` returns the trace the UI
 intake → agent → brief → shortlist → parallel fits → branch → compare → reply, each with its
 `tool`, `ms`, `group` and `iteration`. If the geometry worker never produced a verdict, the
 agent hands the shopper to a person rather than inventing one.
+
+### How good is it?
+
+`evals/golden_briefs.json` is fifteen shopper briefs, the catalog rows each one shortlists, and
+the verdict geometry-service gave each of those boxes in each of those rooms - 38 verdicts in
+all. Two CI steps keep that file honest: geometry-service re-derives every verdict from the
+engine, so a label cannot quietly rot into an opinion, and agent-service is then scored against
+the labels through the real journey.
+
+`make eval` prints the scoreboard, and the same gate runs as a test. Today: 15/15 briefs read as
+written, 15/15 decisions as the labels say, and **0 false fits** among 13 recommendations - the
+only number that matters for a product whose whole promise is a fit claim a merchant can stand
+behind, because a false "it fits" is precisely the return the demo exists to prevent. The set is
+deliberately built around the ways an agent can be wrong, not only right: a piece that sits on
+the floor but cannot get through the door, a brief vague enough to spend nothing on, a room
+where nothing fits and the search has to widen and still hand off, and a shopper who wrote the
+room in centimetres.
 
 ### Setting up the Evolus workspace
 
