@@ -44,9 +44,10 @@ export const journey = {
     { index: 1, kind: "agent", status: "ok", detail: "handed to the Evolus agent", tool: "POST /v1/chat/completions", group: null, iteration: 1, ms: 640, output: null },
     { index: 2, kind: "brief", status: "ok", detail: "sofa · $$ · 900", tool: "evolus", group: null, iteration: 1, ms: 120, output: null },
     { index: 3, kind: "shortlist", status: "ok", detail: "4 candidates", tool: "GET /api/v1/catalog", group: null, iteration: 1, ms: 18, output: null },
-    { index: 4, kind: "simulate", status: "ok", detail: "KURA fitted", tool: "POST /api/v1/simulations", group: "fits", iteration: 1, ms: 2800, output: null },
-    { index: 5, kind: "branch", status: "branch", detail: "no candidate cleared the walkway, widening the band", tool: null, group: null, iteration: 2, ms: 0, output: null },
-    { index: 6, kind: "reply", status: "ok", detail: "drafted from the fit report", tool: "evolus", group: null, iteration: 2, ms: 700, output: null },
+    { index: 4, kind: "simulate", status: "ok", detail: "KURA fitted", tool: "POST /api/v1/simulations", group: "pass-1", iteration: 1, ms: 2800, output: null },
+    { index: 5, kind: "fit", status: "ok", detail: "BYB-KURA-3S -> fits", tool: "geometry-service", group: "pass-1", iteration: 1, ms: 2400, output: { simulation_id: "sim-e2e-1" } },
+    { index: 6, kind: "branch", status: "branch", detail: "no candidate cleared the walkway, widening the band", tool: null, group: null, iteration: 2, ms: 0, output: null },
+    { index: 7, kind: "reply", status: "ok", detail: "drafted from the fit report", tool: "evolus", group: null, iteration: 2, ms: 700, output: null },
   ],
   attempts: [
     {
@@ -87,6 +88,41 @@ export const journey = {
   conversation_id: null,
   error: null,
 }
+
+/** What `returns_estimate` answered for those inputs, taken off the live service on 2026-10-16. */
+export const estimate = {
+  tool: "returns_estimate",
+  result: {
+    orders_per_month: 1000,
+    returns_per_month: 200,
+    fit_driven_returns_per_month: 134,
+    returns_prevented_per_month: 33.5,
+    handling_saved_eur_per_month: 335.0,
+    revenue_kept_eur_per_month: 25125.0,
+    per_simulation_value_eur: 25.46,
+    assumptions: {
+      return_rate: 0.2,
+      fit_driven_share_of_returns: 0.67,
+      handling_cost_eur_per_return: 10.0,
+      average_order_value_eur: 750.0,
+      share_of_fit_returns_prevented: 0.25,
+      note: "Band prices stand in for the merchant feed until it is wired; every input above can be overridden by the caller.",
+    },
+  },
+}
+
+export const reservations = [
+  {
+    id: "res-e2e-1",
+    simulation_id: "sim-e2e-1",
+    sku: "BYB-KURA-3S",
+    name: "KURA three-seat sofa",
+    verdict: "fits",
+    confirmation: "yes, hold the KURA for me",
+    status: "pending_merchant",
+    created_at: "2026-10-16T09:12:00Z",
+  },
+]
 
 export const catalog = [
   {
@@ -146,6 +182,13 @@ export const simulation = {
     verdict: "fits",
     conflicts: [],
     obstacles: [{ label: "window recess", ring: [[0, 0], [1.2, 0], [1.2, 0.3], [0, 0.3]], height_m: 1.1, source: "photo" }],
+    door_swing_m: 0.85,
+    door_pass: "tight",
+    walkway_connected: true,
+    isolated_pockets: 0,
+    fragile: true,
+    tolerance_cm: 2,
+    suggestions: ["Measure the doorway as well as the room: the box is inside 2 cm of the frame."],
     placements: [
       {
         label: "against the long wall",

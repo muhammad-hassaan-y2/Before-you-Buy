@@ -56,3 +56,14 @@ test("the measured plan stays under the 3D view", async ({ page }) => {
   await expect(page.getByText("13.6 m² usable")).toBeVisible()
   await expect(page.locator("svg").first()).toBeVisible()
 })
+
+test("the verdict carries the delivery path the engine checked", async ({ page }) => {
+  await page.goto("/workspace")
+  await page.getByRole("button", { name: /KURA three-seat sofa/ }).click()
+  await page.getByRole("button", { name: /Place it in 3D/i }).click()
+
+  await expect(page.getByText("doorway is tight")).toBeVisible()
+  await expect(page.getByText("fragile by 2 cm")).toBeVisible()
+  await expect(page.getByText(/reality is off by 2 cm/)).toBeVisible()
+  await expect(page.getByText("Measure the doorway as well as the room: the box is inside 2 cm of the frame.")).toBeVisible()
+})
