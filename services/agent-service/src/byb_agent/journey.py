@@ -31,6 +31,8 @@ logger = logging.getLogger("byb.journey")
 DEFAULT_ROOM = (4.0, 3.5, 2.4)
 PASS_VERDICTS = {"fits", "tight"}
 FAIL_VERDICTS = {"blocked", "too_large"}
+# A piece resting flush against a wall leaves no gap there, and a gap of nil is not a walkway.
+RESTING_TOLERANCE_M = 0.01
 
 
 def _started() -> float:
@@ -81,13 +83,17 @@ def note_for(brief: ShopperBrief, candidate: dict) -> str:
 
 
 def best_walkway(fit: dict[str, Any]) -> dict[str, float]:
-    """The roomiest walkway among the placements that actually fit - the evidence to show a shopper."""
+    """The roomiest walkway among the placements that actually fit - the evidence to show a shopper.
+
+    Sides the piece rests against are left out: a wall-touching sofa reports a 0 m gap at the
+    back, and quoting that to a shopper as "no walkway" would be wrong twice over.
+    """
     gaps: dict[str, float] = {}
     best = -1.0
     for placement in fit.get("placements") or []:
         if not placement.get("fits"):
             continue
-        walkway = {str(key): float(value) for key, value in (placement.get("walkway_m") or {}).items()}
+        walkway = {str(key): float(value) for key, value in (placement.get("walkway_m") or {}).items() if float(value) > RESTING_TOLERANCE_M}
         floor = min(walkway.values()) if walkway else 0.0
         if floor > best:
             best, gaps = floor, walkway
