@@ -389,6 +389,8 @@ def profile_from_candidate(candidate: CatalogCandidate) -> ProductProfile:
         confidence=max(0.6, candidate.score),
         summary=f"Matched catalog SKU {candidate.sku} from the listing text; the room is sized around those published dimensions.",
         source="catalog",
+        dimension_reliability={axis: "verified" for axis in ("width_cm", "depth_cm", "height_cm")},
+        measurement_basis="catalog_sku",
     )
 
 

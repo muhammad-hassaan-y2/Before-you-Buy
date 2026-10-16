@@ -150,6 +150,14 @@ def test_enrich_success_reaches_vision_with_token_factory_profile(tf_settings):
     vision = recorder["vision_payload"]
     assert vision["simulation_id"] == ENRICH_BODY["simulation_id"]
     assert vision["profile"]["source"] == "amd_token_factory"
+    assert vision["profile"]["provider"] == "amd_token_factory"
+    assert vision["profile"]["model"] == "example-model-id"
+    assert vision["profile"]["dimension_reliability"] == {
+        "width_cm": "extracted",
+        "depth_cm": "extracted",
+        "height_cm": "extracted",
+    }
+    assert vision["profile"]["measurement_basis"] == "amd_token_factory"
     assert vision["profile"]["geometry"]["width_cm"] == 228
     assert vision["room_width_m"] == 4.0
     assert recorder["vision_token"] == "test-internal-token"

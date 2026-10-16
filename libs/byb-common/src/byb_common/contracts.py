@@ -69,7 +69,7 @@ class ProductProfile(JsonModel):
     dimension_reliability: dict[str, str] = Field(default_factory=dict)
     measurement_basis: str | None = Field(
         default=None,
-        description="listing_verified | listing_partial | category_estimate | amd_token_factory",
+        description="listing_verified | listing_partial | category_estimate | catalog_sku | amd_token_factory",
     )
     parts: list[ProductPart] = Field(default_factory=list, description="Empty means the engine builds one box.")
 

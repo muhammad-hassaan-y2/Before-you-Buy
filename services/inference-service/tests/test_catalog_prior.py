@@ -25,6 +25,9 @@ def test_catalog_candidate_beats_a_guess():
     assert profile.geometry.width_cm == 218
     assert profile.confidence >= 0.6
     assert profile.parts, "a catalog SKU always knows its own box breakdown"
+    # Published SKU sizes, so nothing here may be flagged to the shopper as a guess.
+    assert profile.measurement_basis == "catalog_sku"
+    assert all(status == "verified" for status in profile.dimension_reliability.values())
 
 
 def test_heuristics_now_carry_parts_for_the_engine():

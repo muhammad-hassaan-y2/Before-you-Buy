@@ -73,6 +73,46 @@ def test_dispatches_then_records_result(client, dispatcher):
     assert len(client.get("/api/v1/simulations").json()) == 1
 
 
+def test_dimension_provenance_survives_storage(client, dispatcher):
+    """The browser reads the stored JSON, so the reliability map must round-trip."""
+    profile = ProductProfile(
+        name="Unknown shelf",
+        category="bookcase",
+        geometry=ProductGeometry(width_cm=80, depth_cm=28, height_cm=202, clearance_cm=60),
+        source="heuristic",
+        confidence=0.35,
+        dimension_reliability={"width_cm": "verified", "depth_cm": "verified", "height_cm": "estimated"},
+        measurement_basis="listing_partial",
+    )
+    accepted = client.post(
+        "/api/v1/simulations",
+        data={"link": "https://example.com/shelf", "room_width_m": 4, "room_depth_m": 3, "room_height_m": 2.4},
+    )
+    simulation_id = accepted.json()["id"]
+    fit = FitReport(
+        room_area_m2=12,
+        usable_area_m2=11.6,
+        placements=[],
+        conflicts=[],
+        coverage_pct=18.9,
+        verdict="tight",
+    )
+    client.post(
+        "/api/v1/internal/results",
+        json=SimulationCompleted(simulation_id=simulation_id, status="completed", profile=profile, fit=fit).model_dump(),
+        headers={"x-byb-token": "test-token"},
+    )
+
+    stored = client.get(f"/api/v1/simulations/{simulation_id}").json()["product_profile"]
+    assert stored["source"] == "heuristic"
+    assert stored["dimension_reliability"] == {
+        "width_cm": "verified",
+        "depth_cm": "verified",
+        "height_cm": "estimated",
+    }
+    assert stored["measurement_basis"] == "listing_partial"
+
+
 def test_unknown_simulation(client):
     assert client.get("/api/v1/simulations/deadbeef").status_code == 404
 
