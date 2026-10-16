@@ -36,7 +36,8 @@ VLLM_TIMEOUT_S=60
 
 See [scripts/amd-layer-a.md](../../../scripts/amd-layer-a.md).
 
-`ProductProfile.source` remains `vllm` on success for UI compatibility; this is **not** self-hosted vLLM.
+`ProductProfile.source` is `amd_token_factory` on success, with `provider`, `model`,
+`dimension_reliability` and `measurement_basis` alongside it; this is **not** self-hosted vLLM.
 
 ## Inference commands
 

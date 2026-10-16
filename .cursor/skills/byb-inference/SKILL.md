@@ -42,9 +42,9 @@ api-gateway  --simulation.requested-->  inference-service :8002
 
 ## Invariants (do not break)
 
-1. **Always return a `ProductProfile`** from `enrich`. If vLLM fails or is down, call `fallback_profile` — demos must complete without a GPU.
-2. **Tag provenance**: `source="vllm"` (Token Factory success; name kept for UI) or `source="heuristic"`.
-3. **Keep `confidence` in `[0, 1]`**. Today: vLLM `0.72`, heuristic `0.25`. If you add real scores, still clamp and document.
+1. **Always return a `ProductProfile`** from `enrich`. If Token Factory fails or is down, call `fallback_profile` — demos must complete without a GPU.
+2. **Tag provenance**: `source="amd_token_factory"` (model read), `"catalog"` (published SKU box) or `"heuristic"`; mark each footprint axis in `dimension_reliability` as `extracted` / `verified` / `estimated` and set `measurement_basis`. Never leave an estimated axis unlabelled — the UI warns the shopper from it.
+3. **Keep `confidence` in `[0, 1]`.** Today: Token Factory `0.72`, catalog `>= 0.6`, heuristic `0.25`–`0.45`. If you add real scores, still clamp and document.
 4. **Dimensions in centimetres** on `ProductGeometry`; clamp with existing `MAX_DIMENSION_CM` (800). Geometry service expects cm and converts to metres.
 5. **Forward after enrich**: publish `simulation.measured` via Dapr, else HTTP `geometry-service` `/v1/measure`. Do not POST results to the gateway from inference.
 6. **Shared uploads**: read images only as `UPLOAD_DIR / Path(image_key).name` (basename only — no traversal).
