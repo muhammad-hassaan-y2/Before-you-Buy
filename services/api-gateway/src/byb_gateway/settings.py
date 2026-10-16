@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     pubsub_name: str = "byb-pubsub"
     internal_token: str = "dev-internal-token"
 
-    inference_url: str = "http://localhost:8002"
-    geometry_url: str = "http://localhost:8003"
+    # Head of the worker chain; every later hop is addressed by the workers themselves.
+    catalog_url: str = "http://localhost:8004"
 
     upload_dir: str = "/uploads"
     max_upload_mb: int = 12

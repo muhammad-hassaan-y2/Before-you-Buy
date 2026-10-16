@@ -27,7 +27,8 @@ class Settings(BaseSettings):
     pubsub_name: str = "byb-pubsub"
     internal_token: str = "dev-internal-token"
 
-    geometry_url: str = "http://localhost:8003"
+    vision_url: str = "http://localhost:8005"
+    gateway_url: str = "http://localhost:8001"
 
     # OpenAI-compatible chat API (AMD Token Factory). Env names kept for compatibility.
     # Leave empty until Token Factory docs provide the official base URL and model id.

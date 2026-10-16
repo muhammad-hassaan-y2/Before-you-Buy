@@ -3,6 +3,13 @@
 
 const BASE = "/api/v1"
 
+export type ProductPart = {
+  label: string
+  size_cm: [number, number, number]
+  offset_cm: [number, number, number]
+  tone: string
+}
+
 export type ProductGeometry = {
   width_cm: number
   depth_cm: number
@@ -20,6 +27,50 @@ export type ProductProfile = {
   confidence: number
   summary: string
   source: string
+  parts?: ProductPart[]
+}
+
+export type CatalogCandidate = {
+  sku: string
+  name: string
+  brand: string
+  category: string
+  material?: string | null
+  price_band?: string | null
+  geometry: ProductGeometry
+  parts?: ProductPart[]
+  score: number
+  source: string
+}
+
+export type SimulationStage =
+  | "pending"
+  | "cataloguing"
+  | "enriching"
+  | "measuring"
+  | "scanning"
+  | "fitting"
+  | "rendering"
+  | "completed"
+  | "failed"
+
+export type Obstacle = {
+  label: string
+  /** Polygon ring in metres, room-local. */
+  ring: [number, number][]
+  height_m: number
+  source: string
+}
+
+export type RoomScan = {
+  width_m: number
+  depth_m: number
+  height_m: number
+  obstacles: Obstacle[]
+  /** False when the photo could not be read and the shopper's own numbers stood. */
+  measured: boolean
+  method: "declared" | "photo" | "photo-ignored"
+  confidence: number
 }
 
 export type FitPlacement = {
@@ -28,6 +79,11 @@ export type FitPlacement = {
   area_m2: number
   footprint_m2: number
   fits: boolean
+  centre_x_m: number
+  centre_y_m: number
+  rotation_deg: number
+  /** Gap in metres on each face: left, right, front, back. */
+  walkway_m: Record<string, number>
 }
 
 export type FitReport = {
@@ -37,11 +93,12 @@ export type FitReport = {
   conflicts: string[]
   coverage_pct: number
   verdict: "fits" | "tight" | "too_large" | "blocked"
+  obstacles: Obstacle[]
 }
 
 export type Simulation = {
   id: string
-  status: "pending" | "enriching" | "measuring" | "completed" | "failed"
+  status: SimulationStage
   product_link?: string | null
   image_key?: string | null
   created_at: string
@@ -52,6 +109,8 @@ export type Simulation = {
   room_height_m: number
   shopper_notes?: string | null
   product_profile?: ProductProfile | null
+  catalog_candidate?: CatalogCandidate | null
+  room_scan?: RoomScan | null
   fit_report?: FitReport | null
 }
 
@@ -96,6 +155,23 @@ export async function createSimulation(input: SimulationInput): Promise<{ id: st
 
 export async function fetchSimulation(id: string): Promise<Simulation> {
   const response = await fetch(`${BASE}/simulations/${id}`, { cache: "no-store" })
+  if (!response.ok) throw new ApiError(await message(response))
+  return response.json()
+}
+
+export type CatalogRow = {
+  sku: string
+  name: string
+  brand: string
+  category: string
+  material?: string | null
+  price_band?: string | null
+  geometry: ProductGeometry
+}
+
+/** The gateway proxies catalog-service, so the browser still talks to one origin. */
+export async function fetchCatalog(): Promise<CatalogRow[]> {
+  const response = await fetch(`${BASE}/catalog`, { cache: "no-store" })
   if (!response.ok) throw new ApiError(await message(response))
   return response.json()
 }

@@ -1,4 +1,4 @@
-import type { FitPlacement, FitReport } from "@/lib/api"
+import type { FitPlacement, FitReport, Obstacle } from "@/lib/api"
 
 const PADDING_M = 0.4
 const DOOR_SWING_M = 0.85
@@ -8,10 +8,12 @@ type Props = {
   depthM: number
   report: FitReport
   placement?: FitPlacement | null
+  /** Furniture already on the floor, from the room photo or the shopper. */
+  obstacles?: Obstacle[]
 }
 
 /** Top-down plan drawn straight from the Shapely polygons (metres -> SVG units). */
-export function RoomPlan({ widthM, depthM, report, placement }: Props) {
+export function RoomPlan({ widthM, depthM, report, placement, obstacles = [] }: Props) {
   const viewBoxWidth = widthM + PADDING_M * 2
   const viewBoxHeight = depthM + PADDING_M * 2
   // SVG y grows downward; room coordinates grow away from the front wall.
@@ -26,7 +28,7 @@ export function RoomPlan({ widthM, depthM, report, placement }: Props) {
       viewBox={`${-PADDING_M} ${-PADDING_M} ${viewBoxWidth} ${viewBoxHeight}`}
       className="w-full"
       role="img"
-      aria-label={`Room ${widthM} by ${depthM} metres with ${selected?.label ?? "no placement"}`}
+      aria-label={`Room ${widthM} by ${depthM} metres, ${obstacles.length} object(s) already on the floor, ${selected?.label ?? "no placement"}`}
     >
       <defs>
         <pattern id="grid" width="0.5" height="0.5" patternUnits="userSpaceOnUse">
@@ -57,6 +59,20 @@ export function RoomPlan({ widthM, depthM, report, placement }: Props) {
         strokeDasharray="0.08 0.06"
       />
       <line x1={0} y1={y(0)} x2={0} y2={y(DOOR_SWING_M)} stroke="var(--room-wall)" strokeWidth={0.05} />
+
+      {obstacles.map((obstacle) => (
+        <polygon
+          key={obstacle.label}
+          points={points(obstacle.ring)}
+          fill="var(--room-wall)"
+          fillOpacity={0.18}
+          stroke="var(--room-wall)"
+          strokeOpacity={0.55}
+          strokeWidth={0.02}
+        >
+          <title>{`${obstacle.label} (${obstacle.source}), ${obstacle.height_m.toFixed(2)} m tall`}</title>
+        </polygon>
+      ))}
 
       {selected && (
         <polygon

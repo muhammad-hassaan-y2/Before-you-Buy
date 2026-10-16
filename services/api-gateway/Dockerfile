@@ -4,7 +4,7 @@ FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    POETRY_VERSION=1.8.4 \
+    POETRY_VERSION=2.1.3 \
     POETRY_VIRTUALENVS_CREATE=false
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -18,11 +18,14 @@ WORKDIR /app
 # Dependencies first: this layer only rebuilds when a manifest changes.
 COPY libs/ ./libs/
 COPY services/api-gateway/pyproject.toml services/api-gateway/README.md ./services/api-gateway/
-RUN cd services/api-gateway && poetry install --without dev --no-interaction --no-ansi
+# The dependency layer cannot see src/, so --no-root skips installing the service itself.
+RUN cd services/api-gateway && poetry install --no-root --without dev --no-interaction --no-ansi
 
 COPY services/api-gateway/src/ ./services/api-gateway/src/
 ENV PYTHONPATH=/app/services/api-gateway/src:/app/libs/byb-common/src
 
+# The uploads volume is shared by services running as different uids.
+RUN mkdir -p /uploads && chmod 1777 /uploads
 RUN useradd --create-home --uid 10001 byb
 USER byb
 

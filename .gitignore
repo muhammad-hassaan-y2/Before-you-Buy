@@ -22,6 +22,7 @@ out/
 uploads/
 uploads-e2e/
 *.log
+.pytest-tmp/
 
 # Scratch environments created by scripts/e2e-smoke.sh
 .venv-check/

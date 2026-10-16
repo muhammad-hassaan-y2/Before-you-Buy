@@ -25,6 +25,8 @@ class SimulationDetail(SimulationSummary):
     shopper_notes: str | None = None
     updated_at: datetime
     product_profile: dict | None = None
+    catalog_candidate: dict | None = None
+    room_scan: dict | None = None
     fit_report: dict | None = None
 
 

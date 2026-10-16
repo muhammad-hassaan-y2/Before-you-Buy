@@ -1,4 +1,4 @@
-"""End-to-end POST /v1/enrich with mocked product fetch, Token Factory, and geometry."""
+"""End-to-end POST /v1/enrich with mocked product fetch, Token Factory, and vision handoff."""
 
 from __future__ import annotations
 
@@ -56,7 +56,7 @@ def tf_settings(monkeypatch):
     monkeypatch.setattr(settings, "vllm_api_key", "tf-test-key")
     monkeypatch.setattr(settings, "vllm_timeout_s", 5.0)
     monkeypatch.setattr(settings, "dapr_http_endpoint", None)
-    monkeypatch.setattr(settings, "geometry_url", "http://geometry.example")
+    monkeypatch.setattr(settings, "vision_url", "http://vision.example")
     monkeypatch.setattr(settings, "internal_token", "test-internal-token")
     monkeypatch.setattr("byb_inference.safe_fetch._public_ips", lambda host: ["203.0.113.10"])
     monkeypatch.setattr("byb_inference.vllm_client._retry_delay_s", lambda attempt, response: 0.0)
@@ -72,10 +72,13 @@ def _make_handler(recorder: dict, *, tf_responder):
                 "body": json.loads(request.content.decode()),
             }
             return tf_responder(request)
-        if url.rstrip("/").endswith("/v1/measure"):
-            recorder["geometry_payload"] = json.loads(request.content.decode())
-            recorder["geometry_token"] = request.headers.get("x-byb-token")
+        if url.rstrip("/").endswith("/v1/scan"):
+            recorder["vision_payload"] = json.loads(request.content.decode())
+            recorder["vision_token"] = request.headers.get("x-byb-token")
             return httpx.Response(200, json={"status": "ok"})
+        if "/api/v1/internal/progress" in url:
+            recorder["progress"] = json.loads(request.content.decode())
+            return httpx.Response(200, json={"ok": True})
         # Product page (IP-pinned)
         recorder["product_fetch"] = {
             "url": url,
@@ -94,7 +97,10 @@ def _enrich_client(handler) -> tuple[TestClient, httpx.AsyncClient]:
     app.state.http = http_client
     app.state.transport = DaprTransport(
         dapr_http_endpoint=None,
-        routes={"geometry-service": "http://geometry.example"},
+        routes={
+            "vision-service": "http://vision.example",
+            "api-gateway": "http://gateway.example",
+        },
         token=settings.internal_token,
     )
     return client, http_client
@@ -109,7 +115,7 @@ def _close(client: TestClient, http_client: httpx.AsyncClient) -> None:
         asyncio.run(http_client.aclose())
 
 
-def test_enrich_success_reaches_geometry_with_token_factory_profile(tf_settings):
+def test_enrich_success_reaches_vision_with_token_factory_profile(tf_settings):
     recorder: dict = {}
 
     def tf_responder(request: httpx.Request) -> httpx.Response:
@@ -141,12 +147,12 @@ def test_enrich_success_reaches_geometry_with_token_factory_profile(tf_settings)
     user_content = tf_req["body"]["messages"][-1]["content"]
     assert "228" in user_content or "sofa" in user_content.lower()
 
-    geo = recorder["geometry_payload"]
-    assert geo["simulation_id"] == ENRICH_BODY["simulation_id"]
-    assert geo["profile"]["source"] == "amd_token_factory"
-    assert geo["profile"]["geometry"]["width_cm"] == 228
-    assert geo["room_width_m"] == 4.0
-    assert recorder["geometry_token"] == "test-internal-token"
+    vision = recorder["vision_payload"]
+    assert vision["simulation_id"] == ENRICH_BODY["simulation_id"]
+    assert vision["profile"]["source"] == "amd_token_factory"
+    assert vision["profile"]["geometry"]["width_cm"] == 228
+    assert vision["room_width_m"] == 4.0
+    assert recorder["vision_token"] == "test-internal-token"
     assert recorder["product_fetch"]["host"] == "shop.example"
 
 
@@ -169,8 +175,8 @@ def test_enrich_timeout_falls_back_without_claiming_verified(tf_settings):
     assert body["measurement_basis"] == "listing_verified"
     assert all(v == "verified" for v in body["dimension_reliability"].values())
     assert "estimate" not in body["summary"].lower()
-    assert recorder.get("geometry_payload") is not None
-    assert recorder["geometry_payload"]["profile"]["source"] == "heuristic"
+    assert recorder.get("vision_payload") is not None
+    assert recorder["vision_payload"]["profile"]["source"] == "heuristic"
 
 
 def test_enrich_http_401_falls_back(tf_settings):
@@ -187,7 +193,7 @@ def test_enrich_http_401_falls_back(tf_settings):
 
     assert response.status_code == 200
     assert response.json()["source"] == "heuristic"
-    assert recorder["geometry_payload"]["profile"]["source"] == "heuristic"
+    assert recorder["vision_payload"]["profile"]["source"] == "heuristic"
 
 
 def test_enrich_http_429_then_success(tf_settings):
@@ -208,7 +214,7 @@ def test_enrich_http_429_then_success(tf_settings):
     assert response.status_code == 200
     assert response.json()["source"] == "amd_token_factory"
     assert recorder["tf_calls"] == 2
-    assert recorder["geometry_payload"]["profile"]["source"] == "amd_token_factory"
+    assert recorder["vision_payload"]["profile"]["source"] == "amd_token_factory"
 
 
 def test_enrich_invalid_json_falls_back(tf_settings):
@@ -283,8 +289,8 @@ def test_enrich_notes_only_category_estimate_not_verified(tf_settings):
         url = str(request.url)
         if "/chat/completions" in url:
             return tf_responder(request)
-        if "/v1/measure" in url:
-            recorder["geometry_payload"] = json.loads(request.content.decode())
+        if "/v1/scan" in url:
+            recorder["vision_payload"] = json.loads(request.content.decode())
             return httpx.Response(200, json={"ok": True})
         return httpx.Response(200, text="<html></html>", headers={"content-type": "text/html"})
 
@@ -308,4 +314,4 @@ def test_enrich_notes_only_category_estimate_not_verified(tf_settings):
     assert body["measurement_basis"] == "category_estimate"
     assert all(v == "estimated" for v in body["dimension_reliability"].values())
     assert "not verified" in body["summary"].lower()
-    assert recorder["geometry_payload"]["profile"]["measurement_basis"] == "category_estimate"
+    assert recorder["vision_payload"]["profile"]["measurement_basis"] == "category_estimate"

@@ -3,7 +3,7 @@ FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    POETRY_VERSION=1.8.4 \
+    POETRY_VERSION=2.1.3 \
     POETRY_VIRTUALENVS_CREATE=false
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl libgeos-c1v5 \
@@ -15,7 +15,8 @@ WORKDIR /app
 
 COPY libs/ ./libs/
 COPY services/geometry-service/pyproject.toml services/geometry-service/README.md ./services/geometry-service/
-RUN cd services/geometry-service && poetry install --without dev --no-interaction --no-ansi
+# The dependency layer cannot see src/, so --no-root skips installing the service itself.
+RUN cd services/geometry-service && poetry install --no-root --without dev --no-interaction --no-ansi
 
 COPY services/geometry-service/src/ ./services/geometry-service/src/
 ENV PYTHONPATH=/app/services/geometry-service/src:/app/libs/byb-common/src

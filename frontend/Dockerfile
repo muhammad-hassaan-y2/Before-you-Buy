@@ -9,6 +9,10 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile=false
 
 COPY . .
+# next.config.ts resolves the /api rewrite into the build output, so the gateway
+# address has to exist at build time, not only at runtime.
+ARG API_GATEWAY_URL=http://localhost:8001
+ENV API_GATEWAY_URL=${API_GATEWAY_URL}
 RUN pnpm build
 
 ENV HOSTNAME=0.0.0.0

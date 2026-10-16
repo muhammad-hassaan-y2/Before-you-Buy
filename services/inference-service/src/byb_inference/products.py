@@ -11,7 +11,8 @@ import json
 import re
 from html.parser import HTMLParser
 
-from byb_common.contracts import ProductGeometry, ProductProfile
+from byb_common.contracts import CatalogCandidate, ProductGeometry, ProductProfile
+from byb_common.parts import build_parts
 
 _TAG = re.compile(r"<[^>]+>")
 _META = re.compile(
@@ -364,6 +365,7 @@ def fallback_profile(context: str, link: str | None) -> ProductProfile:
             height_cm=values["height_cm"],
             clearance_cm=float(clearance),
         ),
+        parts=build_parts(category, values["width_cm"], values["depth_cm"], values["height_cm"]),
         confidence=confidence,
         summary=summary,
         source="heuristic",
@@ -372,3 +374,27 @@ def fallback_profile(context: str, link: str | None) -> ProductProfile:
         dimension_reliability=reliability,
         measurement_basis=measurement_basis,
     )
+
+
+def profile_from_candidate(candidate: CatalogCandidate) -> ProductProfile:
+    """A catalog hit is a published box size, so it outranks a guess."""
+    return ProductProfile(
+        name=candidate.name,
+        brand=candidate.brand,
+        category=candidate.category,
+        material=candidate.material,
+        price_band=candidate.price_band,
+        geometry=candidate.geometry,
+        parts=candidate.parts,
+        confidence=max(0.6, candidate.score),
+        summary=f"Matched catalog SKU {candidate.sku} from the listing text; the room is sized around those published dimensions.",
+        source="catalog",
+    )
+
+
+def best_profile(*profiles: ProductProfile | None) -> ProductProfile | None:
+    """Highest confidence wins, ties going to the earlier argument."""
+    ranked = [profile for profile in profiles if profile is not None]
+    if not ranked:
+        return None
+    return max(enumerate(ranked), key=lambda pair: (pair[1].confidence, -pair[0]))[1]
