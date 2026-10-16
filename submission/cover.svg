@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-label="Buy You Before — the agent that measures before it recommends">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B0F14"/>
+      <stop offset="0.55" stop-color="#0E151C"/>
+      <stop offset="1" stop-color="#0A0E13"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.24" cy="0.60" r="0.55">
+      <stop offset="0" stop-color="#E8A33D" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#E8A33D" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#192229" stroke-width="1"/>
+    </pattern>
+    <marker id="tick" viewBox="0 0 6 12" refX="3" refY="6" markerWidth="6" markerHeight="12">
+      <path d="M3 0v12" stroke="#E8A33D" stroke-width="1.6"/>
+    </marker>
+    <style>
+      .f { font-family: "Segoe UI", Inter, system-ui, sans-serif; }
+      .eyebrow { font-size: 21px; letter-spacing: 4px; fill: #E8A33D; font-weight: 600; }
+      .h1 { font-size: 90px; letter-spacing: -2px; fill: #E9F0F5; font-weight: 700; }
+      .sub { font-size: 30px; fill: #9FB0BF; }
+      .lbl { font-size: 19px; letter-spacing: 1.2px; fill: #7E8F9E; font-weight: 600; }
+      .dim { font-size: 20px; fill: #BCC9D4; }
+      .amber { fill: #E8A33D; }
+      .step { font-size: 20px; fill: #C6D2DB; }
+      .fine { font-size: 19px; fill: #748697; }
+    </style>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <rect width="1920" height="1080" fill="url(#grid)" opacity="0.55"/>
+  <rect width="1920" height="1080" fill="url(#glow)"/>
+
+  <!-- ─── headline ─── -->
+  <g class="f">
+    <text class="eyebrow" x="96" y="112">AMD DEVELOPER HACKATHON · ACT III · EVOLUS TRACK</text>
+    <text class="h1" x="94" y="202">Buy You Before</text>
+    <text class="sub" x="96" y="252">The agent that measures before it recommends.</text>
+  </g>
+
+  <!-- ─── measured plan ─── -->
+  <g>
+    <text class="f lbl" x="96" y="322">MEASURED PLAN · ROOM SCAN METHOD: PHOTO</text>
+    <text class="f" x="96" y="358" font-size="21" fill="#E9F0F5">KURA three-seat sofa · 200 × 90 cm</text>
+
+    <!-- room shell, 1 m = 130 px -->
+    <rect x="200" y="376" width="520" height="455" fill="#121A22" stroke="#33434F" stroke-width="7"/>
+
+    <!-- doorway cut into the front wall, swing kept clear -->
+    <rect x="240" y="822" width="108" height="18" fill="#121A22"/>
+    <path d="M348 831h-108" stroke="#E8A33D" stroke-width="4"/>
+    <path d="M242 727 A104 104 0 0 1 346 831" fill="none" stroke="#E8A33D" stroke-width="2" stroke-dasharray="6 9" opacity="0.8"/>
+    <path d="M242 831v-104" stroke="#E8A33D" stroke-width="2.5"/>
+    <text class="f dim amber" x="404" y="786">door 0.85 m</text>
+    <text class="f fine" x="404" y="812">swing kept furniture-free</text>
+
+    <!-- the piece, flush on the back wall, with its clearance halo -->
+    <rect x="308" y="380" width="304" height="156" fill="none" stroke="#5E7182" stroke-width="1.6" stroke-dasharray="6 7"/>
+    <rect x="321" y="380" width="278" height="143" rx="9" fill="#D8C7A9" opacity="0.93"/>
+    <rect x="321" y="380" width="278" height="28" rx="9" fill="#C2AF90"/>
+
+    <!-- the walkway the brief asked for -->
+    <path d="M460 526v78" stroke="#E8A33D" stroke-width="2.4" marker-start="url(#tick)" marker-end="url(#tick)"/>
+    <text class="f amber" x="478" y="574">0.60 m to walk past it</text>
+
+    <!-- obstacle read out of the photo -->
+    <rect x="206" y="600" width="44" height="104" fill="#43596A"/>
+    <text class="f fine" x="266" y="660">radiator, found in the photo</text>
+
+    <!-- room dimensions -->
+    <path d="M200 922h520" stroke="#4C5F6D" stroke-width="1.6" marker-start="url(#tick)" marker-end="url(#tick)"/>
+    <text class="f dim" x="438" y="956">4.0 m</text>
+    <path d="M760 376v455" stroke="#4C5F6D" stroke-width="1.6" marker-start="url(#tick)" marker-end="url(#tick)"/>
+    <text class="f dim" x="780" y="608">3.5 m</text>
+    <text class="f fine" x="780" y="640">usable 13.6 m²</text>
+  </g>
+
+  <!-- ─── verdict ─── -->
+  <g class="f">
+    <rect x="96" y="986" width="128" height="44" rx="22" fill="#16281E" stroke="#3E7A52"/>
+    <text x="122" y="1015" font-size="24" fill="#79C99A" font-weight="600">fits</text>
+    <text class="fine" x="242" y="1015">14.2 % of the floor · scored on 38 engine-derived labels · 0 false fits, and it gates the build</text>
+  </g>
+
+  <!-- ─── the run trace ─── -->
+  <g>
+    <line x1="1040" y1="300" x2="1040" y2="1000" stroke="#23303C" stroke-width="1.5"/>
+    <text class="f lbl" x="1092" y="322">RUN TRACE · EVERY RECOMMENDATION ACCOUNTS FOR ITSELF</text>
+
+    <g class="f">
+      <rect x="1092" y="356" width="196" height="34" rx="8" fill="#1B2631"/>
+      <text class="step" x="1108" y="379">intake</text>
+
+      <rect x="1092" y="402" width="452" height="34" rx="8" fill="#1B2631"/>
+      <text class="step" x="1108" y="425">agent · POST /v1/chat/completions · 640 ms</text>
+
+      <rect x="1092" y="448" width="336" height="34" rx="8" fill="#1B2631"/>
+      <text class="step" x="1108" y="471">brief · sofa · $$ · 900</text>
+
+      <rect x="1092" y="494" width="392" height="34" rx="8" fill="#1B2631"/>
+      <text class="step" x="1108" y="517">shortlist · GET /api/v1/catalog</text>
+
+      <rect x="1092" y="540" width="640" height="34" rx="8" fill="#2A2417" stroke="#E8A33D" stroke-width="1.6"/>
+      <text class="step amber" x="1108" y="563" font-weight="600">fit · KURA → fits · geometry-service · 2400 ms</text>
+
+      <rect x="1092" y="586" width="512" height="34" rx="8" fill="#1B2631"/>
+      <text class="step" x="1108" y="609">fit · VIDGA → tight · geometry-service</text>
+
+      <rect x="1092" y="632" width="600" height="34" rx="8" fill="#1B2631"/>
+      <text class="step" x="1108" y="655">branch · no walkway cleared, band widened</text>
+
+      <rect x="1092" y="678" width="474" height="34" rx="8" fill="#1B2631"/>
+      <text class="step" x="1108" y="701">reply · drafted from the fit report</text>
+    </g>
+
+    <g class="f">
+      <text class="dim" x="1092" y="758">6.7 s measured · 2 pieces checked by the engine · 3 model calls</text>
+      <text class="fine" x="1092" y="790">the header totals the steps' own durations — nothing is estimated</text>
+    </g>
+
+    <g class="f">
+      <text class="lbl" x="1092" y="856">TWELVE CAPABILITIES · ONE IMPLEMENTATION · THREE DOORS</text>
+      <rect x="1092" y="878" width="150" height="38" rx="19" fill="#151E27" stroke="#33434F"/>
+      <text class="step" x="1114" y="903">MCP /mcp/</text>
+      <rect x="1254" y="878" width="238" height="38" rx="19" fill="#151E27" stroke="#33434F"/>
+      <text class="step" x="1276" y="903">REST /agent/tools</text>
+      <rect x="1504" y="878" width="176" height="38" rx="19" fill="#151E27" stroke="#33434F"/>
+      <text class="step" x="1526" y="903">shop pages</text>
+      <text class="fine" x="1092" y="958">Evolus workflow, knowledge library and widget · bring-your-own model on AMD vLLM</text>
+    </g>
+  </g>
+</svg>
