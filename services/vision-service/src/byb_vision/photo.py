@@ -48,7 +48,8 @@ def _segments(gray: np.ndarray) -> list[tuple[tuple[float, float, float, float],
     if raw is None:
         return found
     for line in raw:
-        x0, y0, x1, y1 = map(float, line[0])
+        # OpenCV 4 hands back (N, 1, 4), OpenCV 5 (N, 4); flatten to the four endpoints.
+        x0, y0, x1, y1 = map(float, np.asarray(line).reshape(-1)[:4])
         length = math.hypot(x1 - x0, y1 - y0)
         if length > 0:
             found.append(((x0, y0, x1, y1), length))
