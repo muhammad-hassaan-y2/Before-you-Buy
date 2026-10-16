@@ -154,7 +154,10 @@ class ScenePlacement(JsonModel):
     label: str
     fits: bool
     position_m: tuple[float, float, float] = Field(description="Product origin in scene metres: x across the room, 0 on the floor, z away from the door wall.")
-    rotation_deg: float = Field(default=0.0, description="Turn about the room's vertical axis. Apply it as -rotation_deg on the scene y axis: product-local (x, y, z) maps to scene (x, z, y).")
+    rotation_deg: float = Field(
+        default=0.0,
+        description="Turn about the room's vertical axis. Apply it as -rotation_deg on the scene y axis: product-local (x, y, z) maps to scene (x, z, y).",
+    )
     walkway_m: dict[str, float] = Field(default_factory=dict)
 
 
