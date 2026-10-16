@@ -187,6 +187,14 @@ Verdicts: `fits`, `tight`, `blocked`, `too_large`. Candidate spots (back wall, b
 walls, corner, freestanding, in both orientations) are all returned with their centre,
 orientation and four walkway gaps, so the UI can show alternatives and draw them.
 
+A second pass asks the delivery questions the floor plan cannot answer on its own: whether the
+box clears the doorway it has to be carried through (tilting included), whether a walkable route
+from the door survives at the required clearance, how much floor the placement seals off, and
+whether the verdict still holds if every number is off by the survey tolerance. Those come back
+as `door_pass`, `walkway_connected`, `isolated_pockets`, `fragile` and `tolerance_cm`. Only one
+of them overrides the verdict — a piece that cannot be carried in is not a fit, whatever the
+floor area says — and the rest are reported beside it for the agent to weigh.
+
 ## Reading the room photo
 
 `services/vision-service/src/byb_vision/photo.py`
@@ -343,15 +351,24 @@ never learns the gateway origin and never sees the Evolus key.
 the panel then shows what the agent heard (category, band, budget, must-haves, and *which
 reader* produced it), the trace of the journey with each step's driver and duration, parallel
 fan-out marked as such, loop passes as "Pass 2", the verdict for every tested piece with its
-tightest walkway, and the reply. Below it, the classic single-piece simulator, and a chat
-panel that names which brain answered.
+tightest walkway, and the reply. The trace totals itself at the top — measured time, how many
+pieces the geometry worker actually checked, how many calls went to a model, and the Evolus
+execution id when one took part — so the spend sits next to the answer rather than under it.
+Below it, the classic single-piece simulator, and a chat panel that names which brain answered.
+
+The page ends on the merchant's side of the same journey: what a fit check is worth, recalculated
+by `returns_estimate` from assumptions the reviewer can change, and the holds the agent took only
+after a shopper said yes in their own words, each linking back to the simulation that proved it.
 
 `/workspace` is the 3D one: pick a SKU off the shelf, give it a room, and stand it there with
 three.js — floor, walls, the obstacles vision-service found, the door's quarter-circle sweep,
 the product as the part boxes `byb-common` builds for its category, and the clearance
 envelope the geometry worker insisted on. Views are the presets scene-service chose, the
 placement buttons are the fit report's own candidates, and the glTF download is the same
-document. Where WebGL is missing the viewport says so and the measured 2D plan stays.
+document. Under the plan, the delivery path the engine actually checked: whether the box clears
+the doorway, whether the entrance stays walkable, how much floor it seals off, and whether the
+verdict survives the survey tolerance it was measured at. Where WebGL is missing the viewport
+says so and the measured 2D plan stays.
 
 The Evolus widget is one script tag, loaded only when `NEXT_PUBLIC_EVOLUS_WIDGET_URL` is set.
 
