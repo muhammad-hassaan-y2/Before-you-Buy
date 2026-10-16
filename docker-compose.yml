@@ -329,6 +329,38 @@ services:
     depends_on:
       - scene-service
 
+  # ---------- agent-service ----------
+  # Deliberately without a daprd sidecar: the agent drives the same public HTTP surface a
+  # shopper's browser uses, so it never needs a worker hop of its own to subscribe to.
+  agent-service:
+    <<: *service
+    build:
+      context: .
+      dockerfile: services/agent-service/Dockerfile
+    hostname: agent-service
+    environment:
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}
+      GATEWAY_URL: http://api-gateway:8001
+      EVOLUS_BASE_URL: ${EVOLUS_BASE_URL:-https://api.evolus.ai}
+      EVOLUS_API_KEY: ${EVOLUS_API_KEY:-}
+      EVOLUS_APP_ID: ${EVOLUS_APP_ID:-}
+      EVOLUS_AGENT_ID: ${EVOLUS_AGENT_ID:-}
+      EVOLUS_WORKFLOW_ID: ${EVOLUS_WORKFLOW_ID:-}
+      EVOLUS_LIBRARY_ID: ${EVOLUS_LIBRARY_ID:-}
+      EVOLUS_REPLY_TOOL: ${EVOLUS_REPLY_TOOL:-}
+      VLLM_BASE_URL: ${AGENT_VLLM_BASE_URL:-${VLLM_BASE_URL:-http://vllm:8000/v1}}
+      VLLM_MODEL: ${VLLM_MODEL:-Qwen/Qwen2.5-3B-Instruct}
+      VLLM_API_KEY: ${VLLM_API_KEY:-}
+      # The tunnel address Evolus calls back into, once there is one.
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      MAX_CANDIDATES: ${AGENT_MAX_CANDIDATES:-4}
+      PARALLEL_FITS: ${AGENT_PARALLEL_FITS:-2}
+      SETTLE_TIMEOUT_S: ${AGENT_SETTLE_TIMEOUT_S:-120}
+    ports:
+      - "${AGENT_PORT:-8007}:8007"
+    depends_on:
+      - api-gateway
+
   # ---------- frontend ----------
   frontend:
     <<: *service
@@ -339,7 +371,11 @@ services:
         API_GATEWAY_URL: http://api-gateway:8001
     environment:
       API_GATEWAY_URL: http://api-gateway:8001
+      AGENT_SERVICE_URL: http://agent-service:8007
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}
+      # Read at build time: the widget script tag is public by design, the key is not.
+      NEXT_PUBLIC_EVOLUS_WIDGET_URL: ${NEXT_PUBLIC_EVOLUS_WIDGET_URL:-}
+      NEXT_PUBLIC_EVOLUS_WIDGET_SCRIPT: ${NEXT_PUBLIC_EVOLUS_WIDGET_SCRIPT:-}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:

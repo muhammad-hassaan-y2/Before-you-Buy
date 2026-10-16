@@ -9,10 +9,10 @@ select = ["E", "F", "I", "UP", "B"]
 
 [lint.flake8-bugbear]
 # FastAPI declares its injections as argument defaults; that is the framework idiom.
-extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.File", "fastapi.Form", "fastapi.Header"]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.File", "fastapi.Form", "fastapi.Header", "fastapi.Body"]
 
 [lint.isort]
-known-first-party = ["byb_common", "byb_gateway", "byb_catalog", "byb_inference", "byb_geometry", "byb_vision", "byb_scene"]
+known-first-party = ["byb_common", "byb_gateway", "byb_catalog", "byb_inference", "byb_geometry", "byb_vision", "byb_scene", "byb_agent"]
 
 [lint.per-file-ignores]
 # Test modules set PYTHONPATH/sys.path before importing, which ruff reads as E402.

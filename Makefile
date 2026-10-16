@@ -1,4 +1,4 @@
-SERVICES := api-gateway catalog-service inference-service vision-service geometry-service scene-service
+SERVICES := api-gateway catalog-service inference-service vision-service geometry-service scene-service agent-service
 
 .PHONY: up down logs build rebuild test lint install clean
 

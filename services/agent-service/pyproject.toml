@@ -1,0 +1,39 @@
+[project]
+name = "byb-agent-service"
+version = "0.1.0"
+description = "Buy You Before - agent that runs the pre-purchase fit process on Evolus and an AMD-hosted model"
+authors = [{ name = "Hassaan", email = "hassaan@example.com" }]
+readme = "README.md"
+requires-python = ">=3.11"
+dynamic = ["dependencies"]
+
+[tool.poetry]
+packages = [{ include = "byb_agent", from = "src" }]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<4.0"
+fastapi = ">=0.115.0"
+uvicorn = { version = ">=0.30.0", extras = ["standard"] }
+pydantic-settings = ">=2.3.0"
+httpx = ">=0.27.0"
+mcp = { version = ">=1.6.0", extras = ["web"] }
+byb-common = { path = "../../libs/byb-common", develop = true }
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.2.0"
+pytest-asyncio = ">=0.24.0"
+ruff = ">=0.6.0"
+
+[project.scripts]
+start = "byb_agent.main:start"
+dev = "byb_agent.main:dev"
+test = "pytest:main"
+
+[tool.pytest.ini_options]
+# Windows: a stale, unreadable %TEMP%\pytest-of-<user> makes the tmp_path fixture fail.
+addopts = "--basetemp=.pytest-tmp"
+asyncio_mode = "auto"
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
