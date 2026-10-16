@@ -30,7 +30,7 @@ CATEGORIES = {
     "rug": ("rug", "carpet"),
 }
 BUDGET = re.compile(r"(?:under|below|max|maximum|up to|budget(?:\s+of)?|less than)\s*[^\d]{0,4}(\d{2,5})", re.I)
-ROOM = re.compile(r"(\d+(?:[.,]\d+)?)\s*(?:m|meter|metre|meters|metres|x|by|\*)\s*(\d+(?:[.,]\d+)?)", re.I)
+ROOM = re.compile(r"(\d+(?:[.,]\d+)?)\s*(cm|metres?|meters?|m)?\s*(?:x|by|\*)\s*(\d+(?:[.,]\d+)?)\s*(cm|metres?|meters?|m)?", re.I)
 HEIGHT = re.compile(r"(?:ceilings?|height)\s*(?:of)?\s*(\d+(?:[.,]\d+)?)\s*(?:m|meter|metre|meters|metres)", re.I)
 NUMBER = re.compile(r"\d+(?:[.,]\d+)?")
 MUST_HAVES = {
@@ -47,6 +47,16 @@ def _metric(text: str) -> float:
     return float(NUMBER.search(text).group().replace(",", "."))
 
 
+def _room_pair(match: re.Match) -> tuple[float, float]:
+    """The two numbers as metres, wide first - which is how most people write a room."""
+    values = [_metric(match.group(1)), _metric(match.group(3))]
+    units = (match.group(2) or "", match.group(4) or "")
+    # A bare pair over 20 is centimetres by any other name: nobody has a 300 m living room.
+    if any(unit.startswith("c") for unit in units) or (not any(units) and max(values) > 20):
+        values = [value / 100 for value in values]
+    return max(values), min(values)
+
+
 def heuristic(text: str) -> ShopperBrief:
     lowered = text.lower()
     category = None
@@ -57,9 +67,7 @@ def heuristic(text: str) -> ShopperBrief:
 
     width_m = depth_m = height_m = None
     if match := ROOM.search(lowered):
-        first, second = _metric(match.group(1)), _metric(match.group(2))
-        # A room is written wide-first by most people; the larger of the two is the width.
-        width_m, depth_m = max(first, second), min(first, second)
+        width_m, depth_m = _room_pair(match)
     if match := HEIGHT.search(lowered):
         height_m = _metric(match.group(1))
 

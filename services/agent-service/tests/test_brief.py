@@ -18,6 +18,12 @@ def test_wider_number_becomes_the_width():
     assert brief.room_depth_m == 3.4
 
 
+def test_a_room_written_in_centimetres_is_still_the_room():
+    assert heuristic("a shelf unit for a 220cm x 180cm hallway").room_width_m == 2.2
+    brief = heuristic("a sofa for a room that is 420 cm by 340 cm")
+    assert (brief.room_width_m, brief.room_depth_m) == (4.2, 3.4)
+
+
 def test_budget_sets_the_price_band():
     assert heuristic("a bookcase under 400").price_band == "$"
     assert heuristic("bookcase under 1500").price_band == "$$"
