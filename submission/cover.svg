@@ -80,7 +80,7 @@
   <g class="f">
     <rect x="96" y="986" width="128" height="44" rx="22" fill="#16281E" stroke="#3E7A52"/>
     <text x="122" y="1015" font-size="24" fill="#79C99A" font-weight="600">fits</text>
-    <text class="fine" x="242" y="1015">14.2 % of the floor · scored on 38 engine-derived labels · 0 false fits, and it gates the build</text>
+    <text class="fine" x="242" y="1015">floor used, walkways and the doorway are the engine's own · scored on 38 engine-derived labels, and it gates the build</text>
   </g>
 
   <!-- ─── the run trace ─── -->
