@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle2, ImageIcon, Link2, Loader2, Ruler, Sofa, X 
 import { useEffect, useRef, useState } from "react"
 
 import { DeliveryPath } from "@/components/delivery-path"
+import { DimensionEstimateWarning, ProductSourceBadge } from "@/components/product-provenance"
 import { RoomPlan } from "@/components/room-plan"
 import { SceneViewer } from "@/components/scene-viewer"
 import { Badge } from "@/components/ui/badge"
@@ -22,12 +23,6 @@ const STEPS = [
   { key: "fitting", label: "Fitting the floor plan" },
   { key: "completed", label: "Ready" },
 ] as const
-
-const PRODUCT_SOURCE: Record<string, string> = {
-  vllm: "vLLM",
-  catalog: "Catalog SKU",
-  heuristic: "Category heuristics",
-}
 
 const SCAN_LABEL: Record<string, string> = {
   photo: "Room measured from the photo",
@@ -105,8 +100,8 @@ export function RoomSimulator() {
             <Sofa className="size-4 text-primary" /> What are you considering?
           </CardTitle>
           <CardDescription>
-            Paste a product link and the inference service asks vLLM for its real dimensions. Or attach a room photo and
-            describe the piece.
+            Paste a product link and the inference service reads its real dimensions with AMD Token Factory. Or attach a
+            room photo and describe the piece.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -247,9 +242,11 @@ export function RoomSimulator() {
                     {profile.geometry.width_cm.toFixed(0)} × {profile.geometry.depth_cm.toFixed(0)} × {profile.geometry.height_cm.toFixed(0)} cm
                   </Badge>
                 )}
-                {profile && <Badge variant="secondary">{PRODUCT_SOURCE[profile.source] ?? profile.source}</Badge>}
+                {profile && <ProductSourceBadge profile={profile} />}
                 {scan && <Badge variant="outline">{SCAN_LABEL[scan.method] ?? scan.method}</Badge>}
               </div>
+
+              {profile && <DimensionEstimateWarning profile={profile} />}
 
               <div className="rounded-lg border bg-muted/30 p-3">
                 <RoomPlan widthM={roomWidth} depthM={roomDepth} report={report} placement={activeSpot} obstacles={scan?.obstacles ?? report.obstacles} />

@@ -164,6 +164,11 @@ export const simulation = {
     confidence: 0.9,
     summary: "Three seats, oak legs.",
     source: "catalog",
+    provider: null,
+    model: null,
+    // A published SKU box: nothing here is a category guess.
+    dimension_reliability: { width_cm: "verified", depth_cm: "verified", height_cm: "verified" },
+    measurement_basis: "catalog_sku",
     parts: [{ label: "seat cushion", size_cm: [180, 80, 35], offset_cm: [0, 5, 27], tone: "upholstery" }],
   },
   room_scan: {

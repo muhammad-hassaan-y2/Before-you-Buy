@@ -17,6 +17,8 @@ export type ProductGeometry = {
   clearance_cm: number
 }
 
+export type DimensionReliability = "verified" | "extracted" | "estimated"
+
 export type ProductProfile = {
   name: string
   brand?: string | null
@@ -27,7 +29,35 @@ export type ProductProfile = {
   confidence: number
   summary: string
   source: string
+  provider?: string | null
+  model?: string | null
+  /** Per-axis evidence for the numbers geometry-service placed the box with. */
+  dimension_reliability?: Record<string, DimensionReliability>
+  measurement_basis?: string | null
   parts?: ProductPart[]
+}
+
+/** `ProductProfile.source` straight from the contract, keyed for a badge. */
+export const PRODUCT_SOURCE: Record<string, string> = {
+  amd_token_factory: "AMD Token Factory",
+  catalog: "Catalog SKU",
+  heuristic: "Category heuristics",
+  // Rows written before the provider was named.
+  vllm: "vLLM",
+}
+
+const AXES: Record<string, string> = {
+  width_cm: "width",
+  depth_cm: "depth",
+  height_cm: "height",
+}
+
+/** Footprint axes the engine placed the box with a category guess for, not a read number. */
+export function estimatedAxes(profile: ProductProfile): string[] {
+  const reliability = profile.dimension_reliability ?? {}
+  return Object.keys(AXES)
+    .filter((axis) => reliability[axis] === "estimated")
+    .map((axis) => AXES[axis])
 }
 
 export type CatalogCandidate = {
