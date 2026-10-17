@@ -12,7 +12,9 @@ lead time, freight — and a room bar that measures the best candidates with the
 `fit_catalog` tool an outside assistant calls. Open a listing and it tests *itself*: the
 simulation is started by pasting the product URL that SKU generated, so the verdict on the
 page and the verdict a shopper's ChatGPT or Claude returns are the same run of the same seven
-services. A green badge is only ever the geometry engine's own word.
+services. A green badge is only ever the geometry engine's own word — and when the engine gives it,
+the bag, the total and the order draft are the same service's answer in the browser and in the
+conversation.
 
 Seven FastAPI services, one Next.js app, Postgres for state, Dapr for the transport, OpenCV
 for the room, Shapely for the geometry, vLLM on AMD for product understanding and listing
@@ -177,6 +179,7 @@ the seven services, so run the loop itself when `make` is missing, or use WSL.
 | `POST` | `/agent/webhooks/evolus?run={id}` | where an Evolus workflow puts its result |
 | `GET` | `/agent/connect` | how to add the connector to ChatGPT, Claude, Claude Code, Cursor or Evolus |
 | `GET` | `/agent/reservations` | the holds the agent took, waiting on a person at the shop |
+| `GET` | `/agent/orders` | the order drafts a shopper checked out, with the report behind every line |
 | `POST` | `/mcp/` | the same capabilities as an MCP connector (streamable HTTP; stateless JSON, or sessions) |
 
 ## Data model
@@ -292,12 +295,14 @@ pipeline:
 | Webhook | `/agent/webhooks/evolus?run={id}` | a workflow putting its result back |
 | Shop UI | `/agent/brief`, `/agent/runs`, `/agent/chat` | the Next.js page, proxied so keys stay server-side |
 | Holds | `/agent/reservations` | the shop's own queue of holds a human agreed to |
+| Bag and orders | `/agent/orders`, and the bag tools behind both doors | the shopper's bag in the drawer, and the merchant's queue of order drafts |
 
-Thirteen capabilities, one implementation behind every door. Measuring: `catalog_search`,
+Nineteen capabilities, one implementation behind every door. Measuring: `catalog_search`,
 `read_brief`, `simulate_product`, `fit_report`, `explain_fit`, `joint_fit`, `find_alternatives`,
 `fit_catalog`. Deciding: `start_journey`, `journey_status`. Acting and costing:
-`proven_fit_offer`, `reserve_fit`, `returns_estimate`. A foreseeable failure (unknown SKU, an
-unproven piece, a hold without a yes) is reported to the model in words, not as a crash. The five
+`proven_fit_offer`, `reserve_fit`, `returns_estimate`. Buying: `add_to_cart`, `view_cart`,
+`remove_from_cart`, `measure_cart`, `checkout`, `order_status`. A foreseeable failure (unknown SKU,
+an unproven piece, a hold without a yes) is reported to the model in words, not as a crash. The five
 that measure a room — `simulate_product`, `joint_fit`, `find_alternatives`, `fit_catalog`,
 `start_journey` — take an `image_key`, so an external agent fits into the shopper's photographed
 room exactly as the shop's own page does.
@@ -307,6 +312,12 @@ raised over a fit the geometry engine signed; a **hold** re-reads that proof and
 the caller passes the shopper's own confirmation words, and what it writes is a request a
 person at the shop accepts or releases - nothing is charged and nothing ships. The business
 number is arithmetic over assumptions the caller can see and override, never a model's guess.
+
+**Buying is the same shape.** A bag lives in agent-service, so the shopper's drawer in the browser
+and an assistant in ChatGPT are looking at one set of lines, prices and verdicts — the browser keeps
+only a bag id and the room it is shopping for. `checkout` refuses any line the engine has not
+cleared for that room, and refuses an assumed yes, so the words have to be the shopper's. What comes
+out is an order draft waiting on a person at the shop.
 
 Five Evolus building blocks are in play: the **custom MCP server**, **custom REST
 endpoints/webhooks**, a **workflow** with a conditional branch (recommend vs. handoff), a
@@ -391,16 +402,19 @@ steps per client — because the honest answer differs by client and by environm
   the guide says which doors a key locks. What a key is for is a stranger's agent spending the
   merchant's GPU jobs.
 - **Tools announce what they do.** Everything that only measures says `readOnlyHint: true`, so a
-  client can run it without stopping the human; `proven_fit_offer` and `reserve_fit` do not, and
-  nothing is marked destructive. The rules the model must not lose are inside the connector's first
-  512 characters of instructions, because that is the part a client is guaranteed to keep.
-- **A hold is put to the shopper when the client can ask.** `reserve_fit` tries an elicitation
-  first: the shopper answers in the client's own form and those words are what the gate checks.
-  That needs a real session, so it comes with `MCP_SESSIONS=true`; otherwise the tool falls back to
-  the confirmation the agent relayed — and still refuses a yes it would have to guess at.
+  client can run it without stopping the human; `proven_fit_offer`, `reserve_fit` and the bag tools
+  do not, and nothing is marked destructive. The rules the model must not lose are inside the
+  connector's first 512 characters of instructions, because that is the part a client is guaranteed
+  to keep.
+- **A hold, and a checkout, are put to the shopper when the client can ask.** `reserve_fit` and
+  `checkout` try an elicitation first: the shopper answers in the client's own form and those words
+  are what the gate checks. That needs a real session, so it comes with `MCP_SESSIONS=true`;
+  otherwise the tool falls back to the confirmation the agent relayed — and still refuses a yes it
+  would have to guess at.
 - **Evidence travels both ways.** Beside the tools the connector publishes the catalog, one fit
-  report and one journey trace as resources, and two prompts a shopper can start from, so a client
-  that reads resources quotes the file the engine wrote instead of its own earlier tool call.
+  report, one journey trace and one bag as resources, and three prompts a shopper can start from —
+  fit my room, hold the fit, fill a cart — so a client that reads resources quotes the file the
+  engine wrote instead of its own earlier tool call.
 
 Without a public origin the connector still answers locally — that is what the tests and the MCP
 Inspector exercise — and the guide simply admits it has no address to hand out.
@@ -421,6 +435,14 @@ pitch claims — a listing tests itself through the pipeline the way a shopper's
 the answer it shows is the fit report the geometry worker signed, with the plan and the room
 view beside it.
 
+The bag is the same service's, not the browser's. A card that has been measured for the room on
+screen puts its simulation id on the line, so a proven piece enters the bag already proven and
+never pays for a second GPU job to reach the verdict the sweep already had. The drawer shows the
+count, the prices and the set verdict exactly as `view_cart` and `measure_cart` returned them,
+renders a bag the service no longer has as an empty shelf rather than an error, and only offers the
+order button for words `checkout` would accept. A piece the engine refused shows "Not for this
+room" on the card, and the shopper cannot click past that.
+
 `/room-simulator` is the agent-first page. A shopper writes their brief in their own words;
 the panel then shows what the agent heard (category, band, budget, must-haves, and *which
 reader* produced it), the trace of the journey with each step's driver and duration, parallel
@@ -435,8 +457,9 @@ room in the photo. The trace records that as its own step, and the recommendatio
 that photo measured.
 
 The page ends on the merchant's side of the same journey: what a fit check is worth, recalculated
-by `returns_estimate` from assumptions the reviewer can change, and the holds the agent took only
-after a shopper said yes in their own words, each linking back to the simulation that proved it.
+by `returns_estimate` from assumptions the reviewer can change, and the two queues a person at the
+shop works through — the holds and the order drafts, each written only after a shopper said yes in
+their own words, and every row linking back to the simulation that proved the line.
 
 `/workspace` is the 3D one: pick a SKU off the shelf, give it a room, and stand it there with
 three.js — floor, walls, the obstacles vision-service found, the door's quarter-circle sweep,
@@ -469,6 +492,11 @@ bash scripts/e2e-smoke.sh        # one full simulation and one journey, no Docke
 
 `pnpm test:e2e` boots its own `next dev` unless `E2E_BASE_URL` points at a running stack, and
 stubs the services it talks to, so a red run means the front end broke rather than the network.
+
+Everything above runs on a laptop with no containers up: 375 backend tests across the seven
+suites, 113 Vitest tests, 30 Playwright journeys and a clean `pnpm build`. The e2e specs answer
+every request the pages make, so the shop, the agent page and the workspace are covered without
+the pipeline being live.
 
 ## Hackathon submission checklist
 
