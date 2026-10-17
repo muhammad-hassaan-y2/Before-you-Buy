@@ -142,7 +142,8 @@ images add `--no-root` because the dependency layer is built before `src/` exist
 | Method | Path | Notes |
 | --- | --- | --- |
 | `GET` | `/healthz` | per service; reports `dapr` or `http` transport |
-| `POST` | `/api/v1/simulations` | `multipart/form-data`: `link` and/or `file`, `room_width_m`, `room_depth_m`, `room_height_m`, `shopper_notes` |
+| `POST` | `/api/v1/simulations` | `multipart/form-data`: `link` and/or `file` (or an earlier `image_key`), `room_width_m`, `room_depth_m`, `room_height_m`, `shopper_notes` |
+| `POST` | `/api/v1/uploads` | store a room photo on its own; returns the `image_key` a simulation or an agent call can point at |
 | `GET` | `/api/v1/simulations/{id}` | status, `catalog_candidate`, `product_profile`, `room_scan`, `fit_report`, `scene`, `has_model` |
 | `GET` | `/api/v1/simulations/{id}/model` | the glTF 2.0 document, served as a download on demand |
 | `GET` | `/api/v1/simulations` | recent jobs |
@@ -207,6 +208,12 @@ forwarded and `room_scan.method` says which of `photo`, `photo-ignored` or `decl
 run ended up with, which is what the UI badge shows. Ceiling height is never guessed from
 a photo — pixels cannot express a dimension the camera never saw.
 
+The key the gateway returns is what the agent tools take (`image_key` on `simulate_product`,
+`joint_fit`, `find_alternatives` and `start_journey`), so one photo measures the room once and
+every candidate in the journey is fitted into that room instead of the typed numbers. It is the
+shopper's *room*, never product evidence: inference-service reads a listing from the page alone
+and is not given the picture.
+
 ## The 3D scene and the download
 
 `services/scene-service`
@@ -232,8 +239,8 @@ endpoint for brief reading, replies and the fallback chat. Both read `VLLM_BASE_
 
 The compose `gpu` profile runs `vllm/vllm-openai-rocm` with `/dev/kfd` and `/dev/dri`
 passed through — that needs an AMD MI-series host, so on a laptop leave the profile off.
-Set `VLLM_MODEL` to a vision model and `VLLM_SUPPORTS_VISION=true` to feed the uploaded room
-photo to the model as well.
+The uploaded photo is the shopper's *room*: vision-service measures it and the product read
+never sees it, because a room picture is not evidence about a sofa.
 
 On an AMD Developer Cloud droplet (MI300X) the serving line is:
 
@@ -274,7 +281,10 @@ Twelve capabilities, one implementation behind every door. Measuring: `catalog_s
 `read_brief`, `simulate_product`, `fit_report`, `explain_fit`, `joint_fit`,
 `find_alternatives`. Deciding: `start_journey`, `journey_status`. Acting and costing:
 `proven_fit_offer`, `reserve_fit`, `returns_estimate`. A foreseeable failure (unknown SKU, an
-unproven piece, a hold without a yes) is reported to the model in words, not as a crash.
+unproven piece, a hold without a yes) is reported to the model in words, not as a crash. The four
+that measure a room — `simulate_product`, `joint_fit`, `find_alternatives`, `start_journey` — take
+an `image_key`, so an external agent fits into the shopper's photographed room exactly as the shop's
+own page does.
 
 The three that carry the commerce are deliberately conservative. An **offer** can only be
 raised over a fit the geometry engine signed; a **hold** re-reads that proof and refuses unless
@@ -289,9 +299,11 @@ parallel fan-out (two fits at a time) and a loop boundary (a widened budget is p
 front end as one script tag.
 
 A journey is the auditable unit. `GET /agent/runs/{id}` returns the trace the UI draws:
-intake → agent → brief → shortlist → parallel fits → branch → compare → reply, each with its
-`tool`, `ms`, `group` and `iteration`. If the geometry worker never produced a verdict, the
-agent hands the shopper to a person rather than inventing one.
+intake → agent → brief → (room) → shortlist → parallel fits → branch → compare → reply, each with
+its `tool`, `ms`, `group` and `iteration`. The `room` step only appears when the brief carried an
+`image_key`: the photo is measured first and every candidate after it is fitted into that room.
+If the geometry worker never produced a verdict, the agent hands the shopper to a person rather
+than inventing one.
 
 ### How good is it?
 
@@ -355,6 +367,10 @@ tightest walkway, and the reply. The trace totals itself at the top — measured
 pieces the geometry worker actually checked, how many calls went to a model, and the Evolus
 execution id when one took part — so the spend sits next to the answer rather than under it.
 Below it, the classic single-piece simulator, and a chat panel that names which brain answered.
+The brief panel takes a photo of the room as well as the typed numbers: the browser stores it with
+the gateway, hands the agent the key it gets back, and every candidate is then measured against the
+room in the photo. The trace records that as its own step, and the recommendation opens in the room
+that photo measured.
 
 The page ends on the merchant's side of the same journey: what a fit check is worth, recalculated
 by `returns_estimate` from assumptions the reviewer can change, and the holds the agent took only
@@ -369,6 +385,13 @@ document. Under the plan, the delivery path the engine actually checked: whether
 the doorway, whether the entrance stays walkable, how much floor it seals off, and whether the
 verdict survives the survey tolerance it was measured at. Where WebGL is missing the viewport
 says so and the measured 2D plan stays.
+
+Every published fit gets those two views behind one switch — **2D plan**, the top-down polygons the
+engine solved, and **3D room**, the same placement stood at scale — and the 3D option is only
+offered when a scene was actually built for that run. The workspace opens in the room; the shop's
+simulator and the agent's recommendation open on the plan. All three take the room from
+`room_scan`, so a photo-measured 3.6 × 3 m room is drawn as that room, not as the numbers someone
+typed next to the photo.
 
 The Evolus widget is one script tag, loaded only when `NEXT_PUBLIC_EVOLUS_WIDGET_URL` is set.
 
