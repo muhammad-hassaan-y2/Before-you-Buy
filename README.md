@@ -161,8 +161,9 @@ images add `--no-root` because the dependency layer is built before `src/` exist
 | `GET` | `/agent/runs` · `/agent/runs/{id}` | the trace: every step, its driver, its duration, the decision |
 | `POST` | `/agent/chat` | talk to the Evolus agent, or to the AMD model when Evolus is not configured |
 | `POST` | `/agent/webhooks/evolus?run={id}` | where an Evolus workflow puts its result |
+| `GET` | `/agent/connect` | how to add the connector to ChatGPT, Claude, Claude Code, Cursor or Evolus |
 | `GET` | `/agent/reservations` | the holds the agent took, waiting on a person at the shop |
-| `POST` | `/mcp/` | the same capabilities as an MCP connector (streamable HTTP, stateless) |
+| `POST` | `/mcp/` | the same capabilities as an MCP connector (streamable HTTP; stateless JSON, or sessions) |
 
 ## Data model
 
@@ -271,20 +272,21 @@ pipeline:
 
 | Door | Shape | Used by |
 | --- | --- | --- |
-| MCP connector | `/mcp/` — streamable HTTP, stateless, JSON responses | the Evolus agent, as a custom MCP server |
+| MCP connector | `/mcp/` — streamable HTTP; stateless JSON by default, real sessions on request | ChatGPT, Claude, Cursor, the Evolus agent |
 | REST tools | `/agent/tools`, `/agent/tools/{name}` | an Evolus workflow step or AI Tool |
+| Install guide | `/agent/connect` | the shop's page, and a person adding the connector |
 | Webhook | `/agent/webhooks/evolus?run={id}` | a workflow putting its result back |
 | Shop UI | `/agent/brief`, `/agent/runs`, `/agent/chat` | the Next.js page, proxied so keys stay server-side |
 | Holds | `/agent/reservations` | the shop's own queue of holds a human agreed to |
 
-Twelve capabilities, one implementation behind every door. Measuring: `catalog_search`,
-`read_brief`, `simulate_product`, `fit_report`, `explain_fit`, `joint_fit`,
-`find_alternatives`. Deciding: `start_journey`, `journey_status`. Acting and costing:
+Thirteen capabilities, one implementation behind every door. Measuring: `catalog_search`,
+`read_brief`, `simulate_product`, `fit_report`, `explain_fit`, `joint_fit`, `find_alternatives`,
+`fit_catalog`. Deciding: `start_journey`, `journey_status`. Acting and costing:
 `proven_fit_offer`, `reserve_fit`, `returns_estimate`. A foreseeable failure (unknown SKU, an
-unproven piece, a hold without a yes) is reported to the model in words, not as a crash. The four
-that measure a room — `simulate_product`, `joint_fit`, `find_alternatives`, `start_journey` — take
-an `image_key`, so an external agent fits into the shopper's photographed room exactly as the shop's
-own page does.
+unproven piece, a hold without a yes) is reported to the model in words, not as a crash. The five
+that measure a room — `simulate_product`, `joint_fit`, `find_alternatives`, `fit_catalog`,
+`start_journey` — take an `image_key`, so an external agent fits into the shopper's photographed
+room exactly as the shop's own page does.
 
 The three that carry the commerce are deliberately conservative. An **offer** can only be
 raised over a fit the geometry engine signed; a **hold** re-reads that proof and refuses unless
@@ -353,6 +355,34 @@ PUBLIC_BASE_URL=https://<tunnel>   # so callbackUrl and /mcp/ reach us
 Without `EVOLUS_API_KEY` the service degrades on purpose: briefs are read by the shipped
 heuristics, replies are written from the fit report, and `answered_by` in `/agent/chat` says
 which of the two spoke.
+
+### Adding the connector to ChatGPT or Claude
+
+The same `/mcp/` door is what an outside assistant adds, so a shopper can ask their own agent
+"which of this shop's sofas fit my 3.6 × 3 m room?" and get a measured answer. `GET /agent/connect`
+describes the deployment to the page — the URL, the transport, the auth it actually expects and the
+steps per client — because the honest answer differs by client and by environment:
+
+- **It has to be reachable over https.** `PUBLIC_BASE_URL` is what turns a laptop into a connector;
+  with it unset, every URL the guide prints is local and no outside assistant can add it.
+- **Authentication is none or OAuth.** ChatGPT and Claude's app offer those two. A static bearer
+  key (`MCP_CONNECT_TOKEN`) is a Claude Code and Cursor thing, so the gate stays off by default and
+  the guide says which doors a key locks. What a key is for is a stranger's agent spending the
+  merchant's GPU jobs.
+- **Tools announce what they do.** Everything that only measures says `readOnlyHint: true`, so a
+  client can run it without stopping the human; `proven_fit_offer` and `reserve_fit` do not, and
+  nothing is marked destructive. The rules the model must not lose are inside the connector's first
+  512 characters of instructions, because that is the part a client is guaranteed to keep.
+- **A hold is put to the shopper when the client can ask.** `reserve_fit` tries an elicitation
+  first: the shopper answers in the client's own form and those words are what the gate checks.
+  That needs a real session, so it comes with `MCP_SESSIONS=true`; otherwise the tool falls back to
+  the confirmation the agent relayed — and still refuses a yes it would have to guess at.
+- **Evidence travels both ways.** Beside the tools the connector publishes the catalog, one fit
+  report and one journey trace as resources, and two prompts a shopper can start from, so a client
+  that reads resources quotes the file the engine wrote instead of its own earlier tool call.
+
+Without a public origin the connector still answers locally — that is what the tests and the MCP
+Inspector exercise — and the guide simply admits it has no address to hand out.
 
 ## The shop's own UI
 

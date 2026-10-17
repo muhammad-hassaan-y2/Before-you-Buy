@@ -1,16 +1,17 @@
 # agent-service
 
-The agent layer. It gives the Evolus agent the ability to act on this shop: search the
-catalog, measure a product against a real room, widen the search when nothing fits, explain a
-verdict in words, price the purchase, hold a piece on the shopper's own word, and hand the case
-to a person when it should.
+The agent layer. It gives an outside agent the ability to act on this shop: search the
+catalog, measure a product against a real room, sweep the catalog against that room, widen the
+search when nothing fits, explain a verdict in words, price the purchase, hold a piece on the
+shopper's own word, and hand the case to a person when it should.
 
 One set of capabilities, reachable through several doors:
 
 | Door | For | Purpose |
 | --- | --- | --- |
-| `/mcp/` | the Evolus MCP connector, Claude Code, Evolus Studio | the tools the agent calls while it reasons |
+| `/mcp/` | ChatGPT, Claude, Claude Code, Cursor, the Evolus connector | the tools, resources and prompts the agent attaches to |
 | `/agent/tools/{name}` | an Evolus workflow step or webhook | the same tools over plain REST |
+| `/agent/connect` | a person adding the connector | the URL, the auth it expects and the steps per client |
 | `/agent/brief`, `/agent/runs/{id}`, `/agent/chat` | the shop's own UI | start a journey, watch its trace, talk to the agent |
 | `/agent/reservations` | the shop | the holds a human agreed to, still waiting on a person |
 
@@ -34,12 +35,38 @@ claims a fit it did not test.
 
 The capabilities that go past measuring are held to the same rule. `explain_fit` turns a
 report into facts a shopper can read; `joint_fit` judges a set of pieces as one purchase by
-adding their footprints and walkways, and says so when it estimated one. `proven_fit_offer`
+adding their footprints and walkways, and says so when it estimated one. `fit_catalog` answers
+the question a shopper actually asks a shop - which of *your* pieces fit my room - by measuring a
+capped slice of the catalog in parallel and splitting the result into fits, non-fits and
+unproven, because a fit that never settled is not a fit. `proven_fit_offer`
 raises an offer only over a fit the engine signed, and carries the simulation id so another
 agent can verify it. `reserve_fit` re-reads that proof and refuses unless the caller passes the
-shopper's own confirmation words - the result is a request a person at the shop accepts or
+shopper's own confirmation words - over MCP it first tries to ask the shopper directly, which is
+what a session gives the client - and what it writes is a request a person at the shop accepts or
 releases, never a charge. `returns_estimate` is arithmetic over assumptions the caller sees and
 can override.
+
+## The connector, and what an outside client needs
+
+`/mcp/` is streamable HTTP over one implementation shared with REST, so an agent in ChatGPT and a
+workflow step in Evolus get the same verdict from the same numbers. What it announces:
+
+- **Identity** - title, description, icon and instructions. A connector is shown to a human before
+  its first tool is called, and the rules a model must not lose are inside the first 512 characters
+  of the instructions, which is the part a client is guaranteed to keep.
+- **Hints** - every capability that only measures declares `readOnlyHint`, so a client can run it
+  without stopping the shopper; the two that act on stock do not.
+- **Resources and prompts** - the catalog, one fit report, one journey trace, and two starting
+  prompts, so a client can attach the evidence rather than quote a tool call.
+- **Absolute links** - offers, model downloads and run polls are printed against `PUBLIC_BASE_URL`,
+  because an agent outside this machine can only follow a URL it can reach.
+
+`MCP_CONNECT_TOKEN` puts a bearer gate on the door. It is off by default: ChatGPT and Claude add a
+connector with no auth or with OAuth, so a static key only serves Claude Code, Cursor and Evolus.
+`MCP_SESSIONS=true` trades one stateless JSON request per call for a real session, which is what
+server-initiated requests - asking the shopper before a hold - need. `ALLOWED_ORIGINS` names the
+browsers allowed to call this service; the MCP Inspector is in the default so a connector can be
+poked without writing a client for it.
 
 ## The golden set
 
@@ -64,8 +91,12 @@ so the file is engine output under test rather than a set of opinions someone ty
 | `EVOLUS_LIBRARY_ID` | knowledge library the agent cites |
 | `EVOLUS_REPLY_TOOL` | AI Tool that rewrites the reply; empty sends the agent's own wording |
 | `VLLM_BASE_URL`, `VLLM_MODEL`, `VLLM_API_KEY` | the open model served on AMD hardware |
-| `PUBLIC_BASE_URL` | this service's reachable URL, used as the workflow `callbackUrl` |
+| `PUBLIC_BASE_URL` | this service's reachable URL: the workflow `callbackUrl`, the connector's origin, and the base every link an outside agent is handed is built from |
+| `MCP_CONNECT_TOKEN` | bearer key an outside MCP client must send; empty leaves the door open |
+| `MCP_SESSIONS` | `true` gives clients a real session, which is how a hold asks the shopper in their own app |
+| `ALLOWED_ORIGINS` | browsers allowed to call this service; the MCP Inspector is in the default |
 | `MAX_CANDIDATES`, `PARALLEL_FITS`, `SETTLE_TIMEOUT_S` | loop and fan-out boundaries |
+| `MAX_CATALOG_FITS` | how many pieces one `fit_catalog` sweep may measure - each one is a GPU job |
 | `MAX_JOINT_PIECES`, `MAX_JOINT_COVERAGE`, `MIN_WALKWAY_M` | how many pieces a multi-piece verdict may add up, and the room it must leave clear |
 
 Nothing is required to be set. With no Evolus key the run still completes against the
@@ -78,6 +109,7 @@ read the brief and the trace says so too.
 | --- | --- | --- |
 | GET | `/healthz` | which of Evolus, the AMD model and the pipeline are reachable |
 | GET | `/agent/tools` | the tool catalogue |
+| GET | `/agent/connect` | the connector's install guide: URL, transport, auth, steps per client |
 | POST | `/agent/tools/{name}` | invoke one tool |
 | POST | `/agent/brief` | start a journey, returns a run id to poll |
 | GET | `/agent/runs` / `/agent/runs/{id}` | recent runs, one run's full trace |

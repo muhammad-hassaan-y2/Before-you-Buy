@@ -39,20 +39,23 @@ geometry worker computed.
 
 ## 4. Agent-first, not AI decoration — Application of Technology
 
-Twelve capabilities, one implementation, three doors:
+Thirteen capabilities, one implementation, three doors:
 
 | Door | Who uses it |
 | --- | --- |
-| MCP connector | any agent that speaks MCP, including Evolus |
+| MCP connector | any agent that speaks MCP — Evolus, ChatGPT, Claude, Cursor |
 | REST tool endpoints | an Evolus workflow step, a checkout bot, a webhook |
 | The shop's own pages | the shopper, and the merchant checking the holds |
 
 `catalog_search · read_brief · simulate_product · fit_report · explain_fit · joint_fit ·
-find_alternatives · start_journey · journey_status · proven_fit_offer · reserve_fit ·
+find_alternatives · fit_catalog · start_journey · journey_status · proven_fit_offer · reserve_fit ·
 returns_estimate`
 
-An agent that can shop your catalog, measure a room, explain a verdict, judge a set of pieces as
-one purchase and take a hold — that is a commerce surface, not a demo chat window.
+An agent that can shop your catalog, measure a room, sweep the catalog against that room, explain a
+verdict, judge a set of pieces as one purchase and take a hold — that is a commerce surface, not a
+demo chat window. The connector is a real remote one: a shopper adds it to ChatGPT or Claude and
+asks which of the shop's sofas fit their 3.6 × 3 m room, and the hold it offers still needs their
+own yes, asked in the client's own form when the client has one.
 
 ## 5. What the geometry actually decides
 
@@ -96,7 +99,7 @@ hand off, and a shopper who wrote their room in centimetres.
 
 | Block | In this project |
 | --- | --- |
-| MCP connector | the twelve capabilities, mounted at `/mcp/` |
+| MCP connector | the thirteen capabilities, mounted at `/mcp/` — addable to ChatGPT or Claude |
 | REST API | every capability is a POST an Evolus step can call |
 | Workflow | conditional branch (recommend vs. hand off), parallel fits, a loop boundary at the widened budget |
 | Knowledge library | the catalog, uploaded as documents the agent can retrieve |

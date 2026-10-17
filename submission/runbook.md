@@ -40,7 +40,8 @@ Sanity from the outside:
 
 ```bash
 curl -s localhost:8001/api/v1/health
-curl -s localhost:8007/agent/tools | head -c 400     # twelve capabilities
+curl -s localhost:8007/agent/tools | head -c 400     # thirteen capabilities
+curl -s localhost:8007/agent/connect | head -c 400   # the connector's own install guide
 ```
 
 No GPU is required — `PROFILE` stays unset and the agent falls back to its own heuristics.
@@ -63,8 +64,10 @@ Then confirm the two consequences:
 
 The rule is at least two building blocks; we use five, and each needs creating by hand once:
 
-1. **MCP connector** — point it at `PUBLIC_BASE_URL` + `/mcp/`. Check the twelve tools appear in
-   the workspace's tool list.
+1. **MCP connector** — point it at `PUBLIC_BASE_URL` + `/mcp/`. Check the thirteen tools appear in
+   the workspace's tool list. `GET /agent/connect` prints the same URL with the steps for ChatGPT,
+   Claude, Claude Code and Cursor; adding it to one of those is the strongest 20 seconds of the demo,
+   and it only works once `PUBLIC_BASE_URL` is a real https tunnel.
 2. **REST API** — one workflow step calling `/agent/tools/simulate_product`. Check it returns
    `{tool, result}`.
 3. **Workflow** — the conditional branch (recommend versus hand off), the parallel fits, and the

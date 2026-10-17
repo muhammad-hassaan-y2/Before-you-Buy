@@ -84,10 +84,11 @@ me."
 **On screen:** the capability panel on `/room-simulator`, then one tool called over REST with curl
 (or the MCP inspector) in a terminal next to the browser.
 
-> "Twelve capabilities, one implementation, three doors: an MCP connector, REST tool endpoints, and
+> "Thirteen capabilities, one implementation, three doors: an MCP connector, REST tool endpoints, and
 > the pages a shopper uses. Catalog search, read brief, simulate, fit report, explain, joint fit for
-> pieces bought together, alternatives no wider than the first pick, the journey, an offer, a hold,
-> and the returns arithmetic. That is a commerce surface another agent can shop — not a chat window
+> pieces bought together, alternatives no wider than the first pick, a sweep of the whole catalog
+> against your room, the journey, an offer, a hold, and the returns arithmetic. That is a commerce
+> surface another agent can shop — the same connector adds to ChatGPT or Claude — not a chat window
 > bolted onto a product page."
 
 Call `fit_report` for the simulation id from the earlier run and show the same JSON the page read.
