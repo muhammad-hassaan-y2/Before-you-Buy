@@ -1,133 +1,214 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-label="Buy You Before — the agent that measures before it recommends">
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-label="Buy You Before — the shop that measures the room before it recommends, and only sells what the geometry engine cleared">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0B0F14"/>
-      <stop offset="0.55" stop-color="#0E151C"/>
-      <stop offset="1" stop-color="#0A0E13"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#17110C"/>
+      <stop offset="0.5" stop-color="#130E0A"/>
+      <stop offset="1" stop-color="#0F0B08"/>
     </linearGradient>
-    <radialGradient id="glow" cx="0.24" cy="0.60" r="0.55">
-      <stop offset="0" stop-color="#E8A33D" stop-opacity="0.14"/>
-      <stop offset="1" stop-color="#E8A33D" stop-opacity="0"/>
+    <radialGradient id="glow" cx="0.2" cy="0.22" r="0.62">
+      <stop offset="0" stop-color="#EBAA2D" stop-opacity="0.13"/>
+      <stop offset="1" stop-color="#EBAA2D" stop-opacity="0"/>
     </radialGradient>
-    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
-      <path d="M48 0H0V48" fill="none" stroke="#192229" stroke-width="1"/>
+    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M60 0H0V60" fill="none" stroke="#FFFFFF" stroke-opacity="0.035" stroke-width="1"/>
     </pattern>
-    <marker id="tick" viewBox="0 0 6 12" refX="3" refY="6" markerWidth="6" markerHeight="12">
-      <path d="M3 0v12" stroke="#E8A33D" stroke-width="1.6"/>
-    </marker>
+    <filter id="lift" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="26" stdDeviation="30" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
     <style>
-      .f { font-family: "Segoe UI", Inter, system-ui, sans-serif; }
-      .eyebrow { font-size: 21px; letter-spacing: 4px; fill: #E8A33D; font-weight: 600; }
-      .h1 { font-size: 90px; letter-spacing: -2px; fill: #E9F0F5; font-weight: 700; }
-      .sub { font-size: 30px; fill: #9FB0BF; }
-      .lbl { font-size: 19px; letter-spacing: 1.2px; fill: #7E8F9E; font-weight: 600; }
-      .dim { font-size: 20px; fill: #BCC9D4; }
-      .amber { fill: #E8A33D; }
-      .step { font-size: 20px; fill: #C6D2DB; }
-      .fine { font-size: 19px; fill: #748697; }
+      .ui { font-family: "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", Inter, system-ui, sans-serif; }
+      .mono { font-family: "SF Mono", "Cascadia Mono", Consolas, ui-monospace, monospace; }
+      .eyebrow { font-size: 18px; letter-spacing: 5px; fill: #EBAA2D; font-weight: 600; }
+      .h1 { font-size: 112px; letter-spacing: -3.5px; fill: #F4F1EC; font-weight: 700; }
+      .sub { font-size: 30px; letter-spacing: -0.4px; fill: #AAA39A; }
+      .feat { font-size: 25px; fill: #F4F1EC; font-weight: 600; letter-spacing: -0.3px; }
+      .body { font-size: 19px; fill: #AAA39A; }
+      .stat { font-size: 54px; fill: #F4F1EC; font-weight: 700; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; }
+      .cap { font-size: 17px; fill: #8F8880; }
+      .lbl { font-size: 15px; letter-spacing: 2.4px; fill: #AAA39A; font-weight: 600; }
+      .name { font-size: 30px; fill: #F4F1EC; font-weight: 600; letter-spacing: -0.5px; }
+      .term { font-size: 17px; fill: #AAA39A; }
+      .btn { font-size: 21px; fill: #17110C; font-weight: 700; letter-spacing: -0.2px; }
+      .pill { font-size: 19px; font-weight: 600; }
+      .tiny { font-size: 13px; fill: #8F8880; }
+      .row { font-size: 16px; fill: #F4F1EC; font-weight: 600; }
+      .rowsub { font-size: 13px; fill: #8F8880; }
+      .rowprice { font-size: 18px; fill: #F4F1EC; font-weight: 600; font-variant-numeric: tabular-nums; }
+      .num { font-variant-numeric: tabular-nums; letter-spacing: -0.2px; }
     </style>
   </defs>
 
   <rect width="1920" height="1080" fill="url(#bg)"/>
-  <rect width="1920" height="1080" fill="url(#grid)" opacity="0.55"/>
+  <rect width="1920" height="1080" fill="url(#grid)"/>
   <rect width="1920" height="1080" fill="url(#glow)"/>
 
-  <!-- ─── headline ─── -->
-  <g class="f">
-    <text class="eyebrow" x="96" y="112">AMD DEVELOPER HACKATHON · ACT III · EVOLUS TRACK</text>
-    <text class="h1" x="94" y="202">Buy You Before</text>
-    <text class="sub" x="96" y="252">The agent that measures before it recommends.</text>
+  <!-- ── headline band ── -->
+  <g class="ui">
+    <text class="eyebrow" x="100" y="118">AMD DEVELOPER HACKATHON · ACT III · EVOLUS TRACK</text>
+    <text class="h1" x="96" y="236">Buy You Before</text>
+    <text class="sub" x="100" y="296">The shop that answers first: it measures</text>
+    <text class="sub" x="100" y="330">your room before it recommends, and only</text>
+    <text class="sub" x="100" y="364">sells what the geometry engine cleared.</text>
   </g>
 
-  <!-- ─── measured plan ─── -->
+  <!-- ── who can call it ── -->
+  <g class="ui">
+    <rect x="1390" y="266" width="110" height="32" rx="16" fill="#1D1712" stroke="#2C251F"/>
+    <text x="1445" y="287" font-size="15" fill="#AAA39A" text-anchor="middle">ChatGPT</text>
+    <rect x="1512" y="266" width="96" height="32" rx="16" fill="#1D1712" stroke="#2C251F"/>
+    <text x="1560" y="287" font-size="15" fill="#AAA39A" text-anchor="middle">Claude</text>
+    <rect x="1620" y="266" width="92" height="32" rx="16" fill="#1D1712" stroke="#2C251F"/>
+    <text x="1666" y="287" font-size="15" fill="#AAA39A" text-anchor="middle">Cursor</text>
+    <rect x="1724" y="266" width="96" height="32" rx="16" fill="#1D1712" stroke="#2C251F"/>
+    <text x="1772" y="287" font-size="15" fill="#AAA39A" text-anchor="middle">Evolus</text>
+  </g>
+
+  <!-- ── what it promises ── -->
+  <g class="ui">
+    <path d="M101 461l9 9 20-22" fill="none" stroke="#EBAA2D" stroke-width="3" stroke-linecap="round"/>
+    <text class="feat" x="144" y="470">Every verdict is the engine's own</text>
+    <text class="body" x="144" y="504">Shapely runs the measured room — walkway, door swing,</text>
+    <text class="body" x="144" y="528">clearance. A green badge is its word, never a model's.</text>
+
+    <path d="M101 595l9 9 20-22" fill="none" stroke="#EBAA2D" stroke-width="3" stroke-linecap="round"/>
+    <text class="feat" x="144" y="604">Add to bag and check out inside the chat</text>
+    <text class="body" x="144" y="638">Nineteen tools, one implementation: ChatGPT, Claude, Evolus</text>
+    <text class="body" x="144" y="662">and the storefront all read one bag, one price, one verdict.</text>
+
+    <path d="M101 729l9 9 20-22" fill="none" stroke="#EBAA2D" stroke-width="3" stroke-linecap="round"/>
+    <text class="feat" x="144" y="738">Nothing is charged on a guess</text>
+    <text class="body" x="144" y="772">Checkout refuses an uncleared line and an assumed yes.</text>
+    <text class="body" x="144" y="796">What leaves is a draft a person at the shop accepts.</text>
+  </g>
+
+  <!-- ── the scoreboard ── -->
+  <g class="ui">
+    <line x1="302" y1="850" x2="302" y2="972" stroke="#2C251F"/>
+    <line x1="532" y1="850" x2="532" y2="972" stroke="#2C251F"/>
+    <text class="stat" x="100" y="906">19</text>
+    <text class="cap" x="100" y="936">capabilities, one</text>
+    <text class="cap" x="100" y="958">service, no private door</text>
+    <text class="stat" x="330" y="906">0</text>
+    <text class="cap" x="330" y="936">false fits across</text>
+    <text class="cap" x="330" y="958">38 golden verdicts</text>
+    <text class="stat" x="560" y="906">375</text>
+    <text class="cap" x="560" y="936">backend tests, plus</text>
+    <text class="cap" x="560" y="958">143 on the front end</text>
+  </g>
+
+  <!-- ══ the listing, measured ══ -->
+  <g filter="url(#lift)">
+    <rect x="840" y="336" width="560" height="624" rx="30" fill="#1D1712" stroke="#2C251F" stroke-width="1.5"/>
+  </g>
+
+  <g class="ui">
+    <text class="lbl" x="884" y="374">MEASURED PLAN · ROOM FROM YOUR PHOTO</text>
+  </g>
+
+  <!-- figure block: the shopper's floor, 1 m = 76 px -->
+  <rect x="884" y="390" width="472" height="312" rx="22" fill="#241D16" stroke="#2C251F"/>
   <g>
-    <text class="f lbl" x="96" y="322">MEASURED PLAN · ROOM SCAN METHOD: PHOTO</text>
-    <text class="f" x="96" y="358" font-size="21" fill="#E9F0F5">KURA three-seat sofa · 200 × 90 cm</text>
+    <rect x="968" y="410" width="304" height="266" fill="#130E0A" fill-opacity="0.45"/>
+    <path d="M1044 412v262M1120 412v262M1196 412v262" stroke="#2C251F" stroke-width="1"/>
+    <path d="M970 486h300M970 562h300M970 638h300" stroke="#2C251F" stroke-width="1"/>
 
-    <!-- room shell, 1 m = 130 px -->
-    <rect x="200" y="376" width="520" height="455" fill="#121A22" stroke="#33434F" stroke-width="7"/>
+    <!-- the piece, off the back and side walls, at its own 220 × 89 cm -->
+    <rect x="970" y="412" width="167" height="68" rx="5" fill="#4DBF74" fill-opacity="0.26" stroke="#4DBF74" stroke-width="2"/>
+    <rect x="970" y="412" width="167" height="15" rx="5" fill="#4DBF74" fill-opacity="0.45"/>
+    <!-- walls, with the doorway cut out of the front one -->
+    <path d="M968 410h304M968 410v266M1272 410v266M968 676h239" stroke="#5D5449" stroke-width="5" fill="none"/>
+    <!-- clearance on the two faces that are not a wall -->
+    <path d="M970 526h213V412" fill="none" stroke="#5D5449" stroke-width="1.5" stroke-dasharray="5 6"/>
 
-    <!-- doorway cut into the front wall, swing kept clear -->
-    <rect x="240" y="822" width="108" height="18" fill="#121A22"/>
-    <path d="M348 831h-108" stroke="#E8A33D" stroke-width="4"/>
-    <path d="M242 727 A104 104 0 0 1 346 831" fill="none" stroke="#E8A33D" stroke-width="2" stroke-dasharray="6 9" opacity="0.8"/>
-    <path d="M242 831v-104" stroke="#E8A33D" stroke-width="2.5"/>
-    <text class="f dim amber" x="404" y="786">door 0.85 m</text>
-    <text class="f fine" x="404" y="812">swing kept furniture-free</text>
+    <!-- walkway dimension -->
+    <path d="M1053 486v38" stroke="#EBAA2D" stroke-width="2"/>
+    <path d="M1047 486h12M1047 524h12" stroke="#EBAA2D" stroke-width="2"/>
+    <text class="ui" x="1053" y="551" font-size="14" fill="#EBAA2D" text-anchor="middle">0.60 m to walk past</text>
 
-    <!-- the piece, flush on the back wall, with its clearance halo -->
-    <rect x="308" y="380" width="304" height="156" fill="none" stroke="#5E7182" stroke-width="1.6" stroke-dasharray="6 7"/>
-    <rect x="321" y="380" width="278" height="143" rx="9" fill="#D8C7A9" opacity="0.93"/>
-    <rect x="321" y="380" width="278" height="28" rx="9" fill="#C2AF90"/>
+    <!-- the door leaf, and the sweep it keeps furniture-free -->
+    <path d="M1207 676v-65" stroke="#EBAA2D" stroke-width="2"/>
+    <path d="M1207 611a65 65 0 0 1 65 65" fill="none" stroke="#EBAA2D" stroke-width="1.5" stroke-dasharray="5 7" stroke-opacity="0.75"/>
+    <text class="ui" x="1191" y="663" font-size="13" fill="#8F8880" text-anchor="end">door 0.85 m</text>
 
-    <!-- the walkway the brief asked for -->
-    <path d="M460 526v78" stroke="#E8A33D" stroke-width="2.4" marker-start="url(#tick)" marker-end="url(#tick)"/>
-    <text class="f amber" x="478" y="574">0.60 m to walk past it</text>
-
-    <!-- obstacle read out of the photo -->
-    <rect x="206" y="600" width="44" height="104" fill="#43596A"/>
-    <text class="f fine" x="266" y="660">radiator, found in the photo</text>
-
-    <!-- room dimensions -->
-    <path d="M200 922h520" stroke="#4C5F6D" stroke-width="1.6" marker-start="url(#tick)" marker-end="url(#tick)"/>
-    <text class="f dim" x="438" y="956">4.0 m</text>
-    <path d="M760 376v455" stroke="#4C5F6D" stroke-width="1.6" marker-start="url(#tick)" marker-end="url(#tick)"/>
-    <text class="f dim" x="780" y="608">3.5 m</text>
-    <text class="f fine" x="780" y="640">usable 13.6 m²</text>
+    <text class="ui num" x="900" y="690" font-size="13" fill="#8F8880">4.0 × 3.5 m · 1 m grid</text>
+    <text class="ui num" x="1340" y="690" font-size="13" fill="#8F8880" text-anchor="end">usable 13.6 m²</text>
   </g>
 
-  <!-- ─── verdict ─── -->
-  <g class="f">
-    <rect x="96" y="986" width="128" height="44" rx="22" fill="#16281E" stroke="#3E7A52"/>
-    <text x="122" y="1015" font-size="24" fill="#79C99A" font-weight="600">fits</text>
-    <text class="fine" x="242" y="1015">floor used, walkways and the doorway are the engine's own · scored on 38 engine-derived labels, and it gates the build</text>
+  <g class="ui">
+    <text class="name" x="884" y="750">Kivik 3-seat sofa</text>
+    <text class="name num" x="1356" y="750" text-anchor="end">€939</text>
+    <text class="term" x="884" y="778">220 × 89 cm · 18 days, pallet freight</text>
+
+    <rect x="884" y="798" width="84" height="36" rx="18" fill="#4DBF74" fill-opacity="0.16" stroke="#4DBF74" stroke-opacity="0.6"/>
+    <text class="pill" x="926" y="822" fill="#4DBF74" text-anchor="middle">Fits</text>
+    <rect x="980" y="798" width="166" height="36" rx="18" fill="#241D16" stroke="#2C251F"/>
+    <text x="1063" y="822" font-size="18" fill="#AAA39A" text-anchor="middle">0.60 m walkway</text>
+    <rect x="1158" y="798" width="142" height="36" rx="18" fill="#241D16" stroke="#2C251F"/>
+    <text x="1229" y="822" font-size="18" fill="#AAA39A" text-anchor="middle">door pass ✓</text>
+
+    <rect x="884" y="858" width="472" height="54" rx="16" fill="#EBAA2D"/>
+    <text class="btn" x="1120" y="892" text-anchor="middle">In the bag</text>
+    <text class="tiny" x="884" y="938">computed for the room on screen, not for a generic one</text>
   </g>
 
-  <!-- ─── the run trace ─── -->
-  <g>
-    <line x1="1040" y1="300" x2="1040" y2="1000" stroke="#23303C" stroke-width="1.5"/>
-    <text class="f lbl" x="1092" y="322">RUN TRACE · EVERY RECOMMENDATION ACCOUNTS FOR ITSELF</text>
-
-    <g class="f">
-      <rect x="1092" y="356" width="196" height="34" rx="8" fill="#1B2631"/>
-      <text class="step" x="1108" y="379">intake</text>
-
-      <rect x="1092" y="402" width="452" height="34" rx="8" fill="#1B2631"/>
-      <text class="step" x="1108" y="425">agent · POST /v1/chat/completions · 640 ms</text>
-
-      <rect x="1092" y="448" width="336" height="34" rx="8" fill="#1B2631"/>
-      <text class="step" x="1108" y="471">brief · sofa · $$ · 900</text>
-
-      <rect x="1092" y="494" width="392" height="34" rx="8" fill="#1B2631"/>
-      <text class="step" x="1108" y="517">shortlist · GET /api/v1/catalog</text>
-
-      <rect x="1092" y="540" width="640" height="34" rx="8" fill="#2A2417" stroke="#E8A33D" stroke-width="1.6"/>
-      <text class="step amber" x="1108" y="563" font-weight="600">fit · KURA → fits · geometry-service · 2400 ms</text>
-
-      <rect x="1092" y="586" width="512" height="34" rx="8" fill="#1B2631"/>
-      <text class="step" x="1108" y="609">fit · VIDGA → tight · geometry-service</text>
-
-      <rect x="1092" y="632" width="600" height="34" rx="8" fill="#1B2631"/>
-      <text class="step" x="1108" y="655">branch · no walkway cleared, band widened</text>
-
-      <rect x="1092" y="678" width="474" height="34" rx="8" fill="#1B2631"/>
-      <text class="step" x="1108" y="701">reply · drafted from the fit report</text>
-    </g>
-
-    <g class="f">
-      <text class="dim" x="1092" y="758">6.7 s measured · 2 pieces checked by the engine · 3 model calls</text>
-      <text class="fine" x="1092" y="790">the header totals the steps' own durations — nothing is estimated</text>
-    </g>
-
-    <g class="f">
-      <text class="lbl" x="1092" y="856">TWELVE CAPABILITIES · ONE IMPLEMENTATION · THREE DOORS</text>
-      <rect x="1092" y="878" width="150" height="38" rx="19" fill="#151E27" stroke="#33434F"/>
-      <text class="step" x="1114" y="903">MCP /mcp/</text>
-      <rect x="1254" y="878" width="238" height="38" rx="19" fill="#151E27" stroke="#33434F"/>
-      <text class="step" x="1276" y="903">REST /agent/tools</text>
-      <rect x="1504" y="878" width="176" height="38" rx="19" fill="#151E27" stroke="#33434F"/>
-      <text class="step" x="1526" y="903">shop pages</text>
-      <text class="fine" x="1092" y="958">Evolus workflow, knowledge library and widget · bring-your-own model on AMD vLLM</text>
-    </g>
+  <!-- ══ the bag, gated ══ -->
+  <g filter="url(#lift)">
+    <rect x="1460" y="336" width="360" height="624" rx="26" fill="#1D1712" stroke="#2C251F" stroke-width="1.5"/>
   </g>
+
+  <g class="ui">
+    <path d="M1490 384h16l2-12h-20zM1492 372a6 6 0 0 1 12 0" fill="none" stroke="#EBAA2D" stroke-width="2" stroke-linejoin="round"/>
+    <text x="1520" y="388" font-size="21" font-weight="600" fill="#F4F1EC" letter-spacing="-0.3">Your bag</text>
+    <text x="1792" y="388" font-size="15" fill="#EBAA2D" text-anchor="end">3 lines</text>
+    <line x1="1488" y1="410" x2="1792" y2="410" stroke="#2C251F"/>
+    <text class="rowsub" x="1488" y="440" font-size="15" fill="#AAA39A">Measured for a 4.0 × 3.5 × 2.4 m room.</text>
+  </g>
+
+  <!-- bag rows -->
+  <g class="ui">
+    <rect x="1488" y="458" width="304" height="84" rx="16" fill="#130E0A" fill-opacity="0.5" stroke="#2C251F"/>
+    <text class="row" x="1506" y="484">Kivik 3-seat sofa</text>
+    <text class="mono rowsub" x="1506" y="503">SOFA-301</text>
+    <rect x="1710" y="468" width="64" height="24" rx="12" fill="#4DBF74" fill-opacity="0.16" stroke="#4DBF74" stroke-opacity="0.55"/>
+    <text x="1742" y="485" font-size="13" font-weight="600" fill="#4DBF74" text-anchor="middle">Fits</text>
+    <text class="rowprice num" x="1506" y="528">€939</text>
+    <text class="rowsub num" x="1560" y="528">0.62 m walkway</text>
+    <text class="rowsub num" x="1774" y="528" text-anchor="end">× 1</text>
+
+    <rect x="1488" y="556" width="304" height="84" rx="16" fill="#130E0A" fill-opacity="0.5" stroke="#2C251F"/>
+    <text class="row" x="1506" y="582">Stenheden coffee table</text>
+    <text class="mono rowsub" x="1506" y="601">TAB-301</text>
+    <rect x="1710" y="566" width="64" height="24" rx="12" fill="#4DBF74" fill-opacity="0.16" stroke="#4DBF74" stroke-opacity="0.55"/>
+    <text x="1742" y="583" font-size="13" font-weight="600" fill="#4DBF74" text-anchor="middle">Fits</text>
+    <text class="rowprice num" x="1506" y="626">€359</text>
+    <text class="rowsub num" x="1560" y="626">0.85 m walkway</text>
+    <text class="rowsub num" x="1774" y="626" text-anchor="end">× 1</text>
+
+    <rect x="1488" y="654" width="304" height="84" rx="16" fill="#130E0A" fill-opacity="0.5" stroke="#2C251F"/>
+    <text class="row" x="1506" y="680">Bektet desk</text>
+    <text class="mono rowsub" x="1506" y="699">DESK-101</text>
+    <rect x="1696" y="664" width="78" height="24" rx="12" fill="#E3B842" fill-opacity="0.16" stroke="#E3B842" stroke-opacity="0.55"/>
+    <text x="1735" y="681" font-size="13" font-weight="600" fill="#E3B842" text-anchor="middle">Tight fit</text>
+    <text class="rowprice num" x="1506" y="724">€779</text>
+    <text class="rowsub num" x="1560" y="724">0.61 m walkway</text>
+    <text class="rowsub num" x="1774" y="724" text-anchor="end">× 1</text>
+  </g>
+
+  <!-- totals + the gate -->
+  <g class="ui">
+    <line x1="1488" y1="760" x2="1792" y2="760" stroke="#2C251F"/>
+    <text x="1488" y="788" font-size="15" fill="#AAA39A">3 piece(s)</text>
+    <text class="num" x="1792" y="790" font-size="21" font-weight="600" fill="#F4F1EC" text-anchor="end">€2,077</text>
+    <text class="rowsub" x="1488" y="814">Arrives</text>
+    <text class="rowsub num" x="1792" y="814" text-anchor="end">18 days, pallet freight</text>
+
+    <rect x="1488" y="834" width="304" height="112" rx="16" stroke="#2C251F" fill="none"/>
+    <text class="lbl" x="1506" y="858" font-size="12" letter-spacing="2">Fit check</text>
+    <rect x="1506" y="868" width="268" height="32" rx="10" fill="#130E0A" stroke="#2C251F"/>
+    <text x="1518" y="889" font-size="13" fill="#8F8880">yes, order it</text>
+    <rect x="1506" y="908" width="268" height="30" rx="10" fill="#EBAA2D"/>
+    <text class="num" x="1640" y="928" font-size="14" font-weight="700" fill="#17110C" text-anchor="middle">Place the order · €2,077</text>
+  </g>
+
+  <text class="ui" x="1640" y="988" font-size="14" fill="#8F8880" text-anchor="middle">refuses an uncleared line, and an assumed yes</text>
 </svg>
