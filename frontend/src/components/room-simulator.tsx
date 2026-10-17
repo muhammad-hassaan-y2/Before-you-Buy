@@ -174,9 +174,16 @@ export function RoomSimulator() {
           )}
 
           {!report && !error && (
-            <div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-sm text-muted-foreground">
-              <Sofa className="size-6 opacity-40" />
-              Nothing simulated yet.
+            <div className="rounded-2xl border border-dashed border-border/70 bg-surface/70 px-6 py-10 text-center">
+              <svg viewBox="0 0 120 84" className="mx-auto h-auto w-40" aria-hidden>
+                <rect x="6" y="6" width="108" height="72" rx="4" className="fill-room-floor/20 stroke-muted-foreground/40" strokeWidth="1" strokeDasharray="3 3" />
+                <rect x="14" y="14" width="42" height="19" rx="3" className="fill-room-product/15 stroke-room-product/50" strokeWidth="1" strokeDasharray="3 3" />
+              </svg>
+              <p className="mt-4 text-sm font-medium">Nothing measured yet</p>
+              <p className="mx-auto mt-1 max-w-xs text-xs text-muted-foreground">
+                The plan, the walkways and the verdict land here. The geometry worker decides all three — nothing on this
+                page guesses on its behalf.
+              </p>
             </div>
           )}
 

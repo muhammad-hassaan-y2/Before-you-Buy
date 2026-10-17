@@ -49,7 +49,7 @@ export function BagDrawer() {
       <aside className="flex h-full w-full max-w-md flex-col border-l border-border/60 bg-card shadow-2xl">
         <header className="flex items-center gap-3 border-b border-border/50 px-6 py-4">
           <ShoppingBag className="size-4 text-primary" />
-          <h2 className="text-sm font-semibold tracking-[0.14em] uppercase">{order ? "Order draft" : "Your bag"}</h2>
+          <h2 className="text-base font-semibold tracking-tight">{order ? "Order draft" : "Your bag"}</h2>
           <Button type="button" size="icon" variant="ghost" className="ml-auto" aria-label="Close the bag" onClick={closeBag}>
             <X className="size-4" />
           </Button>
@@ -97,7 +97,7 @@ function RoomLine({ bag, current }: { bag: Bag; current: Bag["room"] }) {
   return (
     <p className="text-xs text-muted-foreground">
       Measured for a{" "}
-      <span className="font-mono tabular-nums text-foreground">
+      <span className="num font-medium text-foreground">
         {bag.room.width_m} × {bag.room.depth_m} × {bag.room.height_m} m
       </span>{" "}
       room{measured ? "" : ` — the room on screen is ${current.width_m} × ${current.depth_m} m, so measure again before ordering`}
@@ -118,7 +118,7 @@ function BagRow({ line, busy }: { line: BagLine; busy: boolean }) {
         <Badge variant={verdictVariant(line.verdict ?? undefined)}>{verdictLabel(line.verdict ?? undefined)}</Badge>
       </div>
       <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
-        <span className="font-mono tabular-nums text-sm text-foreground">{price(line.price_eur * line.quantity)}</span>
+        <span className="num text-sm font-semibold text-foreground">{price(line.price_eur * line.quantity)}</span>
         {tightest !== null && <span className="tabular-nums">{tightest.toFixed(2)} m walkway</span>}
         <span className="ml-auto flex items-center gap-1">
           <span className="tabular-nums">× {line.quantity}</span>
@@ -147,10 +147,10 @@ function SetVerdict({ bag }: { bag: Bag }) {
   return (
     <div className="rounded-2xl border border-border/60 bg-muted/30 p-4">
       <div className="flex items-center gap-2">
-        <p className="text-xs tracking-[0.14em] text-muted-foreground uppercase">Bought together</p>
+        <p className="eyebrow text-muted-foreground">Bought together</p>
         <Badge variant={verdictVariant(set.verdict)}>{verdictLabel(set.verdict)}</Badge>
       </div>
-      <p className="mt-2 font-mono text-xs tabular-nums text-muted-foreground">
+      <p className="num mt-2 text-xs text-muted-foreground">
         {set.footprint_m2} m² on {set.usable_area_m2} m² usable · {set.coverage_pct}% covered
         {set.tightest_walkway_m !== null && ` · tightest walkway ${set.tightest_walkway_m} m`}
       </p>
@@ -170,7 +170,7 @@ function Totals({ bag }: { bag: Bag }) {
     <dl className="grid gap-1.5 border-t border-border/50 pt-4 text-sm">
       <div className="flex justify-between">
         <dt className="text-muted-foreground">{bag.items} piece(s)</dt>
-        <dd className="font-mono tabular-nums">{price(bag.total_eur)}</dd>
+        <dd className="num font-medium">{price(bag.total_eur)}</dd>
       </div>
       <div className="flex justify-between text-xs text-muted-foreground">
         <dt>Arrives</dt>
@@ -201,7 +201,7 @@ function Checkout({
   return (
     <div className="space-y-3 rounded-2xl border border-border/60 p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs tracking-[0.14em] text-muted-foreground uppercase">Fit check</p>
+        <p className="eyebrow text-muted-foreground">Fit check</p>
         <Button type="button" size="sm" variant={unproven ? "default" : "outline"} disabled={busy} onClick={() => void onMeasure()}>
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : null}
           {unproven ? `Measure ${bag.unproven.length} unproven` : "Re-measure the bag"}
@@ -251,7 +251,7 @@ function Receipt({ order }: { order: Order }) {
           </li>
         ))}
       </ul>
-      <div className="flex justify-between border-t border-border/40 pt-2 font-mono text-sm tabular-nums">
+      <div className="num flex justify-between border-t border-border/40 pt-2 text-sm">
         <span>{price(order.total_eur)}</span>
         <span className="text-xs text-muted-foreground">“{order.confirmation}”</span>
       </div>

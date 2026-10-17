@@ -69,7 +69,7 @@ describe("StoreGrid", () => {
     await waitFor(() => expect(screen.getByText("KURA three-seat sofa")).toBeInTheDocument())
     expect(screen.getByText("€919")).toBeInTheDocument()
     expect(screen.getByText("€399")).toBeInTheDocument()
-    expect(screen.getByText("18 days, pallet freight")).toBeInTheDocument()
+    expect(screen.getByText("18 days · pallet freight")).toBeInTheDocument()
     expect(screen.getAllByText("Not measured")).toHaveLength(2)
     expect(screen.getByRole("link", { name: /KURA three-seat sofa/ })).toHaveAttribute("href", "/product/BYB-KURA-3S")
   })
@@ -79,7 +79,7 @@ describe("StoreGrid", () => {
     render(<StoreGrid />)
     await waitFor(() => expect(screen.getByText("KURA three-seat sofa")).toBeInTheDocument())
 
-    fireEvent.change(screen.getByLabelText("Width (m)"), { target: { value: "3.6" } })
+    fireEvent.change(screen.getByLabelText("Width in metres"), { target: { value: "3.6" } })
     fireEvent.click(screen.getByRole("button", { name: /Measure in my room/ }))
 
     await waitFor(() => expect(screen.getByText("Fits")).toBeInTheDocument())

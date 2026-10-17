@@ -87,7 +87,7 @@ export function FitAgent() {
   const handoff = decision?.action === "handoff" || run?.status === "awaiting_human"
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:items-start">
       <Card className="shadow-lg shadow-black/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

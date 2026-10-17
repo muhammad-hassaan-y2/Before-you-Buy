@@ -68,18 +68,32 @@ export function FitResult({ simulation, placement, onPlacement }: Props) {
   const roomWidth = scan?.width_m ?? simulation.room_width_m
   const roomDepth = scan?.depth_m ?? simulation.room_depth_m
   const active = report.placements.find((spot) => spot.label === placement) ?? null
+  // The number the verdict turns on: the narrowest gap left around the piece that is being looked at.
+  const shown = active ?? report.placements.find((spot) => spot.fits) ?? report.placements[0] ?? null
+  const walkways = Object.values(shown?.walkway_m ?? {}).filter((gap) => typeof gap === "number")
+  const tightest = walkways.length ? Math.min(...walkways) : null
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={VERDICT[report.verdict]?.variant ?? "secondary"}>{VERDICT[report.verdict]?.label ?? report.verdict}</Badge>
-        <Badge variant="outline">
-          {profile
-            ? `${profile.geometry.width_cm.toFixed(0)} × ${profile.geometry.depth_cm.toFixed(0)} × ${profile.geometry.height_cm.toFixed(0)} cm`
-            : `${report.placements.length} placements tested`}
-        </Badge>
-        {profile && <ProductSourceBadge profile={profile} />}
-        {scan && <Badge variant="outline">{ROOM_SCAN_LABEL[scan.method] ?? scan.method}</Badge>}
+      <div className="space-y-2">
+        <p className="flex items-center gap-2.5 text-xl font-semibold tracking-tight text-balance">
+          <span
+            className={cn(
+              "size-2 shrink-0 rounded-full",
+              report.verdict === "fits" ? "bg-success" : report.verdict === "tight" ? "bg-warning" : "bg-destructive",
+            )}
+          />
+          {VERDICT[report.verdict]?.label ?? report.verdict}
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline">
+            {profile
+              ? `${profile.geometry.width_cm.toFixed(0)} × ${profile.geometry.depth_cm.toFixed(0)} × ${profile.geometry.height_cm.toFixed(0)} cm`
+              : `${report.placements.length} placements tested`}
+          </Badge>
+          {profile && <ProductSourceBadge profile={profile} />}
+          {scan && <Badge variant="outline">{ROOM_SCAN_LABEL[scan.method] ?? scan.method}</Badge>}
+        </div>
       </div>
 
       {profile && <DimensionEstimateWarning profile={profile} />}
@@ -93,15 +107,16 @@ export function FitResult({ simulation, placement, onPlacement }: Props) {
         scene={simulation.scene ?? null}
       />
 
-      <dl className="grid grid-cols-3 gap-3 text-sm">
+      <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
         {[
-          ["Room", `${report.room_area_m2.toFixed(1)} m²`],
-          ["Usable", `${report.usable_area_m2.toFixed(1)} m²`],
-          ["Occupied", `${report.coverage_pct.toFixed(1)} %`],
-        ].map(([labelText, value]) => (
-          <div key={labelText} className="rounded-xl border p-3">
-            <dt className="text-xs text-muted-foreground">{labelText}</dt>
-            <dd className="font-mono text-base tabular-nums">{value}</dd>
+          ["Room", `${report.room_area_m2.toFixed(1)} m²`, null],
+          ["Usable", `${report.usable_area_m2.toFixed(1)} m²`, null],
+          ["Occupied", `${report.coverage_pct.toFixed(1)} %`, null],
+          ["Tightest gap", tightest === null ? null : `${tightest.toFixed(2)} m`, tightest !== null && tightest < 0.6 ? "text-warning" : null],
+        ].map(([labelText, value, tone]) => (
+          <div key={labelText as string} className="rounded-xl border border-border/60 bg-surface px-3.5 py-3">
+            <dt className="eyebrow text-muted-foreground">{labelText}</dt>
+            <dd className={cn("num mt-1 text-lg font-semibold", tone ?? undefined)}>{value ?? "—"}</dd>
           </div>
         ))}
       </dl>

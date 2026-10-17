@@ -20,7 +20,7 @@ test("the shelf quotes terms the catalog actually computes", async ({ page }) =>
   await expect(page.getByRole("heading", { level: 1 })).toContainText("answers before you add to cart")
   await expect(page.getByText("€919")).toBeVisible()
   await expect(page.getByText("€399")).toBeVisible()
-  await expect(page.getByText("18 days, pallet freight")).toBeVisible()
+  await expect(page.getByText("18 days · pallet freight")).toBeVisible()
   await expect(page.getByText("Porto Frame Works · PT").first()).toBeVisible()
   // Nothing is presented as fitting until the geometry worker says so.
   await expect(page.getByText("Not measured")).toHaveCount(2)
