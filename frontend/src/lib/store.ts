@@ -1,7 +1,7 @@
 /** The shop's own reading of a catalog row. Everything here is arithmetic over what the
  *  gateway already sent — the storefront never holds a price the service did not compute. */
 
-import type { CatalogRow } from "@/lib/api"
+import type { CatalogRow, StockRow } from "@/lib/api"
 
 export type StoreSort = "fit" | "price" | "margin" | "lead" | "size"
 
@@ -93,4 +93,37 @@ export function verdictVariant(verdict: string | undefined): "success" | "warnin
   if (PASS_VERDICTS.includes(verdict)) return verdict === "tight" ? "warning" : "success"
   if (FAIL_VERDICTS.includes(verdict)) return "destructive"
   return "outline"
+}
+
+/** How the shop talks about its own shelf. The count comes from catalog-service; these are only
+ *  the words around it, kept in one place so a card and a listing page cannot say different things. */
+export const STOCK_LABEL: Record<StockRow["state"], string> = {
+  in_stock: "In stock",
+  low: "Low stock",
+  backorder: "Out of stock",
+  made_to_order: "Made to order",
+}
+
+export function stockTone(state: StockRow["state"] | undefined): string {
+  if (state === "in_stock") return "text-success"
+  if (state === "low") return "text-warning"
+  if (state === "backorder") return "text-destructive"
+  return "text-muted-foreground"
+}
+
+export function stockLine(row: StockRow | undefined): string {
+  if (!row) return "Count not loaded"
+  if (row.state === "made_to_order") return `Cut after your order · ${row.lead_days} days`
+  if (row.available === 0) return `Next lot on the floor in ${row.next_lot_in_days} days`
+  if (row.state === "low") return `${row.available} left · ${row.reserved} held`
+  return `${row.available} of ${row.on_hand} on the floor`
+}
+
+/** "3 minutes ago", from the shop's own event log, so the activity rail reads as traffic and not as copy. */
+export function ago(iso: string, now = Date.now()): string {
+  const seconds = Math.max(Math.round((now - new Date(iso).getTime()) / 1000), 0)
+  if (seconds < 45) return "just now"
+  if (seconds < 3_600) return `${Math.round(seconds / 60)} min ago`
+  if (seconds < 86_400) return `${Math.round(seconds / 3_600)} h ago`
+  return `${Math.round(seconds / 86_400)} d ago`
 }

@@ -286,7 +286,51 @@ export type CatalogRow = {
   material?: string | null
   price_band?: string | null
   geometry: ProductGeometry
+  /** The sub-boxes the 3D workspace is built from, so the storefront draws the same piece the engine places. */
+  parts?: ProductPart[]
   commerce: CommerceTerms
+}
+
+/** One SKU's shelf, as catalog-service counts it. */
+export type StockRow = {
+  sku: string
+  name: string
+  on_hand: number
+  reserved: number
+  available: number
+  state: "in_stock" | "low" | "backorder" | "made_to_order"
+  volume_m3: number
+  lead_days: number
+  next_lot_in_days: number
+  basis: string
+}
+
+/** One thing the shop did that moved a count. */
+export type StockEvent = {
+  at: string
+  action: "claimed" | "released"
+  sku: string
+  qty: number
+  reason: string
+  key: string
+}
+
+export async function fetchStock(): Promise<StockRow[]> {
+  const response = await fetch(`${BASE}/stock`, { cache: "no-store" })
+  if (!response.ok) throw new ApiError(await message(response))
+  return response.json()
+}
+
+export async function fetchStockOne(sku: string): Promise<StockRow> {
+  const response = await fetch(`${BASE}/stock/${encodeURIComponent(sku)}`, { cache: "no-store" })
+  if (!response.ok) throw new ApiError(await message(response))
+  return response.json()
+}
+
+export async function fetchStockEvents(): Promise<StockEvent[]> {
+  const response = await fetch(`${BASE}/stock/events`, { cache: "no-store" })
+  if (!response.ok) throw new ApiError(await message(response))
+  return response.json()
 }
 
 /** The gateway proxies catalog-service, so the browser still talks to one origin. */
