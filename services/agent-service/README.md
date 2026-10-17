@@ -3,7 +3,7 @@
 The agent layer. It gives an outside agent the ability to act on this shop: search the
 catalog, measure a product against a real room, sweep the catalog against that room, widen the
 search when nothing fits, explain a verdict in words, price the purchase, hold a piece on the
-shopper's own word, and hand the case to a person when it should.
+shopper's own word, fill a bag and check it out, and hand the case to a person when it should.
 
 One set of capabilities, reachable through several doors:
 
@@ -13,7 +13,7 @@ One set of capabilities, reachable through several doors:
 | `/agent/tools/{name}` | an Evolus workflow step or webhook | the same tools over plain REST |
 | `/agent/connect` | a person adding the connector | the URL, the auth it expects and the steps per client |
 | `/agent/brief`, `/agent/runs/{id}`, `/agent/chat` | the shop's own UI | start a journey, watch its trace, talk to the agent |
-| `/agent/reservations` | the shop | the holds a human agreed to, still waiting on a person |
+| `/agent/reservations`, `/agent/orders` | the shop | the holds and the order drafts a human still has to accept |
 
 ## The process it runs
 
@@ -46,6 +46,16 @@ what a session gives the client - and what it writes is a request a person at th
 releases, never a charge. `returns_estimate` is arithmetic over assumptions the caller sees and
 can override.
 
+The bag is the same shape. `add_to_cart` puts a piece in with whatever proof it already has,
+`view_cart` reads it back, `remove_from_cart` takes it out, and `measure_cart` is the only one
+that changes the room the bag is shopped for — it spends the GPU jobs and returns a verdict per
+line plus one for the set. `checkout` refuses an uncleared line and refuses an assumed yes, so
+the confirmation has to be the shopper's words, and what it writes is an order draft a person at
+the shop accepts or releases. `order_status` hands back that draft with the simulation id behind
+every line. The shopper's drawer in the browser is this bag, not a copy of it: the page keeps one
+cart id and the room, so an assistant in ChatGPT and a person on `/store` are looking at the same
+lines, prices and verdicts.
+
 ## The connector, and what an outside client needs
 
 `/mcp/` is streamable HTTP over one implementation shared with REST, so an agent in ChatGPT and a
@@ -57,9 +67,9 @@ announces:
   its first tool is called, and the rules a model must not lose are inside the first 512 characters
   of the instructions, which is the part a client is guaranteed to keep.
 - **Hints** - every capability that only measures declares `readOnlyHint`, so a client can run it
-  without stopping the shopper; the two that act on stock do not.
-- **Resources and prompts** - the catalog, one fit report, one journey trace, and two starting
-  prompts, so a client can attach the evidence rather than quote a tool call.
+  without stopping the shopper; the ones that act on stock, on the bag or on an order do not.
+- **Resources and prompts** - the catalog, one fit report, one journey trace and one bag, plus three
+  starting prompts, so a client can attach the evidence rather than quote a tool call.
 - **Absolute links** - offers, model downloads and run polls are printed against `PUBLIC_BASE_URL`,
   because an agent outside this machine can only follow a URL it can reach.
 
@@ -99,6 +109,7 @@ so the file is engine output under test rather than a set of opinions someone ty
 | `ALLOWED_ORIGINS` | browsers allowed to call this service; the MCP Inspector is in the default |
 | `MAX_CANDIDATES`, `PARALLEL_FITS`, `SETTLE_TIMEOUT_S` | loop and fan-out boundaries |
 | `MAX_CATALOG_FITS` | how many pieces one `fit_catalog` sweep may measure - each one is a GPU job |
+| `MAX_CART_LINES` | how many distinct pieces one bag may hold |
 | `MAX_JOINT_PIECES`, `MAX_JOINT_COVERAGE`, `MIN_WALKWAY_M` | how many pieces a multi-piece verdict may add up, and the room it must leave clear |
 
 Nothing is required to be set. With no Evolus key the run still completes against the
@@ -118,6 +129,7 @@ read the brief and the trace says so too.
 | POST | `/agent/webhooks/evolus` | where a workflow puts its result (`?run=<id>`) |
 | POST | `/agent/chat` | chat with the agent; Evolus when configured, the AMD model otherwise |
 | GET | `/agent/reservations` | the holds a human agreed to, newest first |
+| GET | `/agent/orders` | the order drafts checked out, newest first, with the proof behind each line |
 | POST | `/mcp/` | MCP over streamable HTTP |
 
 ## Poetry

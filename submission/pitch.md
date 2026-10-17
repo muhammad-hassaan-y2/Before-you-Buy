@@ -46,13 +46,13 @@ one run of the same seven services. Nothing on a card claims it fits until the e
 
 ## 4. Agent-first, not AI decoration — Application of Technology
 
-Thirteen capabilities, one implementation, three doors:
+Nineteen capabilities, one implementation, three doors:
 
 | Door | Who uses it |
 | --- | --- |
 | MCP connector | any agent that speaks MCP — Evolus, ChatGPT, Claude, Cursor |
 | REST tool endpoints | an Evolus workflow step, a checkout bot, a webhook |
-| The shop's own pages | the shopper, and the merchant checking the holds |
+| The shop's own pages | the shopper, with the same bag and the same checkout gate, and the merchant checking the holds |
 
 `catalog_search · read_brief · simulate_product · fit_report · explain_fit · joint_fit ·
 find_alternatives · fit_catalog · start_journey · journey_status · proven_fit_offer · reserve_fit ·
@@ -106,7 +106,7 @@ hand off, and a shopper who wrote their room in centimetres.
 
 | Block | In this project |
 | --- | --- |
-| MCP connector | the thirteen capabilities, mounted at `/mcp/` — addable to ChatGPT or Claude |
+| MCP connector | the nineteen capabilities, mounted at `/mcp/` — addable to ChatGPT or Claude |
 | REST API | every capability is a POST an Evolus step can call |
 | Workflow | conditional branch (recommend vs. hand off), parallel fits, a loop boundary at the widened budget |
 | Knowledge library | the catalog, uploaded as documents the agent can retrieve |

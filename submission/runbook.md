@@ -45,7 +45,7 @@ Sanity from the outside:
 
 ```bash
 curl -s localhost:8001/api/v1/health
-curl -s localhost:8007/agent/tools | head -c 400     # thirteen capabilities
+curl -s localhost:8007/agent/tools | head -c 400     # nineteen capabilities
 curl -s localhost:8007/agent/connect | head -c 400   # the connector's own install guide
 ```
 
@@ -69,7 +69,7 @@ Then confirm the two consequences:
 
 The rule is at least two building blocks; we use five, and each needs creating by hand once:
 
-1. **MCP connector** — point it at `PUBLIC_BASE_URL` + `/mcp/`. Check the thirteen tools appear in
+1. **MCP connector** — point it at `PUBLIC_BASE_URL` + `/mcp/`. Check the nineteen tools appear in
    the workspace's tool list. `GET /agent/connect` prints the same URL with the steps for ChatGPT,
    Claude, Claude Code and Cursor; adding it to one of those is the strongest 20 seconds of the demo,
    and it only works once `PUBLIC_BASE_URL` is a real https tunnel. In ChatGPT that means Developer
@@ -115,7 +115,8 @@ voice. The load-bearing shot is `fit_report` called over REST returning the same
 it is the evidence that the agent has no private door into the pipeline.
 
 Exports to keep: the video file, one PNG of the trace header with its totals, one PNG of the golden
-set scoreboard, and the 16:9 cover (`submission/cover.png`).
+set scoreboard, and the 16:9 cover (`submission/cover.png`, redrawn from `submission/cover.svg` with
+`node scripts/render-cover.mjs`).
 
 ## 7. Fill the form
 
