@@ -24,7 +24,7 @@ const GUIDE: ConnectGuide = {
   auth: { type: "none", header: null, works_in: ["chatgpt"], does_not_work_in: [], why: "Anyone with the URL can call it." },
   capabilities: { tools: ["catalog_search"], resources: ["byb://catalog"], prompts: ["fit-my-room"] },
   clients: {
-    chatgpt: { label: "ChatGPT (web)", requires_https: true, steps: ["Plugins -> + -> Add custom MCP server."] },
+    chatgpt: { label: "ChatGPT (web)", requires_https: true, steps: ["Apps -> Advanced -> Add custom MCP server."] },
     claude: { label: "Claude (claude.ai)", requires_https: true, steps: ["Settings -> Connectors."] },
   },
   wiring: {},
@@ -63,7 +63,7 @@ describe("AgentSurface", () => {
 
     expect(await screen.findByText("Add the connector")).toBeInTheDocument()
     expect(screen.getByText("https://byb.test/mcp/")).toBeInTheDocument()
-    expect(screen.getByText("Plugins -> + -> Add custom MCP server.")).toBeInTheDocument()
+    expect(screen.getByText("Apps -> Advanced -> Add custom MCP server.")).toBeInTheDocument()
   })
 
   it("says so when agent-service is not there", async () => {

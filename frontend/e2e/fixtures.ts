@@ -66,8 +66,8 @@ export const connect = {
       requires_https: true,
       steps: [
         "Set PUBLIC_BASE_URL to the https tunnel URL and restart agent-service.",
-        "In chatgpt.com, open Plugins -> + -> Add custom MCP server.",
-        "Accept the warning, create it as a plugin, then @-mention Buy You Before in a chat.",
+        "Open the Apps directory -> Advanced -> Add custom MCP server.",
+        "Create it, then @-mention Buy You Before in a chat and give it a room to measure.",
       ],
       note: "ChatGPT will not accept a static bearer header.",
     },

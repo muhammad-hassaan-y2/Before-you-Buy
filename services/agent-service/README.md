@@ -49,7 +49,9 @@ can override.
 ## The connector, and what an outside client needs
 
 `/mcp/` is streamable HTTP over one implementation shared with REST, so an agent in ChatGPT and a
-workflow step in Evolus get the same verdict from the same numbers. What it announces:
+workflow step in Evolus get the same verdict from the same numbers. The frontend proxies it, so the
+origin that serves the shop's page is the origin a client adds - one tunnel, both doors. What it
+announces:
 
 - **Identity** - title, description, icon and instructions. A connector is shown to a human before
   its first tool is called, and the rules a model must not lose are inside the first 512 characters

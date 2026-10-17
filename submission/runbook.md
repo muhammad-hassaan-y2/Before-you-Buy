@@ -67,7 +67,9 @@ The rule is at least two building blocks; we use five, and each needs creating b
 1. **MCP connector** — point it at `PUBLIC_BASE_URL` + `/mcp/`. Check the thirteen tools appear in
    the workspace's tool list. `GET /agent/connect` prints the same URL with the steps for ChatGPT,
    Claude, Claude Code and Cursor; adding it to one of those is the strongest 20 seconds of the demo,
-   and it only works once `PUBLIC_BASE_URL` is a real https tunnel.
+   and it only works once `PUBLIC_BASE_URL` is a real https tunnel. In ChatGPT that means Developer
+   mode (Settings → Security, or Workspace settings → Permissions & roles) and *no authentication* —
+   it cannot send a key.
 2. **REST API** — one workflow step calling `/agent/tools/simulate_product`. Check it returns
    `{tool, result}`.
 3. **Workflow** — the conditional branch (recommend versus hand off), the parallel fits, and the
@@ -87,7 +89,9 @@ Expose the frontend and set `PUBLIC_BASE_URL` to the **same** origin the browser
 connector and the callback both miss.
 
 - Fastest: a tunnel (`cloudflared tunnel --url http://localhost:3000`, or ngrok). Free tiers give a
-  random host that changes when the process does — take the video before restarting anything.
+  random host that changes when the process does — take the video before restarting anything. The
+  page proxies `/mcp/`, so that one host is also the connector a ChatGPT or Claude user adds:
+  `https://<host>/mcp/`.
 - Steadier: a small droplet, `docker compose up -d` there, reverse proxy on 443, TLS. Then
   `ALLOWED_ORIGINS` needs that origin or the browser gets CORS errors that look like a dead app.
 - Either way, test from an incognito window on a different network: brief → trace → verdict →

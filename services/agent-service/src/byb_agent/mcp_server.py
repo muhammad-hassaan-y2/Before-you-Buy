@@ -356,14 +356,17 @@ def connect(settings: Settings) -> dict[str, Any]:
             "requires_https": True,
             "steps": [
                 "Set PUBLIC_BASE_URL to the https tunnel URL and restart agent-service.",
-                "In chatgpt.com, open Plugins -> + -> Add custom MCP server.",
-                "Name it Buy You Before, choose Connection, paste the URL below.",
+                "Turn on Developer mode: Settings -> Security, or Workspace settings -> "
+                "Permissions & roles if your account has a workspace. Reload the tab.",
+                "Open the Apps directory -> Advanced -> Add custom MCP server.",
+                "Name it Buy You Before and paste the URL below - the shop's own origin, /mcp/.",
                 "Leave authentication on No authentication, or on OAuth if the shop put OAuth in front.",
-                "Accept the warning, create it as a plugin, then @-mention Buy You Before in a chat.",
+                "Create it, then @-mention Buy You Before in a chat and give it a room to measure.",
             ],
-            "note": "ChatGPT will not accept a static bearer header, so this door only opens while "
-                    "MCP_CONNECT_TOKEN is empty or the shop speaks OAuth. Asking it to fit a room is "
-                    "the demo: it calls fit_catalog and gets a measured answer.",
+            "note": "ChatGPT reaches the connector through the shop's own origin, so one https tunnel "
+                    "is enough; it will not accept a static bearer header, so this door only opens "
+                    "while MCP_CONNECT_TOKEN is empty or the shop speaks OAuth. Asking it to fit a "
+                    "room is the demo: it calls fit_catalog and gets a measured answer.",
         },
         "claude": {
             "label": "Claude (claude.ai)",

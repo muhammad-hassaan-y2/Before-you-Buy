@@ -364,7 +364,8 @@ describes the deployment to the page — the URL, the transport, the auth it act
 steps per client — because the honest answer differs by client and by environment:
 
 - **It has to be reachable over https.** `PUBLIC_BASE_URL` is what turns a laptop into a connector;
-  with it unset, every URL the guide prints is local and no outside assistant can add it.
+  with it unset, every URL the guide prints is local and no outside assistant can add it. The page
+  proxies `/mcp/` to agent-service, so the one tunnel that exposes the shop also exposes its connector.
 - **Authentication is none or OAuth.** ChatGPT and Claude's app offer those two. A static bearer
   key (`MCP_CONNECT_TOKEN`) is a Claude Code and Cursor thing, so the gate stays off by default and
   the guide says which doors a key locks. What a key is for is a stranger's agent spending the

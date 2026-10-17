@@ -20,6 +20,9 @@ const nextConfig: NextConfig = {
       { source: "/healthz", destination: `${gateway}/healthz` },
       // The Evolus key lives on agent-service, so the chat panel is proxied too.
       { source: "/agent/:path*", destination: `${agent}/agent/:path*` },
+      // One origin for the whole shop: an MCP client outside this machine reaches the
+      // connector through the page's URL, which is the origin PUBLIC_BASE_URL is set to.
+      { source: "/mcp/:path*", destination: `${agent}/mcp/` },
     ];
   },
 };

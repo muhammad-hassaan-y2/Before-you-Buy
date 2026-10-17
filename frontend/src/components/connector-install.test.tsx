@@ -22,7 +22,7 @@ function guide(overrides: Partial<ConnectGuide> = {}): ConnectGuide {
     },
     capabilities: { tools: ["catalog_search", "fit_catalog"], resources: ["byb://catalog"], prompts: ["fit-my-room", "hold-the-fit"] },
     clients: {
-      chatgpt: { label: "ChatGPT (web)", requires_https: true, steps: ["Open Plugins -> + -> Add custom MCP server.", "Paste the URL."], note: "ChatGPT takes no static key." },
+      chatgpt: { label: "ChatGPT (web)", requires_https: true, steps: ["Apps -> Advanced -> Add custom MCP server.", "Paste the URL."], note: "ChatGPT takes no static key." },
       "claude-code": { label: "Claude Code", requires_https: false, command: "claude mcp add --transport http buy-you-before https://byb.test/mcp/" },
       cursor: { label: "Cursor", requires_https: false, config: { mcpServers: { "buy-you-before": { url: "https://byb.test/mcp/" } } } },
     },
@@ -37,7 +37,7 @@ describe("ConnectorInstall", () => {
 
     expect(screen.getByText("Add the connector")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "ChatGPT (web)" })).toHaveAttribute("aria-pressed", "true")
-    expect(screen.getByText("Open Plugins -> + -> Add custom MCP server.")).toBeInTheDocument()
+    expect(screen.getByText("Apps -> Advanced -> Add custom MCP server.")).toBeInTheDocument()
     expect(screen.getByText("ChatGPT takes no static key.")).toBeInTheDocument()
   })
 
