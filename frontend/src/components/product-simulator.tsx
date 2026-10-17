@@ -4,6 +4,7 @@ import { AlertTriangle, ImageIcon, Loader2, Ruler, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 import { FitResult, ProgressStrip } from "@/components/fit-result"
+import { AddToBag } from "@/components/bag-drawer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -123,6 +124,19 @@ export function ProductSimulator({ row }: Props) {
         )}
 
         {report && simulation && <FitResult simulation={simulation} placement={placement} onPlacement={setPlacement} />}
+
+        {report && simulation && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/30 p-3">
+            <p className="text-xs text-muted-foreground">Bag it with this report attached — the geometry worker already cleared this piece for this room.</p>
+            <AddToBag
+              sku={row.sku}
+              simulationId={simulation.id}
+              verdict={report.verdict}
+              room={{ width_m: Number(width) || 4, depth_m: Number(depth) || 3.5, height_m: Number(height) || 2.4 }}
+              label="Bag this fit"
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   )

@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { callTool, verdictsOf, type CatalogFits } from "@/lib/agent"
+import { callTool, proofsOf, verdictsOf, type CatalogFits } from "@/lib/agent"
 import { fetchCatalog, type CatalogRow } from "@/lib/api"
+import { trackRoom } from "@/lib/bag"
 import { bands, categories, EMPTY_FILTER, match, sortRows, type StoreFilter, type StoreSort } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
@@ -55,10 +56,17 @@ export function StoreGrid() {
   }, [])
 
   const verdicts = useMemo(() => (fits ? verdictsOf(fits) : {}), [fits])
+  const proofs = useMemo(() => (fits ? proofsOf(fits) : {}), [fits])
   const visible = useMemo(() => sortRows(rows.filter((row) => match(row, filter)), filter, verdicts), [rows, filter, verdicts])
   const roomWidth = Number(width) || 4
   const roomDepth = Number(depth) || 3.5
   const roomHeight = Number(height) || 2.4
+
+  // The bag is measured against the room the shopper was looking at, so the bar tells the bag
+  // store what that room is. Lines already proven for another room go stale on their own.
+  useEffect(() => {
+    trackRoom({ width_m: roomWidth, depth_m: roomDepth, height_m: roomHeight })
+  }, [roomWidth, roomDepth, roomHeight])
 
   async function measure() {
     setBusy(true)
@@ -205,7 +213,15 @@ export function StoreGrid() {
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((row) => (
-            <ProductCard key={row.sku} row={row} verdict={verdicts[row.sku]} roomWidthM={roomWidth} roomDepthM={roomDepth} />
+            <ProductCard
+              key={row.sku}
+              row={row}
+              verdict={verdicts[row.sku]}
+              simulationId={proofs[row.sku]}
+              roomWidthM={roomWidth}
+              roomDepthM={roomDepth}
+              roomHeightM={roomHeight}
+            />
           ))}
         </div>
       )}

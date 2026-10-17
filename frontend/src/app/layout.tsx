@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 
+import { BagDrawer } from "@/components/bag-drawer"
 import { EvolusWidget } from "@/components/evolus-widget"
 import { SiteNav } from "@/components/site-nav"
 import "./globals.css"
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <SiteNav />
         <main className="flex-1">{children}</main>
+        <BagDrawer />
         <EvolusWidget />
       </body>
     </html>

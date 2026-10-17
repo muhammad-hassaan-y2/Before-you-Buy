@@ -30,6 +30,15 @@ export const tools = {
       description: "Hold a proven-fitting piece, gated behind the shopper's own confirmation; the MCP door asks them in their own client when it can.",
     },
     { name: "returns_estimate", description: "What a fit check is worth, as arithmetic over stated assumptions." },
+    { name: "add_to_cart", description: "Put a piece in the bag at the shop's own listed price, with the fit proof attached when one exists." },
+    { name: "view_cart", description: "What is in the bag, what it costs the shopper and the shop, and which lines are still unproven." },
+    { name: "remove_from_cart", description: "Take one piece out of the bag." },
+    {
+      name: "measure_cart",
+      description: "Measure what is in the bag against its room, and judge the pieces together as one purchase.",
+    },
+    { name: "checkout", description: "Turn a bag of proven fits into an order draft - on the shopper's own yes, and on nothing less." },
+    { name: "order_status", description: "One order draft, with the fit proofs and the words that let it be placed." },
     {
       name: "start_journey",
       description: "Run the whole fit-assurance process for a shopper brief, against a photo-measured room when image_key is given.",
@@ -305,6 +314,98 @@ export const catalogFits = {
     note: "Only the geometry engine's own verdict is reported here.",
   },
 }
+
+/** A bag the service filled: one line, its price from the catalog's own terms, its verdict from
+ *  the sweep that measured it. The browser keeps none of this — only the cart id. */
+export const cart = {
+  cart_id: "cart-e2e-1",
+  room: { width_m: 4, depth_m: 3.5, height_m: 2.4 },
+  lines: [
+    {
+      sku: "BYB-KURA-3S",
+      name: "KURA three-seat sofa",
+      quantity: 1,
+      price_eur: 919,
+      cost_eur: 515,
+      lead_days: 18,
+      freight: "pallet",
+      volume_m3: 1.512,
+      simulation_id: "sim-e2e-1",
+      verdict: "fits",
+      coverage_pct: 14.2,
+      walkway_m: { front: 0.6, left: 0.9, right: 0.75, back: 0.2 },
+      footprint_m2: 1.8,
+      placement_proved: true,
+      room: { width_m: 4, depth_m: 3.5, height_m: 2.4 },
+      added_at: "2026-10-17T09:00:00Z",
+    },
+  ],
+  items: 1,
+  total_eur: 919,
+  cost_eur: 515,
+  margin_eur: 404,
+  volume_m3: 1.512,
+  lead_days: 18,
+  freight: "pallet",
+  unproven: [],
+  set: null,
+  checkout: {
+    tool: "checkout",
+    ready: true,
+    needs: "the shopper's own confirmation words",
+    how: "Ask the shopper plainly: shall I place this order? Then pass their own words as confirmation.",
+    refuses: "a bag with any line the engine has not cleared, so measure_cart comes before it",
+  },
+  note: "Prices are the catalog's own listed terms. Nothing is charged here: checkout writes a draft a person at the shop accepts.",
+}
+
+/** The same bag after `measure_cart` judged the two pieces as one purchase. */
+export const measuredCart = {
+  ...cart,
+  lines: [...cart.lines, { ...cart.lines[0], sku: "BYB-BILLY-80", name: "BILLY bookcase 80 cm", price_eur: 399, cost_eur: 176, lead_days: 15, volume_m3: 0.4525, simulation_id: "sim-e2e-2", verdict: "tight", footprint_m2: 0.224 }],
+  items: 2,
+  total_eur: 1318,
+  cost_eur: 691,
+  margin_eur: 627,
+  set: {
+    verdict: "tight",
+    footprint_m2: 2.024,
+    usable_area_m2: 13.6,
+    coverage_pct: 14.9,
+    tightest_walkway_m: 0.6,
+    conflicts: ["The tightest walkway would be 0.6 m, under the 0.7 m a shopper has to reach the far side at."],
+    footprint_estimated_from_listing: [],
+    note: "Each piece was measured alone against this room; the set verdict adds the footprints and the walkways up, not a combined layout search.",
+  },
+}
+
+/** The draft `checkout` wrote, with the proof behind every line. */
+export const order = {
+  id: "ord-e2e-1",
+  cart_id: "cart-e2e-1",
+  lines: measuredCart.lines,
+  currency: "EUR",
+  total_eur: 1318,
+  cost_eur: 691,
+  margin_eur: 627,
+  volume_m3: 1.9645,
+  lead_days: 18,
+  freight: "pallet",
+  confirmation: "yes, order both of them",
+  confirmed_through: "typed by the shopper",
+  status: "awaiting_merchant",
+  created_at: "2026-10-17T09:04:00Z",
+  proofs: [
+    { sku: "BYB-KURA-3S", simulation_id: "sim-e2e-1", verdict: "fits", quantity: 1, tightest_walkway_m: 0.6, verify: "/api/v1/simulations/sim-e2e-1" },
+    { sku: "BYB-BILLY-80", simulation_id: "sim-e2e-2", verdict: "tight", quantity: 1, tightest_walkway_m: 0.6, verify: "/api/v1/simulations/sim-e2e-2" },
+  ],
+  combined: measuredCart.set,
+  room: { width_m: 4, depth_m: 3.5, height_m: 2.4 },
+  next: "A person at the shop accepts or releases this draft. No card is taken and nothing ships from this service.",
+}
+
+/** What a bag with an unmeasured line looks like, and the refusal that comes with checking out. */
+export const unprovenCart = { ...cart, lines: [{ ...cart.lines[0], simulation_id: null, verdict: null, walkway_m: {}, placement_proved: false, room: null }], unproven: ["BYB-KURA-3S"], checkout: { ...cart.checkout, ready: false } }
 
 export const simulation = {
   id: "sim-e2e-1",

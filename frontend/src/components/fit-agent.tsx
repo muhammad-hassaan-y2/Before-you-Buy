@@ -4,6 +4,7 @@ import { Bot, CircleSlash, ImageIcon, Loader2, Send, Sparkles, UserCheck, X } fr
 import { useEffect, useRef, useState } from "react"
 
 import { AgentRunTrace, RunStatusBadge } from "@/components/agent-run-trace"
+import { AddToBag } from "@/components/bag-drawer"
 import { FitViews } from "@/components/fit-views"
 import { DimensionEstimateWarning, ProductSourceBadge } from "@/components/product-provenance"
 import { Badge } from "@/components/ui/badge"
@@ -259,6 +260,26 @@ export function FitAgent() {
               {decision.reason && <p className="mt-2 text-muted-foreground">{decision.reason}</p>}
               {decision.simulation_id && (
                 <p className="mt-1 font-mono text-xs text-muted-foreground">fit run {decision.simulation_id}</p>
+              )}
+              {/* The agent's own recommendation goes in the same bag a shopper fills by hand, with
+                  the simulation that earned it - one door, whichever side asked. */}
+              {decision.sku && decision.simulation_id && (
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <a
+                    className="font-mono text-xs text-primary underline underline-offset-4"
+                    href={`/api/v1/simulations/${decision.simulation_id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    fit evidence
+                  </a>
+                  <AddToBag
+                    sku={decision.sku}
+                    simulationId={decision.simulation_id}
+                    room={{ width_m: Number(width) || 4, depth_m: Number(depth) || 3.5, height_m: Number(height) || 2.4 }}
+                    label="Bag the recommendation"
+                  />
+                </div>
               )}
             </div>
           )}

@@ -91,6 +91,14 @@ export function verdictsOf(fits: CatalogFits): Record<string, string> {
   return verdicts
 }
 
+/** sku -> the simulation that measured it, cleared or not. A card that bags a piece passes this
+ *  on, so the bag inherits the report instead of paying for the same measurement twice. */
+export function proofsOf(fits: CatalogFits): Record<string, string | null> {
+  const proofs: Record<string, string | null> = {}
+  for (const attempt of [...fits.fits, ...fits.does_not_fit, ...fits.unproven]) proofs[attempt.sku] = attempt.simulation_id
+  return proofs
+}
+
 /** How to add the MCP connector to a client, as agent-service itself describes it. Read from the
  *  service rather than written here because the answer changes with the shop's own environment:
  *  whether there is a public URL at all, and whether the door is keyed. */
@@ -215,6 +223,22 @@ export async function fetchConnect(): Promise<ConnectGuide | null> {
 /** The holds waiting on a person at the shop, newest first. */
 export async function fetchReservations(limit = 20): Promise<Reservation[]> {
   return (await request(`/reservations?limit=${limit}`)).json()
+}
+
+/** A checkout draft: what the shopper said, and the report behind every line. Nothing is charged
+ *  until a person at the shop accepts it. */
+export type OrderSummary = {
+  id: string
+  cart_id: string
+  status: string
+  total_eur: number
+  margin_eur: number
+  confirmation: string
+  created_at: string
+}
+
+export async function fetchOrders(limit = 20): Promise<OrderSummary[]> {
+  return (await request(`/orders?limit=${limit}`)).json()
 }
 
 /** One capability, called the way an Evolus workflow step calls it. The gateway wraps the

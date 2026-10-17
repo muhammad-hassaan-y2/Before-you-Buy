@@ -4,6 +4,7 @@ import { ArrowLeft, ExternalLink } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 
+import { AddToBag } from "@/components/bag-drawer"
 import { ProductSimulator } from "@/components/product-simulator"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -51,6 +52,13 @@ export function ProductDetail({ sku }: Props) {
                 {row.material} · {row.geometry.width_cm.toFixed(0)} × {row.geometry.depth_cm.toFixed(0)} × {row.geometry.height_cm.toFixed(0)} cm
               </span>
             </p>
+
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <AddToBag sku={row.sku} size="lg" />
+              <p className="max-w-xs text-xs text-muted-foreground">
+                An unproven line is fine — the bag measures it. Nothing checks out until the geometry engine clears every piece in it.
+              </p>
+            </div>
 
             <Card className="mt-8">
               <CardContent className="p-6">

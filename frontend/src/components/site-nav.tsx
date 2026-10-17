@@ -3,6 +3,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
+import { BagButton } from "@/components/bag-drawer"
+
 const LINKS = [
   { href: "/store", label: "Shop" },
   { href: "/room-simulator", label: "Fit agent" },
@@ -34,7 +36,10 @@ export function SiteNav() {
             </Link>
           ))}
         </nav>
-        <span className="ml-auto text-xs text-muted-foreground">AMD · vLLM · Evolus</span>
+        <div className="ml-auto flex items-center gap-4">
+          <span className="hidden text-xs text-muted-foreground md:inline">AMD · vLLM · Evolus</span>
+          <BagButton />
+        </div>
       </div>
     </header>
   )

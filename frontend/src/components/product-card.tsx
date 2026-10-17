@@ -1,6 +1,9 @@
+"use client"
+
 import Link from "next/link"
 import { Clock, Package, Store } from "lucide-react"
 
+import { AddToBag } from "@/components/bag-drawer"
 import { Badge } from "@/components/ui/badge"
 import type { CatalogRow } from "@/lib/api"
 import { price, verdictLabel, verdictVariant } from "@/lib/store"
@@ -10,8 +13,12 @@ type Props = {
   /** The geometry engine's verdict for this piece in the room on screen, or undefined when the
    *  room has not been measured against it yet. */
   verdict?: string
+  /** The simulation that produced that verdict. Bagging the piece with it attached means the bag
+   *  inherits a proven line instead of paying a GPU job to reach the same answer again. */
+  simulationId?: string | null
   roomWidthM: number
   roomDepthM: number
+  roomHeightM: number
 }
 
 /** Drawing units per metre. The plan is small, so the room is padded rather than cropped. */
@@ -20,7 +27,7 @@ const PAD_M = 0.25
 
 /** A card for a piece nobody has to guess about: the price, the margin and the lead time are the
  *  catalog service's own numbers, and the drawing is the box to scale on the shopper's floor. */
-export function ProductCard({ row, verdict, roomWidthM, roomDepthM }: Props) {
+export function ProductCard({ row, verdict, simulationId, roomWidthM, roomDepthM, roomHeightM }: Props) {
   const { commerce, geometry } = row
   const pad = PAD_M * UNITS_PER_M
   const viewW = roomWidthM * UNITS_PER_M + pad * 2
@@ -41,11 +48,11 @@ export function ProductCard({ row, verdict, roomWidthM, roomDepthM }: Props) {
       : "fill-success/30 stroke-success"
 
   return (
-    <Link
-      href={`/product/${row.sku}`}
-      className="group flex flex-col gap-4 rounded-2xl border border-border/60 bg-card p-5 text-card-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-xl hover:shadow-black/20 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-    >
-      <div className="flex items-start gap-4">
+    <article className="group flex flex-col gap-4 rounded-2xl border border-border/60 bg-card p-5 text-card-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-xl hover:shadow-black/20">
+      <Link
+        href={`/product/${row.sku}`}
+        className="flex items-start gap-4 rounded-xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      >
         <figure className="shrink-0 rounded-xl border border-border/60 bg-muted/40 p-2">
           <svg
             viewBox={`0 0 ${viewW.toFixed(1)} ${viewH.toFixed(1)}`}
@@ -82,21 +89,16 @@ export function ProductCard({ row, verdict, roomWidthM, roomDepthM }: Props) {
         </figure>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <p className="min-w-0 truncate text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
-              {row.brand} · {row.category}
-            </p>
-            <Badge variant={verdictVariant(verdict)} className="shrink-0">
-              {verdictLabel(verdict)}
-            </Badge>
-          </div>
+          <p className="min-w-0 truncate text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+            {row.brand} · {row.category}
+          </p>
           <h3 className="mt-1 truncate text-base font-semibold tracking-tight">{row.name}</h3>
           <p className="mt-2 font-mono text-2xl tabular-nums">
             {price(commerce.retail_eur)}
             <span className="ml-1.5 align-middle text-xs text-muted-foreground">+{commerce.margin_pct.toFixed(0)}% margin</span>
           </p>
         </div>
-      </div>
+      </Link>
 
       <dl className="grid gap-1.5 border-t border-border/50 pt-3 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
@@ -122,6 +124,17 @@ export function ProductCard({ row, verdict, roomWidthM, roomDepthM }: Props) {
           </dd>
         </div>
       </dl>
-    </Link>
+
+      <div className="mt-auto flex items-center justify-between gap-3">
+        <Badge variant={verdictVariant(verdict)}>{verdictLabel(verdict)}</Badge>
+        <AddToBag
+          sku={row.sku}
+          simulationId={simulationId}
+          verdict={verdict}
+          room={{ width_m: roomWidthM, depth_m: roomDepthM, height_m: roomHeightM }}
+          className="ml-auto"
+        />
+      </div>
+    </article>
   )
 }
