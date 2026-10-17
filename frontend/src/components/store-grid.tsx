@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { callTool, proofsOf, verdictsOf, type CatalogFits } from "@/lib/agent"
 import { fetchCatalog, type CatalogRow } from "@/lib/api"
 import { trackRoom } from "@/lib/bag"
-import { bands, categories, EMPTY_FILTER, match, sortRows, type StoreFilter, type StoreSort } from "@/lib/store"
+import { bandLabel, bands, categories, EMPTY_FILTER, match, sortRows, type StoreFilter, type StoreSort } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
 const SORTS: { key: StoreSort; label: string }[] = [
@@ -108,84 +108,95 @@ export function StoreGrid() {
     )
   }
 
-  const chips = (options: string[], selected: string | null, key: "category" | "priceBand") => (
-    <div className="flex flex-wrap gap-1.5">
-      <Button type="button" size="sm" variant={selected === null ? "default" : "outline"} aria-pressed={selected === null} onClick={() => patch({ [key]: null } as Partial<StoreFilter>)}>
-        All
-      </Button>
-      {options.map((option) => (
-        <Button
-          key={option}
-          type="button"
-          size="sm"
-          variant={selected === option ? "default" : "outline"}
-          aria-pressed={selected === option}
-          onClick={() => patch({ [key]: selected === option ? null : option } as Partial<StoreFilter>)}
-        >
-          {option}
-        </Button>
-      ))}
-    </div>
+  const chip = (label: string, selected: boolean, onClick: () => void) => (
+    <Button
+      key={label}
+      type="button"
+      size="sm"
+      variant={selected ? "default" : "outline"}
+      aria-pressed={selected}
+      className="rounded-full"
+      onClick={onClick}
+    >
+      {label}
+    </Button>
   )
 
   return (
     <div className="space-y-8">
-      <Card className="overflow-hidden border-border/60 bg-gradient-to-b from-card to-muted/40">
-        <CardContent className="grid gap-5 p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <div className="space-y-3">
-            <Label htmlFor="room-width" className="text-xs tracking-[0.14em] text-muted-foreground uppercase">
-              Your room
+      <Card className="border-border/60 bg-surface">
+        <CardContent className="p-6">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-4">
+            <Label htmlFor="room-width" className="eyebrow text-muted-foreground">
+              The room you are shopping for
             </Label>
-            <div className="grid max-w-sm grid-cols-3 gap-3">
+            <div className="flex items-center gap-2">
               {(
                 [
                   ["Width", width, setWidth, "room-width"],
                   ["Depth", depth, setDepth, "room-depth"],
                   ["Height", height, setHeight, "room-height"],
                 ] as const
-              ).map(([labelText, value, setter, id]) => (
-                <div key={id} className="space-y-1.5">
-                  <Label htmlFor={id} className="text-xs text-muted-foreground">
-                    {labelText} (m)
+              ).map(([labelText, value, setter, id], at) => (
+                <div key={id} className="flex items-center gap-2">
+                  {at > 0 && <span aria-hidden className="text-muted-foreground">×</span>}
+                  <Label htmlFor={id} className="sr-only">
+                    {labelText} in metres
                   </Label>
-                  <Input id={id} inputMode="decimal" value={value} onChange={(event) => setter(event.target.value)} disabled={busy} className="text-center" />
+                  <Input
+                    id={id}
+                    inputMode="decimal"
+                    value={value}
+                    onChange={(event) => setter(event.target.value)}
+                    disabled={busy}
+                    className="num w-[4.5rem] bg-background/70 text-center font-semibold"
+                  />
                 </div>
               ))}
+              <span className="text-xs text-muted-foreground">m · width × depth × height</span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {fits
-                ? `${fits.checked} pieces measured in a ${fits.room.width_m} × ${fits.room.depth_m} m room — ${fits.fits.length} fit, ${fits.does_not_fit.length} do not.`
-                : `Measure the best ${MEASURE} candidates in this room. The geometry worker settles every verdict; nothing here is guessed.`}
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Button size="lg" onClick={measure} disabled={busy}>
+            <Button size="lg" className="ml-auto" onClick={measure} disabled={busy}>
               {busy ? <Loader2 className="animate-spin" /> : <Ruler className="size-4" />}
               {busy ? "Measuring…" : "Measure in my room"}
             </Button>
-            {fitError && <p className="max-w-xs text-xs text-destructive">{fitError}</p>}
           </div>
+          <p className="mt-4 border-t border-border/50 pt-3.5 text-xs text-muted-foreground">
+            {fits
+              ? `${fits.checked} pieces measured in a ${fits.room.width_m} × ${fits.room.depth_m} m room — ${fits.fits.length} fit, ${fits.does_not_fit.length} do not.`
+              : `Measure the best ${MEASURE} candidates in this room. The geometry worker settles every verdict; nothing here is guessed.`}
+            {fitError && <span className="text-destructive"> {fitError}</span>}
+          </p>
         </CardContent>
       </Card>
 
       {fits && <p className="max-w-3xl text-xs text-muted-foreground">{fits.note}</p>}
 
-      <div className="flex flex-wrap items-start justify-between gap-5">
-        <div className="space-y-3">
-          <div className="relative w-full max-w-xs">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={filter.query}
-              onChange={(event) => patch({ query: event.target.value })}
-              placeholder="linen, oak, deep seat…"
-              className="rounded-full bg-background/60 pl-9"
-              aria-label="Search the catalog"
-            />
-          </div>
-          {chips(categories(rows), filter.category, "category")}
-          {chips(bands(rows), filter.priceBand, "priceBand")}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <div className="relative w-full max-w-xs">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={filter.query}
+            onChange={(event) => patch({ query: event.target.value })}
+            placeholder="linen, oak, deep seat…"
+            className="rounded-full bg-background/60 pl-9"
+            aria-label="Search the catalog"
+          />
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by category">
+          {chip("Everything", filter.category === null, () => patch({ category: null }))}
+          {categories(rows).map((option) =>
+            chip(option, filter.category === option, () => patch({ category: filter.category === option ? null : option })),
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by price tier">
+          {chip("Any price", filter.priceBand === null, () => patch({ priceBand: null }))}
+          {bands(rows).map((option) =>
+            chip(bandLabel(option), filter.priceBand === option, () =>
+              patch({ priceBand: filter.priceBand === option ? null : option }),
+            ),
+          )}
+        </div>
+        <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
           <SlidersHorizontal className="size-3.5" />
           <Label htmlFor="sort" className="sr-only">
             Sort by
@@ -202,7 +213,7 @@ export function StoreGrid() {
               </option>
             ))}
           </select>
-          <span className="tabular-nums">{visible.length === 1 ? "1 piece" : `${visible.length} pieces`}</span>
+          <span className="num">{visible.length === 1 ? "1 piece" : `${visible.length} pieces`}</span>
         </div>
       </div>
 
@@ -211,7 +222,7 @@ export function StoreGrid() {
           Nothing in the shop matches that. Clear a filter and try again.
         </p>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((row) => (
             <ProductCard
               key={row.sku}

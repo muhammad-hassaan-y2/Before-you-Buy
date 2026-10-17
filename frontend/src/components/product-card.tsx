@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { Clock, Package, Store } from "lucide-react"
 
 import { AddToBag } from "@/components/bag-drawer"
+import { ProductFigure } from "@/components/product-figure"
 import { Badge } from "@/components/ui/badge"
 import type { CatalogRow } from "@/lib/api"
 import { price, verdictLabel, verdictVariant } from "@/lib/store"
@@ -21,118 +21,74 @@ type Props = {
   roomHeightM: number
 }
 
-/** Drawing units per metre. The plan is small, so the room is padded rather than cropped. */
-const UNITS_PER_M = 24
-const PAD_M = 0.25
-
-/** A card for a piece nobody has to guess about: the price, the margin and the lead time are the
- *  catalog service's own numbers, and the drawing is the box to scale on the shopper's floor. */
+/** A card for a piece nobody has to guess about: the drawing is the catalog's own centimetres on
+ *  the shopper's floor, and the price, margin and lead time are the catalog service's numbers. */
 export function ProductCard({ row, verdict, simulationId, roomWidthM, roomDepthM, roomHeightM }: Props) {
   const { commerce, geometry } = row
-  const pad = PAD_M * UNITS_PER_M
-  const viewW = roomWidthM * UNITS_PER_M + pad * 2
-  const viewH = roomDepthM * UNITS_PER_M + pad * 2
-  const itemW = Math.min((geometry.width_cm / 100) * UNITS_PER_M, viewW - pad * 2)
-  const itemD = Math.min((geometry.depth_cm / 100) * UNITS_PER_M, viewH - pad * 2)
-  const clearance = (geometry.clearance_cm / 100) * UNITS_PER_M
-  // Where it would actually stand: against the back wall, off to one side, so the bare floor in
-  // front of it reads as the walkway the verdict is about.
-  const x = pad + 2
-  const y = pad + 2
+  const variant = verdictVariant(verdict)
+  const tone = variant === "success" || variant === "warning" ? "pass" : variant === "destructive" ? "fail" : "unmeasured"
   const overruns = geometry.width_cm / 100 > roomWidthM || geometry.depth_cm / 100 > roomDepthM
 
-  const fill = !verdict
-    ? "fill-room-product/40 stroke-room-product"
-    : verdictVariant(verdict) === "destructive"
-      ? "fill-destructive/35 stroke-destructive"
-      : "fill-success/30 stroke-success"
-
   return (
-    <article className="group flex flex-col gap-4 rounded-2xl border border-border/60 bg-card p-5 text-card-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-xl hover:shadow-black/20">
+    <article className="group flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-xl hover:shadow-black/20">
       <Link
         href={`/product/${row.sku}`}
-        className="flex items-start gap-4 rounded-xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className="rounded-2xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
-        <figure className="shrink-0 rounded-xl border border-border/60 bg-muted/40 p-2">
-          <svg
-            viewBox={`0 0 ${viewW.toFixed(1)} ${viewH.toFixed(1)}`}
-            className="h-auto w-20"
-            role="img"
-            aria-label={`${row.name} footprint in a ${roomWidthM} by ${roomDepthM} metre room`}
-          >
-            <rect
-              x={pad}
-              y={pad}
-              width={(roomWidthM * UNITS_PER_M).toFixed(1)}
-              height={(roomDepthM * UNITS_PER_M).toFixed(1)}
-              rx="2"
-              className="fill-room-floor/15 stroke-muted-foreground/40"
-              strokeWidth="1"
-            />
-            {clearance >= 1.5 && (
-              <rect
-                x={(x - clearance).toFixed(1)}
-                y={(y - clearance).toFixed(1)}
-                width={(itemW + clearance * 2).toFixed(1)}
-                height={(itemD + clearance * 2).toFixed(1)}
-                rx="2"
-                className="fill-none stroke-muted-foreground/45"
-                strokeWidth="0.8"
-                strokeDasharray="2.5 2.5"
-              />
-            )}
-            <rect x={x} y={y} width={itemW.toFixed(1)} height={itemD.toFixed(1)} rx="1.5" className={fill} strokeWidth="1.2" />
-          </svg>
-          <figcaption className="mt-1 text-center font-mono text-[10px] tabular-nums text-muted-foreground">
+        <div className="relative flex items-center justify-center bg-surface px-6 pt-6 pb-5">
+          <Badge variant={variant} className="absolute top-4 left-4">
+            {verdictLabel(verdict)}
+          </Badge>
+          <ProductFigure
+            widthCm={geometry.width_cm}
+            depthCm={geometry.depth_cm}
+            clearanceCm={geometry.clearance_cm}
+            roomWidthM={roomWidthM}
+            roomDepthM={roomDepthM}
+            tone={tone}
+            name={row.name}
+            className="max-w-[19rem] transition-transform duration-500 group-hover:scale-[1.015]"
+          />
+          <p className="num absolute right-4 bottom-2.5 text-[10px] text-muted-foreground">
             {roomWidthM} × {roomDepthM} m
-          </figcaption>
-        </figure>
-
-        <div className="min-w-0 flex-1">
-          <p className="min-w-0 truncate text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
-            {row.brand} · {row.category}
           </p>
-          <h3 className="mt-1 truncate text-base font-semibold tracking-tight">{row.name}</h3>
-          <p className="mt-2 font-mono text-2xl tabular-nums">
-            {price(commerce.retail_eur)}
-            <span className="ml-1.5 align-middle text-xs text-muted-foreground">+{commerce.margin_pct.toFixed(0)}% margin</span>
+        </div>
+        <div className="px-5 pb-1">
+          <p className="eyebrow truncate text-muted-foreground">{row.brand} · {row.category}</p>
+          <h3 className="mt-1.5 truncate text-[15px] font-semibold tracking-tight">{row.name}</h3>
+          <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
+            <span className="num text-2xl font-semibold">{price(commerce.retail_eur)}</span>
+            <span className="text-xs text-muted-foreground">+{commerce.margin_pct.toFixed(0)}% margin</span>
           </p>
         </div>
       </Link>
 
-      <dl className="grid gap-1.5 border-t border-border/50 pt-3 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <Clock className="size-3.5 shrink-0" />
-          <dt className="sr-only">Lead time</dt>
-          <dd>
-            {commerce.lead_days} days, {commerce.freight} freight
-          </dd>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Store className="size-3.5 shrink-0" />
-          <dt className="sr-only">Supplier</dt>
-          <dd className="truncate">
-            {commerce.supplier.name} · {commerce.supplier.region}
-          </dd>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Package className="size-3.5 shrink-0" />
-          <dt className="sr-only">Box</dt>
-          <dd className="truncate">
-            {geometry.width_cm.toFixed(0)} × {geometry.depth_cm.toFixed(0)} × {geometry.height_cm.toFixed(0)} cm
-            {overruns && <span className="text-destructive"> · larger than this room</span>}
-          </dd>
-        </div>
+      <dl className="mt-auto space-y-1.5 border-t border-border/50 px-5 py-4 text-xs">
+        {(
+          [
+            ["Ships", `${commerce.lead_days} days · ${commerce.freight} freight`, null],
+            ["Sold by", `${commerce.supplier.name} · ${commerce.supplier.region}`, null],
+            [
+              "Box",
+              `${geometry.width_cm.toFixed(0)} × ${geometry.depth_cm.toFixed(0)} × ${geometry.height_cm.toFixed(0)} cm${overruns ? " · larger than this room" : ""}`,
+              overruns ? "text-destructive" : null,
+            ],
+          ] as const
+        ).map(([labelText, value, tone]) => (
+          <div key={labelText} className="flex items-baseline justify-between gap-3">
+            <dt className="shrink-0 text-muted-foreground">{labelText}</dt>
+            <dd className={tone ?? "min-w-0 truncate text-foreground"}>{value}</dd>
+          </div>
+        ))}
       </dl>
 
-      <div className="mt-auto flex items-center justify-between gap-3">
-        <Badge variant={verdictVariant(verdict)}>{verdictLabel(verdict)}</Badge>
+      <div className="px-5 pb-5">
         <AddToBag
           sku={row.sku}
           simulationId={simulationId}
           verdict={verdict}
           room={{ width_m: roomWidthM, depth_m: roomDepthM, height_m: roomHeightM }}
-          className="ml-auto"
+          className="w-full"
         />
       </div>
     </article>

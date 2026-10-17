@@ -25,6 +25,7 @@
   --border: oklch(0.9 0.006 80);
   --input: oklch(0.9 0.006 80);
   --ring: oklch(0.55 0.14 60);
+  --surface: oklch(0.96 0.006 80);
 
   --room-floor: oklch(0.94 0.012 78);
   --room-wall: oklch(0.72 0.02 65);
@@ -53,6 +54,7 @@
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
   --ring: oklch(0.78 0.15 78);
+  --surface: oklch(0.235 0.016 63);
 
   --room-floor: oklch(0.23 0.015 62);
   --room-wall: oklch(0.45 0.02 70);
@@ -81,6 +83,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-surface: var(--surface);
   --color-room-floor: var(--room-floor);
   --color-room-wall: var(--room-wall);
   --color-room-product: var(--room-product);
@@ -105,4 +108,20 @@
     font-family: var(--font-sans), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
+}
+
+/* The small label above a value. Monospace is reserved for what a person would copy — a SKU, a
+   URL, a tool name — so it no longer stands in for "data" everywhere else. Takes its colour from
+   the caller. */
+@utility eyebrow {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Prices, areas and lead times: aligned digits in the text face. */
+@utility num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }

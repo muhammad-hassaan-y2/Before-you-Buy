@@ -68,6 +68,12 @@ export function bands(rows: CatalogRow[]): string[] {
   return [...new Set(rows.map((row) => row.price_band).filter((band) => !!band))].sort() as string[]
 }
 
+/** catalog-service prices a SKU off its band anchor (€350 / €750 / €1,500) scaled by box size, so
+ *  a band is a tier and not a ceiling. The chips say tier, never a range that would be a lie. */
+export function bandLabel(band: string): string {
+  return { $: "Budget", $$: "Midrange", $$$: "Premium" }[band] ?? band
+}
+
 /** The words a card puts next to a verdict, so the badge says what was measured rather than
  *  looking like a stock indicator. */
 export function verdictLabel(verdict: string | undefined): string {
