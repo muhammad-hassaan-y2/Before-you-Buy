@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createSimulation, pollSimulation, type CatalogRow, type Simulation } from "@/lib/api"
+import { useBag } from "@/lib/bag"
 import { cn } from "@/lib/utils"
 
 type Props = { row: CatalogRow }
@@ -17,9 +18,11 @@ type Props = { row: CatalogRow }
 /** The listing tests itself against the shopper's room by pasting its own URL — which is the
  *  round trip the catalog service guarantees: this link resolves back to this SKU. */
 export function ProductSimulator({ row }: Props) {
-  const [width, setWidth] = useState("4.0")
-  const [depth, setDepth] = useState("3.5")
-  const [height, setHeight] = useState("2.4")
+  // Start from the room the shopper is shopping for, if the shop already knows it.
+  const { room } = useBag()
+  const [width, setWidth] = useState(String(room?.width_m ?? "4.0"))
+  const [depth, setDepth] = useState(String(room?.depth_m ?? "3.5"))
+  const [height, setHeight] = useState(String(room?.height_m ?? "2.4"))
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
