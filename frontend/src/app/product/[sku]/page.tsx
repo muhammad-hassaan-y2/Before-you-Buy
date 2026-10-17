@@ -11,7 +11,7 @@ export const instant = false
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { sku } = await params
   return {
-    title: `${sku} · Buy You Before`,
+    title: sku,
     description: "Dropship terms for this piece, and a live fit simulation against the room you describe.",
   }
 }

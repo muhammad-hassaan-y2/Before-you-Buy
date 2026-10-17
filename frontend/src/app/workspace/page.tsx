@@ -14,7 +14,7 @@ export default function WorkspacePage() {
       <header className="mb-8">
         <h1 className="text-3xl font-semibold tracking-tight lg:text-4xl">3D workspace</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          The same six services, seen from above or from eye height. scene-service turns the fit report into a scene spec —
+          The same pipeline, seen from above or from eye height. scene-service turns the fit report into a scene spec —
           walls, obstacles, door swing, part boxes and camera presets — and this viewport only draws what it was given.
         </p>
       </header>

@@ -10,7 +10,7 @@ import { RoomSimulator } from "@/components/room-simulator"
 import { ValuePanel } from "@/components/value-panel"
 
 export const metadata: Metadata = {
-  title: "Buy You Before — Room Simulator",
+  title: "Fit agent",
   description:
     "Tell the fit agent what you are looking for. It reads the listing, measures the room and tests the footprint before you buy.",
 }
