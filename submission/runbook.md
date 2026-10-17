@@ -16,7 +16,7 @@ which means the live URL is tested from an incognito window, not the tab that se
 | --- | --- | --- |
 | Services | `make test` | seven pytest suites green |
 | Front end units | `(cd frontend && pnpm test)` | client, engine maths and panels |
-| Front end in a browser | `(cd frontend && pnpm test:e2e)` | both pages driven by Playwright, no backend needed |
+| Front end in a browser | `(cd frontend && pnpm test:e2e)` | the shop, the agent and the workspace driven by Playwright, no backend needed |
 | Types and build | `(cd frontend && pnpm build)` | the build the images use |
 | The gate | `make eval` | labels re-derived by the geometry service, then the agent scored: 15/15 briefs, 15/15 decisions, **0 false fits** |
 | One real journey | `bash scripts/e2e-smoke.sh` | a full simulation and a full agent journey against running services |
@@ -95,8 +95,9 @@ connector and the callback both miss.
   `https://<host>/mcp/`.
 - Steadier: a small droplet, `docker compose up -d` there, reverse proxy on 443, TLS. Then
   `ALLOWED_ORIGINS` needs that origin or the browser gets CORS errors that look like a dead app.
-- Either way, test from an incognito window on a different network: brief → trace → verdict →
-  workspace, and one MCP tool call. If it only works on the machine that runs it, it is not a demo.
+- Either way, test from an incognito window on a different network: measure a room on the shelf →
+  let one listing simulate itself → brief → trace → verdict → workspace, and one MCP tool call. If
+  it only works on the machine that runs it, it is not a demo.
 
 Keep the stack warm overnight. One completed simulation on disk means the first judge to open the
 page does not watch a cold container start.

@@ -37,6 +37,13 @@ fitting, hands the shopper to a person when nothing does, and never invents a ve
 The agent does not have a private door into the pipeline. The fit it reports is the fit the
 geometry worker computed.
 
+And the agent *is* the storefront. `/store` lists the catalog on dropship terms the catalog
+derives from each SKU — retail, cost, margin, supplier, lead time, freight — with one room bar
+that sweeps the best candidates through `fit_catalog`, the same tool an outside assistant calls.
+A listing tests itself: its simulation starts by pasting the product URL that SKU generated, so
+the verdict a shopper reads on the page and the verdict their ChatGPT or Claude returns come from
+one run of the same seven services. Nothing on a card claims it fits until the engine has said so.
+
 ## 4. Agent-first, not AI decoration — Application of Technology
 
 Thirteen capabilities, one implementation, three doors:
@@ -124,14 +131,16 @@ from this service.
 
 ## 10. Demo — Presentation
 
-Ninety seconds of typing, ninety of the trace, the rest of the proof:
+The shop first, then the typing, the trace, and the proof — it fits the five-minute limit:
 
-1. type the brief, watch the steps arrive with their driver and duration;
-2. read the verdict: the piece, the walkway it leaves, the doorway it has to clear;
-3. stand it in the room at eye height in the 3D workspace;
-4. show the same capability list from the MCP door — the agent's tools, unchanged;
-5. open the golden set scoreboard: 15/15, 15/15, 0 false fits;
-6. end on the merchant's numbers and the hold waiting for a person.
+1. open the shop, set a room, and watch the badges land only on the cards the engine settled;
+2. open one listing and let it simulate itself off its own product URL;
+3. type the brief, watch the steps arrive with their driver and duration;
+4. read the verdict: the piece, the walkway it leaves, the doorway it has to clear;
+5. stand it in the room at eye height in the 3D workspace;
+6. show the same capability list from the MCP door — the agent's tools, unchanged;
+7. open the golden set scoreboard: 15/15, 15/15, 0 false fits;
+8. end on the merchant's numbers and the hold waiting for a person.
 
 ## 11. Why this could win
 
@@ -139,6 +148,8 @@ Ninety seconds of typing, ninety of the trace, the rest of the proof:
   wrapper around a chat model.
 - The agent is measured, with the measurement in CI and a gate that fails the build.
 - It is a commerce surface a merchant could be handed: capabilities, offers, holds, a number.
+- It already sells. The measured verdict is not only behind a chat panel — it is on the shelf, on
+  the card, with the margin and the lead time beside it.
 - It uses the partner's blocks the way they are meant to be used — and the model runs on AMD.
 
 ## 12. Where it goes next

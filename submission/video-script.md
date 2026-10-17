@@ -1,8 +1,9 @@
 # Buy You Before — the five-minute walkthrough
 
-The spine of this video is the run trace: a brief goes in, a verdict comes out, and everything
-between them is named, timed and re-runnable. Every claim below is something the camera can see on
-our own pages, and nothing is narrated that is not on screen.
+The spine of this video is the measurement: the shop's shelf gets measured, one listing measures
+itself, a brief goes in and a verdict comes out with everything between them named, timed and
+re-runnable. Every claim below is something the camera can see on our own pages, and nothing is
+narrated that is not on screen.
 
 **Target length** 4:55 — the form caps the walkthrough at five minutes and 300 MB, so export at 1080p
 and check the file size before uploading, not after. **Aspect** 16:9. **Captions** burned in or a
@@ -23,17 +24,31 @@ land. **No music under the voice**; the typing is the soundtrack.
 
 ---
 
-## 0:00 – 0:30 · The question, unanswered
+## 0:00 – 0:20 · The question, unanswered
 
-**On screen:** the shop's page, empty brief box.
+**On screen:** `/store`, every card reading *Not measured*.
 
 > "Nobody returns a sofa because the colour was wrong. They return it because it did not fit up the
 > stairs, or it ate the walkway to the balcony. A listing gives three numbers and a marketing photo,
-> and a chatbot asked 'will it fit' will happily say yes. So we built the agent that measures first."
+> and a chatbot asked 'will it fit' will happily say yes."
 
-Type nothing yet. Let the sentence about the chatbot saying yes sit for a beat.
+Do not touch anything yet. The point of these twenty seconds is that nothing on the shelf claims to
+fit.
 
-## 0:30 – 1:15 · The brief goes in, the trace arrives
+## 0:20 – 1:00 · The shop measures its own shelf
+
+**On screen:** the room bar — 4 × 3.5 × 2.4 — then *Measure in my room*; the badges land. Then one
+listing, and *Simulate in my room*.
+
+> "So the storefront does the measuring. Every listing already carries the terms a dropship shop
+> sells it on — price, margin, supplier, lead time, freight — derived from the SKU by the catalog
+> service. Set a room and the sweep sends the best candidates through the same `fit_catalog` tool an
+> outside assistant calls, and the badges that arrive are the geometry worker's own verdicts. Open a
+> listing and it tests itself: the simulation starts by pasting the product URL this SKU generated,
+> so the page a shopper reads and the answer their ChatGPT gives come from one run of seven
+> services."
+
+## 1:00 – 1:45 · The brief goes in, the trace arrives
 
 **On screen:** `/room-simulator` — the brief box, then *Find what fits*.
 
@@ -52,7 +67,7 @@ Paste:
 Point at the widened-budget branch if it fires on the take — it is the honest moment in the video:
 the search spent a second pass rather than recommending something that did not clear the walkway.
 
-## 1:15 – 2:00 · The verdict, and the questions behind it
+## 1:45 – 2:20 · The verdict, and the questions behind it
 
 **On screen:** the result card — piece, verdict, walkway numbers, floor used — then the delivery
 path under the plan.
@@ -66,7 +81,7 @@ path under the plan.
 Hold on the suggested re-measure line for two seconds. Then the reply from the agent, read aloud in
 its own words — it quotes the walkway number, not a feeling.
 
-## 2:00 – 2:45 · Stand it in the room
+## 2:20 – 2:55 · Stand it in the room
 
 **On screen:** `/workspace` — place the same piece, orbit, then *first-person*.
 
@@ -79,7 +94,7 @@ Move slowly. One orbit, one first-person look, no mouse shaking. If the measured
 shows obstacles found in the photo, mention it once: "the radiators came out of the photo, not from
 me."
 
-## 2:45 – 3:30 · The same agent from the other door
+## 2:55 – 3:35 · The same agent from the other door
 
 **On screen:** the capability panel on `/room-simulator`, then one tool called over REST with curl
 (or the MCP inspector) in a terminal next to the browser.
@@ -94,7 +109,7 @@ me."
 Call `fit_report` for the simulation id from the earlier run and show the same JSON the page read.
 That is the load-bearing shot of the video: the agent has no private door into the pipeline.
 
-## 3:30 – 4:10 · Prove it, do not claim it
+## 3:35 – 4:10 · Prove it, do not claim it
 
 **On screen:** the golden-set run in the terminal — labels re-derived by the geometry service, then
 the agent scored against them.
@@ -140,6 +155,8 @@ the model served on AMD hardware — and cut.
   the panel says so on screen.
 - Do not claim the catalog is the merchant's. It is thirty-six SKUs our catalog service serves,
   which is enough for the agent to shop and not enough to pretend otherwise.
+- Do not call the terms on a listing a supplier feed. The page says in its own words that none is
+  connected and the numbers are derived from the SKU — read that line rather than skipping it.
 - Do not narrate over the trace. Let the steps arrive on their own timing and talk after them.
 - Never show the environment file, the key inputs, or a token on screen. If a terminal is visible,
   the secrets are not.

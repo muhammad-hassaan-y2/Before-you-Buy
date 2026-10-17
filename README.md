@@ -1,10 +1,18 @@
-# Buy You Before — the fit agent
+# Buy You Before — the shop that answers first
 
 An e-commerce agent that answers the one question that stops a purchase: **will it fit my
 room?** A shopper says it in their own words — "three-seater sofa under 900, and I need to
 walk past it to the balcony" — and the agent shortlists the catalog, runs a real fit
 simulation for every candidate through the same API a shopper's browser uses, and only then
 recommends. Every step it took is on screen, including the ones it skipped.
+
+That agent is also the shop's own storefront. `/store` is an AI-first dropship catalog: every
+listing carries the terms the catalog derives from the SKU — price, cost, margin, supplier,
+lead time, freight — and a room bar that measures the best candidates with the same
+`fit_catalog` tool an outside assistant calls. Open a listing and it tests *itself*: the
+simulation is started by pasting the product URL that SKU generated, so the verdict on the
+page and the verdict a shopper's ChatGPT or Claude returns are the same run of the same seven
+services. A green badge is only ever the geometry engine's own word.
 
 Seven FastAPI services, one Next.js app, Postgres for state, Dapr for the transport, OpenCV
 for the room, Shapely for the geometry, vLLM on AMD for product understanding and listing
@@ -50,13 +58,14 @@ indicator in the UI while the chain is running.
 components/                     Dapr components (Redis pub/sub)
 libs/byb-common/                shared event contracts, part builders + Dapr transport shim
 services/api-gateway/           FastAPI, SQLAlchemy models, ingest and job state
-services/catalog-service/       seeded furniture catalog, link/notes -> SKU
+services/catalog-service/       seeded furniture catalog, link/notes -> SKU, dropship terms
 services/inference-service/     vLLM product dimensions, catalog prior, heuristic fallback
 services/vision-service/        OpenCV room photo -> dimensions and floor obstacles
 services/geometry-service/      Shapely fit analysis and placement candidates
 services/scene-service/         SceneSpec + glTF 2.0 document for the 3D view and download
 services/agent-service/         the agent: MCP connector, REST tools, Evolus client, journeys
-frontend/                       Next.js 16 app: /room-simulator (agent) and /workspace (3D)
+frontend/                       Next.js 16 app: /store and /product/[sku] (the shop),
+                                /room-simulator (the agent), /workspace (3D)
 docker-compose.yml              postgres + redis + 7 services + daprd sidecars + vllm + frontend
 ruff.toml                       one lint config for every Poetry project
 Makefile                        up / down / logs / build / test / install
@@ -71,7 +80,8 @@ docker compose up --build          # no GPU: vLLM stays down, heuristics fill in
 docker compose --profile gpu up    # with an AMD ROCm host (/dev/kfd, /dev/dri)
 ```
 
-Then open <http://localhost:3000/room-simulator>.
+Then open <http://localhost:3000/store> — the shop. <http://localhost:3000/room-simulator> is
+the same pipeline driven by the agent.
 
 Useful targets: `make up PROFILE=gpu`, `make logs`, `make down`, `make clean` (drops
 volumes), `make rebuild`.
@@ -131,7 +141,7 @@ there is no Dapr state store to keep in sync (and daprd 1.18 no longer bundles
 | repo root | `make lint` | ruff over all seven, using `ruff.toml` |
 | repo root | `make eval` | the golden set: labels re-derived by geometry, then the agent scored against them |
 | `frontend/` | `pnpm test` | Vitest unit tests for the client, the engine maths and the panels |
-| `frontend/` | `pnpm test:e2e` | Playwright against `/room-simulator` and `/workspace` |
+| `frontend/` | `pnpm test:e2e` | Playwright against the shop, `/room-simulator` and `/workspace` |
 
 Needs Poetry 2.x: metadata lives in the PEP 621 `[project]` table while the
 path dependency stays in `[tool.poetry.dependencies]`, which 1.8 rejects. The
@@ -148,6 +158,7 @@ images add `--no-root` because the dependency layer is built before `src/` exist
 | `GET` | `/api/v1/simulations/{id}/model` | the glTF 2.0 document, served as a download on demand |
 | `GET` | `/api/v1/simulations` | recent jobs |
 | `GET` | `/api/v1/catalog` | gateway proxy of catalog-service's SKU list |
+| `GET` | `/api/v1/catalog/{sku}` | one listing, with the dropship terms derived for it |
 | `POST` | `/api/v1/internal/results` | worker callback, needs `x-byb-token` |
 | `POST` | `/api/v1/internal/progress` | stage report, needs `x-byb-token`, ignored once settled |
 | `POST` | `/v1/catalogue` · `/events` | catalog-service sync and subscription entry points |
@@ -393,8 +404,19 @@ Inspector exercise — and the guide simply admits it has no address to hand out
 
 ## The shop's own UI
 
-Two pages, both fed only through the proxies in `frontend/next.config.ts` — the browser
-never learns the gateway origin and never sees the Evolus key.
+`/` opens the shop. Every page is fed only through the proxies in
+`frontend/next.config.ts` — the browser never learns the gateway origin and never sees the
+Evolus key.
+
+`/store` is the shelf. Each card draws the piece to scale on the shopper's floor, quotes the
+terms the catalog derived for it, and stays on "Not measured" until the geometry engine has a
+word about it — the room bar at the top sends the best candidates through `fit_catalog`, the
+same tool an outside assistant calls, and the verdicts land as badges. `/product/[sku]` is one
+listing: the full terms, the arithmetic they came from stated as assumptions, and a simulation
+started by pasting that SKU's own generated product URL. So the page proves the thing the
+pitch claims — a listing tests itself through the pipeline the way a shopper's agent would, and
+the answer it shows is the fit report the geometry worker signed, with the plan and the room
+view beside it.
 
 `/room-simulator` is the agent-first page. A shopper writes their brief in their own words;
 the panel then shows what the agent heard (category, band, budget, must-haves, and *which
@@ -437,7 +459,7 @@ The Evolus widget is one script tag, loaded only when `NEXT_PUBLIC_EVOLUS_WIDGET
 ```bash
 make test                        # seven pytest suites
 (cd frontend && pnpm test)       # Vitest: client, engine maths, panels
-(cd frontend && pnpm test:e2e)   # Playwright against both pages
+(cd frontend && pnpm test:e2e)   # Playwright against the shop, the agent and the workspace
 (cd frontend && pnpm build)      # the type check the images are built with
 bash scripts/e2e-smoke.sh        # one full simulation and one journey, no Docker
 ```
@@ -453,7 +475,9 @@ stubs the services it talks to, so a red run means the front end broke rather th
 - [x] Five Evolus building blocks: MCP connector, REST endpoints, a workflow with a conditional branch, a parallel step and a loop boundary, the knowledge library, and the chat widget.
 - [x] No committed keys: everything lands in `.env`, and `.env.example` documents each name.
 - [ ] Live demo URL: expose the stack and set `PUBLIC_BASE_URL` to the same origin, or the workflow callback and the MCP connector will not reach you.
-- [ ] Pitch slides and walkthrough video: record `/room-simulator` end to end — brief, trace, verdict — then the same piece in `/workspace`.
+- [ ] Pitch slides and walkthrough video: open `/store`, measure a room so the badges arrive, then
+  let one listing simulate itself; follow with `/room-simulator` end to end — brief, trace,
+  verdict — and the same piece in `/workspace`.
 
 `submission/` holds the pitch and the twelve-slide deck built from it, the timed walkthrough script,
 the pre-deadline runbook and the 16:9 cover, so the form has something to paste from and the
