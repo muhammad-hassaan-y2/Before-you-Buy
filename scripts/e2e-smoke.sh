@@ -91,6 +91,20 @@ echo "$OUT" | "$PY" -m json.tool || echo "$OUT"
 echo "--- catalog passthrough ---"
 curl -s "http://127.0.0.1:$GATEWAY_PORT/api/v1/catalog" | "$PY" -c 'import json,sys; rows=json.load(sys.stdin); print(len(rows), "skus; first:", rows[0]["sku"])'
 
+echo "--- the shop's own doors ---"
+# /store shows a card per row and a sweep per room; both are these two calls and nothing else.
+curl -s "http://127.0.0.1:$GATEWAY_PORT/api/v1/catalog/SOFA-201" | "$PY" -c 'import json,sys
+row = json.load(sys.stdin); c = row["commerce"]
+print("listing :", row["sku"], c["retail_eur"], c["currency"], "| margin", c["margin_pct"], "% |",
+      c["lead_days"], "days,", c["freight"], "|", c["supplier"]["name"], c["supplier"]["region"])
+print("as sold :", c["product_url"])'
+curl -s -X POST "http://127.0.0.1:$AGENT_PORT/agent/tools/fit_catalog" -H 'Content-Type: application/json' \
+  -d '{"room_width_m":3.6,"room_depth_m":3.0,"category":"sofa","limit":4}' | "$PY" -c 'import json,sys
+r = json.load(sys.stdin)["result"]
+print("sweep   :", r["checked"], "measured in", r["room"]["width_m"], "x", r["room"]["depth_m"],
+      "m |", len(r["fits"]), "fit,", len(r["does_not_fit"]), "do not")
+for f in r["fits"]: print("        ", f["sku"], f["verdict"], "| walkway", f["tightest_walkway_m"], "m")'
+
 echo "--- room scan ---"
 # The uploaded bytes are not a photo, so this must say declared: the pipeline degrades, it does not fail.
 echo "$OUT" | "$PY" -c 'import json,sys; scan=json.load(sys.stdin).get("room_scan") or {}; print("method:", scan.get("method"), "measured:", scan.get("measured"), "obstacles:", len(scan.get("obstacles") or []), "room:", scan.get("width_m"), "x", scan.get("depth_m"))'

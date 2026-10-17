@@ -24,6 +24,11 @@ which means the live URL is tested from an incognito window, not the tab that se
 `make eval` failing on false fits is a stop, not a footnote — it is the claim the pitch is built on.
 Do it before recording, so the number said in the video is the number on screen.
 
+`make` is GNU make and Git Bash does not ship it, so on Windows either run the loop a target wraps
+(one `poetry run pytest -q` per service directory) or do the freeze in WSL. `pnpm build` is the one
+row that has no `make` in it, and it is the row that catches a page the framework will not
+prerender — run it, do not skip it because the tests are green.
+
 ## 2. Bring the stack up
 
 Docker Desktop has to be genuinely alive, not just installed: `docker version` must answer. If it

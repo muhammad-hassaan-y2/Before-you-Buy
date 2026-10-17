@@ -147,6 +147,9 @@ Needs Poetry 2.x: metadata lives in the PEP 621 `[project]` table while the
 path dependency stays in `[tool.poetry.dependencies]`, which 1.8 rejects. The
 images add `--no-root` because the dependency layer is built before `src/` exists.
 
+`make` is GNU make, which Git Bash does not ship on Windows. Every target is only a loop over
+the seven services, so run the loop itself when `make` is missing, or use WSL.
+
 ## API
 
 | Method | Path | Notes |
