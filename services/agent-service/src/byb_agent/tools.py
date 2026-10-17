@@ -77,12 +77,15 @@ class Tools:
         room_width_m: float = 4.0,
         room_depth_m: float = 3.5,
         room_height_m: float = 2.4,
+        image_key: str | None = None,
     ) -> dict[str, Any]:
         """Measure one product against one room and wait for the fit verdict."""
         row = await self._row(sku, link)
         if row is None:
             raise ValueError("give a sku from catalog_search, or a product link")
-        attempt, ms = await evaluate(self._pipeline, _room_brief(notes, room_width_m, room_depth_m, room_height_m), row, 1.0)
+        attempt, ms = await evaluate(
+            self._pipeline, _room_brief(notes, room_width_m, room_depth_m, room_height_m), row, 1.0, image_key
+        )
         detail = await self._pipeline.simulation(attempt.simulation_id) if attempt.simulation_id else {}
         return {"attempt": attempt.model_dump(), "ms": ms, "evidence": _evidence(detail)}
 
@@ -116,6 +119,7 @@ class Tools:
         room_width_m: float = 4.0,
         room_depth_m: float = 3.5,
         room_height_m: float = 2.4,
+        image_key: str | None = None,
     ) -> dict[str, Any]:
         """Several pieces the shopper wants in one room, judged as one purchase."""
         wanted = [str(sku).strip() for sku in skus if str(sku).strip()]
@@ -132,7 +136,7 @@ class Tools:
         async def test(sku: str) -> tuple[FitAttempt, dict, dict]:
             row = known[sku.lower()]
             async with semaphore:
-                attempt, _ = await evaluate(self._pipeline, brief, row, 1.0)
+                attempt, _ = await evaluate(self._pipeline, brief, row, 1.0, image_key)
             detail = await self._pipeline.simulation(attempt.simulation_id) if attempt.simulation_id else {}
             return attempt, row, detail.get("fit_report") or {}
 
@@ -179,6 +183,7 @@ class Tools:
         room_depth_m: float = 3.5,
         room_height_m: float = 2.4,
         limit: int = 3,
+        image_key: str | None = None,
     ) -> list[dict[str, Any]]:
         """When a product does not fit, the pieces that might: same category, no wider, and tested."""
         row = await self._row(sku, link)
@@ -206,7 +211,7 @@ class Tools:
 
         async def test(candidate: dict, value: float) -> dict[str, Any]:
             async with semaphore:
-                attempt, ms = await evaluate(self._pipeline, brief, candidate, value)
+                attempt, ms = await evaluate(self._pipeline, brief, candidate, value, image_key)
                 return {**attempt.model_dump(), "ms": ms}
 
         return list(await asyncio.gather(*(test(candidate, value) for candidate, value in ranked)))
@@ -217,9 +222,16 @@ class Tools:
         room_width_m: float | None = None,
         room_depth_m: float | None = None,
         room_height_m: float | None = None,
+        image_key: str | None = None,
     ) -> dict[str, Any]:
         """Run the whole fit-assurance process for a shopper and return the run id to poll."""
-        request = BriefRequest(brief=brief, room_width_m=room_width_m, room_depth_m=room_depth_m, room_height_m=room_height_m)
+        request = BriefRequest(
+            brief=brief,
+            room_width_m=room_width_m,
+            room_depth_m=room_depth_m,
+            room_height_m=room_height_m,
+            image_key=image_key,
+        )
         run = AgentRun(id=_new_run_id(), status="running")
         self._store.put(run)
         task = asyncio.create_task(self._journey.run(request, run))
@@ -388,7 +400,7 @@ def _holds_until(seconds: int) -> str:
 SPEC: dict[str, str] = {
     "catalog_search": "Find furniture in the shop's catalog by words, category or price band.",
     "read_brief": "Turn a shopper's own words into a category, a price band and a room size.",
-    "simulate_product": "Measure one product against one room and wait for the fit verdict.",
+    "simulate_product": "Measure one product against one room and wait for the fit verdict. Pass image_key to use a room measured from a photo.",
     "fit_report": "The verdict, placements and walkways for a simulation already run.",
     "explain_fit": "Read a fit report back in words: the facts behind the verdict and what to change.",
     "joint_fit": "Judge two or more pieces as one purchase, measuring each and combining the footprints.",
@@ -396,6 +408,6 @@ SPEC: dict[str, str] = {
     "proven_fit_offer": "An agent-readable offer that only a proven fit can back.",
     "reserve_fit": "Hold a proven-fitting piece, gated behind the shopper's own confirmation.",
     "returns_estimate": "What a fit check is worth, as arithmetic over stated assumptions.",
-    "start_journey": "Run the whole fit-assurance process for a shopper brief.",
+    "start_journey": "Run the whole fit-assurance process for a shopper brief, against a photo-measured room when image_key is given.",
     "journey_status": "The trace of a journey, including the final decision.",
 }

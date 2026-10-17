@@ -109,7 +109,9 @@ async def call_tool(name: str, payload: dict[str, Any] = Body(default_factory=di
 @app.post("/agent/brief", status_code=202)
 async def start_brief(brief: BriefRequest) -> dict[str, Any]:
     """Start a fit-assurance journey from a shopper's words."""
-    return await TOOLS.start_journey(brief.brief, brief.room_width_m, brief.room_depth_m, brief.room_height_m)
+    return await TOOLS.start_journey(
+        brief.brief, brief.room_width_m, brief.room_depth_m, brief.room_height_m, brief.image_key
+    )
 
 
 @app.get("/agent/runs")

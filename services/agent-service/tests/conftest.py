@@ -63,6 +63,7 @@ class StubPipeline:
         self._crash = crash or set()
         self.started: list[dict[str, Any]] = []
         self._sku_by_id: dict[str, str] = {}
+        self._photo: dict[str, bool] = {}
         self._next = 0
 
     async def catalog(self) -> list[dict]:
@@ -76,16 +77,30 @@ class StubPipeline:
         room_width_m: float,
         room_depth_m: float,
         room_height_m: float,
-        image=None,
+        image_key: str | None = None,
     ) -> str:
-        self.started.append({"link": link, "notes": notes, "room": (room_width_m, room_depth_m, room_height_m)})
+        self.started.append(
+            {
+                "link": link,
+                "notes": notes,
+                "room": (room_width_m, room_depth_m, room_height_m),
+                "image_key": image_key,
+            }
+        )
         self._next += 1
         simulation_id = f"sim{self._next:04d}"
+        self._photo[simulation_id] = bool(image_key)
         # The journey names the SKU it queued, which is how a test maps a verdict back to a product.
         for item in self._rows:
             if notes and f"shortlisted {item['sku']}" in notes:
                 self._sku_by_id[simulation_id] = str(item["sku"])
         return simulation_id
+
+    def _scan(self, simulation_id: str) -> dict[str, Any]:
+        """A photo-measured room comes back smaller than the numbers the shopper typed."""
+        if self._photo.get(simulation_id):
+            return {"width_m": 3.6, "depth_m": 3.0, "height_m": 2.4, "method": "photo", "measured": True, "obstacles": []}
+        return {"width_m": 4.0, "depth_m": 3.5, "method": "declared", "obstacles": []}
 
     async def simulation(self, simulation_id: str) -> dict[str, Any]:
         sku = self._sku_by_id.get(simulation_id, "")
@@ -114,7 +129,7 @@ class StubPipeline:
                 "geometry": geometry,
                 "score": 1.0,
             },
-            "room_scan": {"width_m": 4.0, "depth_m": 3.5, "method": "declared", "obstacles": []},
+            "room_scan": self._scan(simulation_id),
             "fit_report": {
                 "room_area_m2": 14.0,
                 "usable_area_m2": 13.3,

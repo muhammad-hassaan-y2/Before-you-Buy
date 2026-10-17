@@ -100,14 +100,21 @@ def best_walkway(fit: dict[str, Any]) -> dict[str, float]:
     return gaps
 
 
-async def evaluate(pipeline: Pipeline, brief: ShopperBrief, row: dict, value: float) -> tuple[FitAttempt, int]:
+async def evaluate(
+    pipeline: Pipeline, brief: ShopperBrief, row: dict, value: float, image_key: str | None = None
+) -> tuple[FitAttempt, int]:
     """One candidate through the whole chain. Never raises: a failed fit is a result, not a crash."""
     attempt = FitAttempt(sku=str(row["sku"]), name=str(row["name"]), price_band=row.get("price_band"), score=round(value, 3), status="queued")
     at = _started()
     width, depth, height = room_for(brief)
     try:
         attempt.simulation_id = await pipeline.start_simulation(
-            link=listing_url(row), notes=note_for(brief, row), room_width_m=width, room_depth_m=depth, room_height_m=height
+            link=listing_url(row),
+            notes=note_for(brief, row),
+            room_width_m=width,
+            room_depth_m=depth,
+            room_height_m=height,
+            image_key=image_key,
         )
         detail = await pipeline.wait(attempt.simulation_id)
         attempt.status = str(detail.get("status", "unknown"))
@@ -206,6 +213,12 @@ class Journey:
     async def run(self, request: BriefRequest, run: AgentRun | None = None) -> AgentRun:
         run = self._store.put(run or new_run())
         add_step(run, "intake", detail=request.brief[:300], tool="agent-service /agent/brief")
+        if request.image_key:
+            add_step(
+                run,
+                "room",
+                detail="every candidate is fitted into the room measured from the shopper's photo, not the typed numbers",
+            )
         try:
             await self._evolus_handoff(run, request)
             brief = await self._read_brief(run, request)
@@ -213,7 +226,7 @@ class Journey:
             if self._is_too_vague(brief):
                 await self._handoff_early(run, brief)
                 return run
-            await self._search(run, brief)
+            await self._search(run, brief, request.image_key)
             await self._decide(run, brief)
         except Exception as exc:  # noqa: BLE001 - a run must always come back with a reason
             logger.exception("journey %s failed", run.id)
@@ -279,7 +292,7 @@ class Journey:
         )
         return brief
 
-    async def _search(self, run: AgentRun, brief: ShopperBrief) -> None:
+    async def _search(self, run: AgentRun, brief: ShopperBrief, image_key: str | None = None) -> None:
         """Two passes at most - the shopper's band, then the band below it - and at most
         `max_candidates` simulations per pass.
 
@@ -318,7 +331,7 @@ class Journey:
 
             group = f"pass-{iteration}"
             at = _started()
-            results = await self._fan(ranked, brief)
+            results = await self._fan(ranked, brief, image_key)
             add_step(
                 run,
                 "simulate",
@@ -356,12 +369,14 @@ class Journey:
             room=(width, depth),
         )
 
-    async def _fan(self, ranked: list[tuple[dict, float]], brief: ShopperBrief) -> list[tuple[FitAttempt, int]]:
+    async def _fan(
+        self, ranked: list[tuple[dict, float]], brief: ShopperBrief, image_key: str | None
+    ) -> list[tuple[FitAttempt, int]]:
         semaphore = asyncio.Semaphore(self._settings.parallel_fits)
 
         async def one(row: dict, value: float) -> tuple[FitAttempt, int]:
             async with semaphore:
-                return await evaluate(self._pipeline, brief, row, value)
+                return await evaluate(self._pipeline, brief, row, value, image_key)
 
         return list(await asyncio.gather(*(one(row, value) for row, value in ranked)))
 

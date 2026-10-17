@@ -98,6 +98,14 @@ def test_a_tool_that_needs_a_product_says_what_is_missing(api):
     assert "sku" in response.json()["detail"]
 
 
+def test_a_workflow_tool_takes_the_room_photo_too(api):
+    """The JSON door forwards image_key, so an external agent fits into the photographed room."""
+    photo = "cd" * 16 + "-room.jpg"
+    measured = api.client.post("/agent/tools/simulate_product", json={"sku": "SOF-001", "image_key": photo}).json()["result"]
+    assert measured["attempt"]["verdict"] == "fits"
+    assert api.pipeline.started[-1]["image_key"] == photo
+
+
 def test_the_new_capabilities_are_callable_over_rest(api):
     """Same numbers through the workflow door as through the connector, including the human gate."""
     measured = api.client.post("/agent/tools/simulate_product", json={"sku": "SOF-001"}).json()["result"]
@@ -138,6 +146,18 @@ def test_a_brief_starts_a_journey_the_browser_can_poll(api):
     assert run["decision"]["action"] == "recommend"
     assert [step["kind"] for step in run["steps"]][:3] == ["intake", "agent", "brief"]
     assert api.pipeline.started, "the journey must queue real simulations"
+
+
+def test_a_brief_with_a_room_photo_fits_every_candidate_into_that_room(api):
+    photo = "ab" * 16 + "-living-room.jpg"
+    started = api.client.post(
+        "/agent/brief",
+        json={"brief": "will a linen sofa fit the room in my photo", "image_key": photo},
+    )
+    assert started.status_code == 202
+    run = settled(api.client, started.json()["run_id"])
+    assert {step["kind"] for step in run["steps"]} >= {"room", "fit"}
+    assert {simulation["image_key"] for simulation in api.pipeline.started} == {photo}
 
 
 def test_the_runs_are_listed_newest_first(api):

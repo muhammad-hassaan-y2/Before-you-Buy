@@ -25,13 +25,16 @@ logger = logging.getLogger("byb.mcp")
 INSTRUCTIONS = (
     "Buy You Before checks whether a piece of furniture fits a real room before it is bought. "
     "Read a shopper's brief with read_brief, search catalog_search, then measure with "
-    "simulate_product, joint_fit or start_journey. Trust only a verdict that came back from "
-    "simulate_product, fit_report or journey_status: those run a geometry engine over the "
-    "measured room, the doorway, the door swing and the walkways. explain_fit turns a verdict "
-    "into the facts behind it. proven_fit_offer issues a purchasable offer only over a fit the "
-    "engine proved, and reserve_fit holds that piece only on the shopper's own confirmation - "
-    "never invent those words. Report the verdict, the coverage percentage and the tightest "
-    "walkway, and hand the case to a person when the decision is handoff."
+    "simulate_product, joint_fit or start_journey. When the shopper sent a photo of the room, "
+    "pass the image_key the gateway returned for it (POST /api/v1/uploads): every piece is "
+    "then measured against the room read from the photo, not against typed numbers. Trust only "
+    "a verdict that came back from simulate_product, fit_report or journey_status: those run a "
+    "geometry engine over the measured room, the doorway, the door swing and the walkways. "
+    "explain_fit turns a verdict into the facts behind it. proven_fit_offer issues a purchasable "
+    "offer only over a fit the engine proved, and reserve_fit holds that piece only on the "
+    "shopper's own confirmation - never invent those words. Report the verdict, the coverage "
+    "percentage and the tightest walkway, and hand the case to a person when the decision is "
+    "handoff."
 )
 
 
@@ -58,9 +61,10 @@ def register(server: MCPServer, tools: Tools) -> None:
         sku: str | None = None,
         link: str | None = None,
         notes: str = "",
+        image_key: str | None = None,
     ) -> dict[str, Any]:
         room = {"room_width_m": room_width_m, "room_depth_m": room_depth_m, "room_height_m": room_height_m}
-        return await _answer(tools.simulate_product, link=link, sku=sku, notes=notes, **room)
+        return await _answer(tools.simulate_product, link=link, sku=sku, notes=notes, image_key=image_key, **room)
 
     @server.tool(name="fit_report", description="The verdict, placements and walkways for a simulation already run.")
     async def fit_report(simulation_id: str) -> dict[str, Any]:
@@ -77,8 +81,17 @@ def register(server: MCPServer, tools: Tools) -> None:
         room_depth_m: float = 3.5,
         room_height_m: float = 2.4,
         notes: str = "",
+        image_key: str | None = None,
     ) -> dict[str, Any]:
-        return await _answer(tools.joint_fit, skus=skus, notes=notes, room_width_m=room_width_m, room_depth_m=room_depth_m, room_height_m=room_height_m)
+        return await _answer(
+            tools.joint_fit,
+            skus=skus,
+            notes=notes,
+            room_width_m=room_width_m,
+            room_depth_m=room_depth_m,
+            room_height_m=room_height_m,
+            image_key=image_key,
+        )
 
     @server.tool(name="find_alternatives", description="Same-category pieces no wider than this one, each measured against the room.")
     async def find_alternatives(
@@ -89,9 +102,12 @@ def register(server: MCPServer, tools: Tools) -> None:
         link: str | None = None,
         notes: str = "",
         limit: int = 3,
+        image_key: str | None = None,
     ) -> dict[str, Any]:
         room = {"room_width_m": room_width_m, "room_depth_m": room_depth_m, "room_height_m": room_height_m}
-        found = await _answer(tools.find_alternatives, sku=sku, link=link, notes=notes, limit=limit, **room)
+        found = await _answer(
+            tools.find_alternatives, sku=sku, link=link, notes=notes, limit=limit, image_key=image_key, **room
+        )
         return {"alternatives": found}
 
     @server.tool(name="proven_fit_offer", description="A purchasable offer over a fit the geometry engine proved. Refuses an unproven piece.")
@@ -127,8 +143,16 @@ def register(server: MCPServer, tools: Tools) -> None:
         room_width_m: float | None = None,
         room_depth_m: float | None = None,
         room_height_m: float | None = None,
+        image_key: str | None = None,
     ) -> dict[str, Any]:
-        return await _answer(tools.start_journey, brief=brief, room_width_m=room_width_m, room_depth_m=room_depth_m, room_height_m=room_height_m)
+        return await _answer(
+            tools.start_journey,
+            brief=brief,
+            room_width_m=room_width_m,
+            room_depth_m=room_depth_m,
+            room_height_m=room_height_m,
+            image_key=image_key,
+        )
 
     @server.tool(name="journey_status", description="The trace of a journey: every step, its tool, its duration, and the final decision.")
     async def journey_status(run_id: str) -> dict[str, Any]:

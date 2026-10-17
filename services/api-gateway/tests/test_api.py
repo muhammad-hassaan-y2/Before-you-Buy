@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from byb_common.contracts import (
     FitPlacement,
     FitReport,
@@ -6,6 +8,7 @@ from byb_common.contracts import (
     ProductProfile,
     SimulationCompleted,
 )
+from byb_gateway.main import settings
 
 PROFILE = ProductProfile(
     name="Linen three-seater sofa",
@@ -28,6 +31,40 @@ def test_needs_link_or_file(client):
 def test_rejects_impossible_room(client):
     response = client.post("/api/v1/simulations", data={"link": "https://example.com/sofa", "room_width_m": 400})
     assert response.status_code == 422
+
+
+def stored_photo(client) -> str:
+    """A room photo kept by the gateway, named the way the gateway names it."""
+    response = client.post("/api/v1/uploads", files={"file": ("room.jpg", b"\xff\xd8\xffimage", "image/jpeg")})
+    assert response.status_code == 201
+    return response.json()["image_key"]
+
+
+def test_a_room_photo_can_be_stored_on_its_own(client):
+    key = stored_photo(client)
+    assert Path(settings.upload_dir, key).is_file()
+    assert key.split("-", 1)[1] == "room.jpg"
+
+
+def test_only_a_picture_can_be_stored(client):
+    response = client.post("/api/v1/uploads", files={"file": ("notes.txt", b"hello", "text/plain")})
+    assert response.status_code == 415
+
+
+def test_a_brief_can_reuse_the_room_photo_it_already_uploaded(client, dispatcher):
+    key = stored_photo(client)
+    accepted = client.post("/api/v1/simulations", data={"link": "https://example.com/sofa", "image_key": key})
+    assert accepted.status_code == 202
+    assert dispatcher.messages[0].image_key == key
+
+
+def test_a_room_photo_that_is_not_one_of_ours_is_refused(client):
+    escaped = client.post("/api/v1/simulations", data={"link": "https://example.com/sofa", "image_key": "../../etc/passwd"})
+    assert escaped.status_code == 400
+    missing = client.post(
+        "/api/v1/simulations", data={"link": "https://example.com/sofa", "image_key": "ab" * 16 + "-room.jpg"}
+    )
+    assert missing.status_code == 404
 
 
 def test_dispatches_then_records_result(client, dispatcher):

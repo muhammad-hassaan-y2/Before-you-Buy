@@ -14,6 +14,9 @@ def steps(run: AgentRun, kind: str) -> list[Any]:
     return [step for step in run.steps if step.kind == kind]
 
 
+PHOTO = f"{'ab' * 16}-living-room.jpg"
+
+
 async def test_a_shopper_brief_comes_back_with_a_recommendation(pipeline, evolus, model, store, settings):
     finished = await Journey(pipeline, evolus, model, store, settings).run(brief())
     assert finished.status == "done"
@@ -35,6 +38,18 @@ async def test_the_room_the_shopper_typed_is_the_room_that_is_tested(pipeline, e
     await Journey(pipeline, evolus, model, store, settings).run(brief())
     assert pipeline.started, "the agent must have queued work"
     assert {run["room"] for run in pipeline.started} == {(4.2, 3.4, 2.4)}
+
+
+async def test_a_room_photo_is_the_room_every_candidate_is_fitted_into(pipeline, evolus, model, store, settings):
+    finished = await Journey(pipeline, evolus, model, store, settings).run(brief(image_key=PHOTO))
+    assert {run["image_key"] for run in pipeline.started} == {PHOTO}
+    assert steps(finished, "room"), "the trace has to say the room came from a photo, not from typed numbers"
+
+
+async def test_a_brief_with_no_photo_fits_the_typed_room_alone(pipeline, evolus, model, store, settings):
+    finished = await Journey(pipeline, evolus, model, store, settings).run(brief())
+    assert {run["image_key"] for run in pipeline.started} == {None}
+    assert not steps(finished, "room")
 
 
 async def test_candidates_are_evaluated_in_parallel_and_tagged_with_their_pass(pipeline, evolus, model, store, settings):

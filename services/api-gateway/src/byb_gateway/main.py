@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -19,7 +20,7 @@ from byb_common.contracts import SimulationCompleted, SimulationProgress, Simula
 from byb_common.dapr import INTERNAL_TOKEN_HEADER, DaprTransport
 from byb_gateway.database import get_db, init_db
 from byb_gateway.dispatch import Dispatcher
-from byb_gateway.models import Simulation, SimulationResult
+from byb_gateway.models import Simulation, SimulationResult, new_id
 from byb_gateway.schemas import HealthResponse, SimulationAccepted, SimulationDetail, SimulationSummary
 from byb_gateway.settings import settings
 
@@ -28,6 +29,8 @@ logger = logging.getLogger("byb.gateway")
 
 MAX_CHUNK = 1024 * 512
 MODEL_MEDIA_TYPE = "model/gltf+json"
+# Keys this service minted: the 32-hex id it wrote the upload under, plus the sanitised name.
+KEY_PATTERN = re.compile(r"[0-9a-f]{32}-[\w.-]{1,100}")
 
 
 @asynccontextmanager
@@ -98,20 +101,46 @@ def _save_upload(file: UploadFile, simulation_id: str) -> str:
     return key
 
 
+def _stored_image(key: str) -> Path:
+    """A caller may point at a photo this gateway wrote - and only at one, by its basename."""
+    name = Path(key).name
+    if not KEY_PATTERN.fullmatch(name):
+        raise HTTPException(status_code=400, detail="Unknown room photo")
+    path = Path(settings.upload_dir) / name
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="That room photo is no longer stored")
+    return path
+
+
+@app.post("/api/v1/uploads", status_code=201)
+async def upload_room_photo(file: UploadFile = File(...)) -> dict[str, str]:
+    """Store a room photo on its own, so a brief or an agent's tool call can refer to it."""
+    if not (file.content_type or "").startswith("image/"):
+        raise HTTPException(status_code=415, detail="Only a room photo can be attached")
+    try:
+        return {"image_key": _save_upload(file, new_id())}
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"Could not store upload: {exc}") from exc
+
+
 @app.post("/api/v1/simulations", response_model=SimulationAccepted, status_code=202)
 async def create_simulation(
     link: str | None = Form(default=None),
     file: UploadFile | None = File(default=None),
+    image_key: str | None = Form(default=None),
     room_width_m: float = Form(default=4.0),
     room_depth_m: float = Form(default=3.5),
     room_height_m: float = Form(default=2.4),
     shopper_notes: str | None = Form(default=None),
     db: Session = Depends(get_db),
 ) -> SimulationAccepted:
-    if not link and not file:
-        raise HTTPException(status_code=400, detail="Provide a product link or a room image")
+    if not link and not file and not image_key:
+        raise HTTPException(status_code=400, detail="Provide a product link or a room photo")
     if not 0.5 <= room_width_m <= 50 or not 0.5 <= room_depth_m <= 50 or not 1.2 <= room_height_m <= 12:
         raise HTTPException(status_code=422, detail="Room dimensions are out of range")
+    # A brief can refer to a photo it already uploaded, so the same room is measured once per piece.
+    if image_key and not file:
+        _stored_image(image_key)
 
     simulation = Simulation(
         product_link=link,
@@ -125,16 +154,18 @@ async def create_simulation(
     db.commit()
     db.refresh(simulation)
 
-    image_key = None
-    if file and file.filename:
+    if image_key and not file:
+        simulation.image_key = image_key
+        db.commit()
+    elif file and file.filename:
         try:
-            image_key = _save_upload(file, simulation.id)
-            simulation.image_key = image_key
+            simulation.image_key = _save_upload(file, simulation.id)
             db.commit()
         except HTTPException:
             raise
         except OSError as exc:
             raise HTTPException(status_code=500, detail=f"Could not store upload: {exc}") from exc
+    image_key = simulation.image_key
 
     message = SimulationRequested(
         simulation_id=simulation.id,

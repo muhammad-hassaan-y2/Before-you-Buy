@@ -45,7 +45,7 @@ class Pipeline:
         room_width_m: float,
         room_depth_m: float,
         room_height_m: float,
-        image: tuple[str, bytes, str] | None = None,
+        image_key: str | None = None,
     ) -> str:
         form: dict[str, Any] = {
             "room_width_m": room_width_m,
@@ -56,9 +56,12 @@ class Pipeline:
             form["link"] = link
         if notes:
             form["shopper_notes"] = notes
-        files = {"file": image} if image else None
+        if image_key:
+            # The shopper's room photo, already stored by the gateway: every candidate is fitted
+            # into the room vision-service measures from it, not into a typed guess.
+            form["image_key"] = image_key
         try:
-            response = await self._client.post(f"{self.gateway}/api/v1/simulations", data=form, files=files, timeout=30)
+            response = await self._client.post(f"{self.gateway}/api/v1/simulations", data=form, timeout=30)
             response.raise_for_status()
         except httpx.HTTPError as exc:
             raise PipelineError(f"could not queue a simulation: {exc}") from exc

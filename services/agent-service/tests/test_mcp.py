@@ -96,6 +96,22 @@ async def test_a_journey_started_over_mcp_is_pollable_over_mcp(server):
     assert {step["kind"] for step in run["steps"]} >= {"intake", "agent", "brief", "shortlist", "simulate", "fit", "compare", "reply"}
 
 
+async def test_a_photographed_room_is_an_argument_the_agent_can_pass(server):
+    by_name = {tool.name: tool for tool in await server.list_tools()}
+    for name in ("simulate_product", "joint_fit", "find_alternatives", "start_journey"):
+        assert "image_key" in by_name[name].input_schema["properties"], name
+
+    photo = "ef" * 16 + "-living-room.jpg"
+    started = _payload(await server.call_tool("start_journey", {"brief": "a linen sofa for the room in my photo", "image_key": photo}))
+    run = started
+    for _ in range(200):
+        run = _payload(await server.call_tool("journey_status", {"run_id": started["run_id"]}))
+        if run["status"] != "running":
+            break
+        await asyncio.sleep(0.01)
+    assert "room" in {step["kind"] for step in run["steps"]}, "the trace must show the photo measured the room"
+
+
 async def test_two_pieces_are_judged_as_one_purchase_over_mcp(server):
     joint = _payload(await server.call_tool("joint_fit", {"skus": ["SOF-001", "ARM-001"], "room_width_m": 4.2, "room_depth_m": 3.4}))
     assert joint["tested"] == ["SOF-001", "ARM-001"]

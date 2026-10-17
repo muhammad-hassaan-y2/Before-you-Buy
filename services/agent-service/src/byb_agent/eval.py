@@ -85,7 +85,7 @@ class GoldenPipeline:
         room_width_m: float,
         room_depth_m: float,
         room_height_m: float,
-        image: tuple[str, bytes, str] | None = None,
+        image_key: str | None = None,
     ) -> str:
         self._next += 1
         simulation_id = f"golden{self._next:04d}"
