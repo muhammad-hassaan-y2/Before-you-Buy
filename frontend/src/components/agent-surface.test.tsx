@@ -25,7 +25,7 @@ const GUIDE: ConnectGuide = {
   capabilities: { tools: ["catalog_search"], resources: ["byb://catalog"], prompts: ["fit-my-room"] },
   clients: {
     chatgpt: { label: "ChatGPT (web)", requires_https: true, steps: ["Apps -> Advanced -> Add custom MCP server."] },
-    claude: { label: "Claude (claude.ai)", requires_https: true, steps: ["Settings -> Connectors."] },
+    claude: { label: "Claude (claude.ai)", requires_https: true, steps: ["Customize -> Connectors -> Add custom connector."] },
   },
   wiring: {},
 }

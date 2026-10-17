@@ -341,6 +341,7 @@ def test_the_install_guide_tells_each_client_how_to_add_the_connector(settings):
     assert guide["capabilities"]["tools"] == sorted(SPEC)
     assert guide["capabilities"]["prompts"] == ["fit-my-room", "hold-the-fit"]
     assert "Add custom MCP server" in " ".join(guide["clients"]["chatgpt"]["steps"])
+    assert "Add custom connector" in " ".join(guide["clients"]["claude"]["steps"])
     assert guide["clients"]["claude-code"]["command"].startswith("claude mcp add --transport http")
     # Asking a shopper a question mid-tool is only possible over a session, and that is opt-in.
     assert guide["elicitation"] is False

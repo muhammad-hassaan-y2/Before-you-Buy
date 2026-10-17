@@ -71,7 +71,17 @@ export const connect = {
       ],
       note: "ChatGPT will not accept a static bearer header.",
     },
-    claude: { label: "Claude (claude.ai)", requires_https: true, steps: ["Settings -> Connectors -> Add custom connector."] },
+    claude: {
+      label: "Claude (claude.ai)",
+      requires_https: true,
+      steps: [
+        "Open Customize -> Connectors, or Settings -> Connectors on the desktop app.",
+        "Click + and choose Add custom connector.",
+        "Connect it as-is, or set an OAuth Client ID under Advanced settings when the shop speaks OAuth.",
+        "Switch the connector on inside the chat, then ask it which sofas fit the room.",
+      ],
+      note: "claude.ai takes an unauthenticated or OAuth URL; a typed key belongs to Claude Code.",
+    },
     "claude-code": { label: "Claude Code", requires_https: false, command: "claude mcp add --transport http buy-you-before /mcp/" },
     cursor: { label: "Cursor", requires_https: false, config: { mcpServers: { "buy-you-before": { url: "/mcp/" } } } },
     evolus: { label: "Evolus Studio", requires_https: true, steps: ["Add an MCP connector and paste the URL."] },

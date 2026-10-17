@@ -69,7 +69,8 @@ The rule is at least two building blocks; we use five, and each needs creating b
    Claude, Claude Code and Cursor; adding it to one of those is the strongest 20 seconds of the demo,
    and it only works once `PUBLIC_BASE_URL` is a real https tunnel. In ChatGPT that means Developer
    mode (Settings → Security, or Workspace settings → Permissions & roles) and *no authentication* —
-   it cannot send a key.
+   it cannot send a key. In Claude that means Customize → Connectors → + → Add custom connector,
+   connected as-is; the same rule applies, no typed key.
 2. **REST API** — one workflow step calling `/agent/tools/simulate_product`. Check it returns
    `{tool, result}`.
 3. **Workflow** — the conditional branch (recommend versus hand off), the parallel fits, and the

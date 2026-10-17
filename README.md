@@ -366,6 +366,12 @@ steps per client — because the honest answer differs by client and by environm
 - **It has to be reachable over https.** `PUBLIC_BASE_URL` is what turns a laptop into a connector;
   with it unset, every URL the guide prints is local and no outside assistant can add it. The page
   proxies `/mcp/` to agent-service, so the one tunnel that exposes the shop also exposes its connector.
+- **Each panel is named, per client.** ChatGPT hides custom apps behind Developer mode (Settings →
+  Security, or Workspace settings → Permissions & roles) and then Apps directory → Advanced → Add
+  custom MCP server; claude.ai adds it under Customize → Connectors → + → Add custom connector, with
+  an OAuth client id in that dialog's Advanced settings. Claude's Team and Enterprise plans can have
+  custom connectors held shut until an admin allows them, which is a shop-side setting, not a bug in
+  the connector.
 - **Authentication is none or OAuth.** ChatGPT and Claude's app offer those two. A static bearer
   key (`MCP_CONNECT_TOKEN`) is a Claude Code and Cursor thing, so the gate stays off by default and
   the guide says which doors a key locks. What a key is for is a stranger's agent spending the

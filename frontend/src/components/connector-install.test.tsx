@@ -23,6 +23,7 @@ function guide(overrides: Partial<ConnectGuide> = {}): ConnectGuide {
     capabilities: { tools: ["catalog_search", "fit_catalog"], resources: ["byb://catalog"], prompts: ["fit-my-room", "hold-the-fit"] },
     clients: {
       chatgpt: { label: "ChatGPT (web)", requires_https: true, steps: ["Apps -> Advanced -> Add custom MCP server.", "Paste the URL."], note: "ChatGPT takes no static key." },
+      claude: { label: "Claude (claude.ai)", requires_https: true, steps: ["Customize -> Connectors -> + -> Add custom connector."], note: "claude.ai takes no typed key." },
       "claude-code": { label: "Claude Code", requires_https: false, command: "claude mcp add --transport http buy-you-before https://byb.test/mcp/" },
       cursor: { label: "Cursor", requires_https: false, config: { mcpServers: { "buy-you-before": { url: "https://byb.test/mcp/" } } } },
     },
@@ -39,6 +40,14 @@ describe("ConnectorInstall", () => {
     expect(screen.getByRole("button", { name: "ChatGPT (web)" })).toHaveAttribute("aria-pressed", "true")
     expect(screen.getByText("Apps -> Advanced -> Add custom MCP server.")).toBeInTheDocument()
     expect(screen.getByText("ChatGPT takes no static key.")).toBeInTheDocument()
+  })
+
+  it("gives Claude the connector path, and says a typed key is not part of it", () => {
+    render(<ConnectorInstall guide={guide()} fallbackUrl="" />)
+
+    fireEvent.click(screen.getByRole("button", { name: "Claude (claude.ai)" }))
+    expect(screen.getByText("Customize -> Connectors -> + -> Add custom connector.")).toBeInTheDocument()
+    expect(screen.getByText("claude.ai takes no typed key.")).toBeInTheDocument()
   })
 
   it("gives Claude Code the command and Cursor the config, ready to copy", () => {

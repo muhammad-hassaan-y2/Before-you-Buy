@@ -372,12 +372,16 @@ def connect(settings: Settings) -> dict[str, Any]:
             "label": "Claude (claude.ai)",
             "requires_https": True,
             "steps": [
-                "Settings -> Connectors -> Add custom connector.",
-                "Paste the URL below, then follow the import prompt.",
-                "Use it from a chat: ask which sofas fit a 3.6 by 3 m room.",
+                "Open Customize -> Connectors, or Settings -> Connectors on the desktop app.",
+                "Click + and choose Add custom connector.",
+                "Name it Buy You Before and paste the URL below - the shop's own origin, /mcp/.",
+                "Connect it as-is, or set an OAuth Client ID under Advanced settings when the shop "
+                "speaks OAuth; Claude takes no typed key the way Claude Code does.",
+                "Switch the connector on inside the chat, then ask it which sofas fit the room.",
             ],
             "note": "claude.ai adds a connector unauthenticated or through OAuth; it cannot send a "
-                    "header you typed. Keys belong to Claude Code below.",
+                    "header you typed. Keys belong to Claude Code below. On a Team or Enterprise "
+                    "workspace an admin may have to allow custom connectors first.",
         },
         "claude-code": {
             "label": "Claude Code",
