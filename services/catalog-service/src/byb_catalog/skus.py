@@ -33,6 +33,11 @@ class Sku(BaseModel):
         )
 
     @property
+    def parts(self):
+        """The same box breakdown the 3D engine is handed, so a storefront can draw this piece."""
+        return build_parts(self.category, self.width_cm, self.depth_cm, self.height_cm)
+
+    @property
     def article(self) -> str:
         """The listing's article number, one word, so a URL's digits survive being read as words."""
         return self.sku.replace("-", "").lower()

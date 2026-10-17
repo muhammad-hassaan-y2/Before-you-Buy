@@ -14,6 +14,8 @@ from byb_catalog.commerce import terms_for
 from byb_catalog.matching import candidate_for
 from byb_catalog.settings import settings
 from byb_catalog.skus import CATALOG, Sku, find
+from byb_catalog.stock import LEDGER
+from byb_catalog import stock
 from byb_common.contracts import CatalogCandidate, SimulationCatalogued, SimulationRequested, SimulationStatus
 from byb_common.dapr import DaprTransport, publish_event
 
@@ -72,6 +74,55 @@ def read(sku: str) -> dict[str, Any]:
     return _row(item)
 
 
+@app.get("/api/v1/stock")
+def stock_browse() -> list[dict[str, Any]]:
+    """What the shop has, what is held, and when the next lot is on the floor."""
+    return stock.browse()
+
+
+@app.get("/api/v1/stock/events")
+def stock_events() -> list[dict[str, Any]]:
+    """The shop's own traffic: every unit a hold or an order draft took, newest first."""
+    return LEDGER.events()
+
+
+@app.get("/api/v1/stock/{sku}")
+def stock_read(sku: str) -> dict[str, Any]:
+    row = stock.read(sku)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"no SKU {sku}")
+    return row
+
+
+@app.post("/api/v1/stock/claim")
+def stock_claim(payload: dict) -> dict[str, Any]:
+    """Take units off the shelf for one thing the shop did. Idempotent by key.
+
+    Internal: the agent calls this when it writes a hold or an order draft, so a bag the shop
+    cannot supply is refused by the shelf as well as by the geometry.
+    """
+    key = str(payload.get("key") or "").strip()
+    lines = payload.get("lines") or []
+    if not key or not isinstance(lines, list) or not lines:
+        raise HTTPException(status_code=422, detail="a claim needs a key and at least one line")
+    try:
+        claim = LEDGER.claim(key=key, lines=lines, reason=str(payload.get("reason") or "unspecified"))
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {**claim.__dict__, "stock": [stock.read(line["sku"]) for line in claim.lines]}
+
+
+@app.post("/api/v1/stock/release")
+def stock_release(payload: dict) -> dict[str, Any]:
+    """Put a claim's units back, when a person at the shop releases the hold or drops the draft."""
+    key = str(payload.get("key") or "").strip()
+    if not key:
+        raise HTTPException(status_code=422, detail="a release needs the key it is undoing")
+    return {"key": key, "released": LEDGER.release(key), "events": LEDGER.events()[:1]}
+
+
 def _row(item: Sku) -> dict[str, Any]:
     return {
         "sku": item.sku,
@@ -81,6 +132,8 @@ def _row(item: Sku) -> dict[str, Any]:
         "material": item.material,
         "price_band": item.price_band,
         "geometry": item.geometry.model_dump(),
+        # The same sub-boxes the 3D engine draws, so a storefront render is the engine's geometry.
+        "parts": [part.model_dump() for part in item.parts],
         "commerce": terms_for(item),
     }
 
