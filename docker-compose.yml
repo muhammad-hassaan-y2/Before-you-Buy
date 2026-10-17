@@ -184,10 +184,6 @@ services:
       VLLM_MODEL: ${VLLM_MODEL:-}
       VLLM_API_KEY: ${VLLM_API_KEY:-}
       VLLM_TIMEOUT_S: ${VLLM_TIMEOUT_S:-60}
-      VLLM_SUPPORTS_VISION: ${VLLM_SUPPORTS_VISION:-false}
-      UPLOAD_DIR: /uploads
-    volumes:
-      - *upload
     ports:
       - "${INFERENCE_PORT:-8002}:8002"
     depends_on:

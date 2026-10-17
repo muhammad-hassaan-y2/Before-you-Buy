@@ -4,11 +4,8 @@ measurement on to vision-service."""
 
 from __future__ import annotations
 
-import base64
 import logging
-import mimetypes
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Any
 
 import httpx
@@ -81,23 +78,15 @@ async def _page_context(client: httpx.AsyncClient, link: str) -> str:
     return extract_context(html_body)
 
 
-def _image_data_uri(image_key: str | None) -> str | None:
-    if not (settings.vllm_supports_vision and image_key):
-        return None
-    path = Path(settings.upload_dir) / Path(image_key).name
-    if not path.is_file():
-        return None
-    mime = mimetypes.guess_type(path.name)[0] or "image/png"
-    return f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode()}"
-
-
 async def enrich(message: SimulationCatalogued, client: httpx.AsyncClient) -> ProductProfile:
     context = await _page_context(client, message.product_link) if message.product_link else ""
     if message.shopper_notes:
         note_line = f"shopper notes: {message.shopper_notes.strip()}"
         context = f"{context}\n{note_line}".strip() if context else note_line
 
-    token_factory = await describe_product(client, context, _image_data_uri(message.image_key))
+    # message.image_key is the shopper's *room* photo, which vision-service measures. The listing
+    # page is the only source of a product picture, so the model is never shown it as product evidence.
+    token_factory = await describe_product(client, context)
     from_catalog = profile_from_candidate(message.candidate) if message.candidate else None
     profile = best_profile(from_catalog, token_factory) or fallback_profile(context, message.product_link)
 

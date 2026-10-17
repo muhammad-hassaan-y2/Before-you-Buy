@@ -43,9 +43,12 @@ Parse completions with `_scan_json` (first balanced `{...}`) — models often wr
 
 ## Vision rules
 
-- Enable only when `VLLM_SUPPORTS_VISION=true` **and** `VLLM_MODEL` is a vision model (e.g. Qwen2.5-VL). Default text model is not multimodal.
-- Uploaded images are **room photos**, not product catalogue shots. Prompt/summary should not treat the photo as the product listing unless shopper notes say so.
-- `build_messages` already switches to multimodal `image_url` when a data URI is present.
+- The product read is text-only today: the listing page is the only source of a product picture,
+  and `describe_product` is called without one.
+- Uploaded images are **room photos**. vision-service measures them; inference must never pass one
+  to the model as product evidence.
+- `build_messages` switches to multimodal `image_url` when a data URI is present, for the day a real
+  product image exists. Keep it that way: gate on the image argument, not on a shopper upload.
 
 ## Heuristic fallback rules
 

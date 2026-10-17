@@ -41,10 +41,6 @@ class Settings(BaseSettings):
     scrape_timeout_s: float = 12.0
     user_agent: str = "BuyYouBeforeBot/0.1 (+https://github.com/muhammad-hassaan-y2/Before-you-Buy)"
 
-    # Only enable when Token Factory (or docs) confirm a vision-capable model id.
-    vllm_supports_vision: bool = False
-    upload_dir: str = "/uploads"
-
     @property
     def llm_configured(self) -> bool:
         return bool(self.vllm_base_url.strip() and self.vllm_model.strip() and self.vllm_api_key.strip())
