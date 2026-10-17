@@ -41,6 +41,11 @@ def _overlap(haystack: set[str], words: list[str]) -> int:
 
 
 def score_item(item: Sku, words: list[str], raw: str) -> float:
+    """How much of this text belongs to this SKU. Capped only where it is reported.
+
+    Two shelves of the same wardrobe read as perfect matches against each other's listing, so the
+    ranking keeps the uncapped total: the article number in the URL is what pulls one ahead.
+    """
     if not words:
         return 0.0
     vocabulary = item.tokens()
@@ -55,7 +60,7 @@ def score_item(item: Sku, words: list[str], raw: str) -> float:
     category_hit = 0.18 if item.category in words else 0.0
     name_hit = _overlap({word for word in item.name.lower().split()}, words) * 0.12
 
-    return min(1.0, phrase + token_hit * 0.45 + brand_hit + category_hit + name_hit)
+    return phrase + token_hit * 0.45 + brand_hit + category_hit + name_hit
 
 
 def best_match(text: str) -> tuple[Sku, float] | None:
@@ -64,9 +69,9 @@ def best_match(text: str) -> tuple[Sku, float] | None:
     words = tokenize(text)
     ranked = sorted(((item, score_item(item, words, raw)) for item in CATALOG), key=lambda pair: pair[1], reverse=True)
     top, score = ranked[0]
-    if score < settings.min_match_score:
+    if min(1.0, score) < settings.min_match_score:
         return None
-    return top, score
+    return top, min(1.0, score)
 
 
 def candidate_for(*sources: str | None) -> CatalogCandidate | None:

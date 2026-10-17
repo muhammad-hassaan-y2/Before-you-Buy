@@ -32,9 +32,18 @@ class Sku(BaseModel):
             width_cm=self.width_cm, depth_cm=self.depth_cm, height_cm=self.height_cm, clearance_cm=self.clearance_cm
         )
 
+    @property
+    def article(self) -> str:
+        """The listing's article number, one word, so a URL's digits survive being read as words."""
+        return self.sku.replace("-", "").lower()
+
     def tokens(self) -> set[str]:
-        """Every word this SKU can be referred to by, aliases included."""
-        phrases = {self.brand, self.category, self.material, self.name, *self.aliases}
+        """Every word this SKU can be referred to by, aliases and its article number included.
+
+        The article belongs here because a shopper pastes a listing URL, and a listing URL is the
+        brand, the name and an article number - which is how two Kivik sofas are not the same SKU.
+        """
+        phrases = {self.brand, self.category, self.material, self.name, self.article, *self.aliases}
         words: set[str] = set()
         for phrase in phrases:
             for part in phrase.lower().replace("-", " ").split():

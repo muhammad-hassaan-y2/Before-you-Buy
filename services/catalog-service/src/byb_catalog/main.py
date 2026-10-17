@@ -8,11 +8,12 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 
+from byb_catalog.commerce import terms_for
 from byb_catalog.matching import candidate_for
 from byb_catalog.settings import settings
-from byb_catalog.skus import CATALOG
+from byb_catalog.skus import CATALOG, Sku, find
 from byb_common.contracts import CatalogCandidate, SimulationCatalogued, SimulationRequested, SimulationStatus
 from byb_common.dapr import DaprTransport, publish_event
 
@@ -58,21 +59,30 @@ def dapr_subscriptions() -> list[dict[str, str]]:
 
 @app.get("/api/v1/catalog")
 def browse(limit: int = 200) -> list[dict[str, Any]]:
-    """Read-only view used by the UI's example picker."""
-    rows = []
-    for item in CATALOG[: max(1, min(limit, len(CATALOG)))]:
-        rows.append(
-            {
-                "sku": item.sku,
-                "name": item.name,
-                "brand": item.brand,
-                "category": item.category,
-                "material": item.material,
-                "price_band": item.price_band,
-                "geometry": item.geometry.model_dump(),
-            }
-        )
-    return rows
+    """Read-only view used by the UI's example picker and by the storefront."""
+    return [_row(item) for item in CATALOG[: max(1, min(limit, len(CATALOG)))]]
+
+
+@app.get("/api/v1/catalog/{sku}")
+def read(sku: str) -> dict[str, Any]:
+    """One shelf of it, so a product page does not have to carry the whole catalog."""
+    item = find(sku)
+    if item is None:
+        raise HTTPException(status_code=404, detail=f"no SKU {sku}")
+    return _row(item)
+
+
+def _row(item: Sku) -> dict[str, Any]:
+    return {
+        "sku": item.sku,
+        "name": item.name,
+        "brand": item.brand,
+        "category": item.category,
+        "material": item.material,
+        "price_band": item.price_band,
+        "geometry": item.geometry.model_dump(),
+        "commerce": terms_for(item),
+    }
 
 
 def _unwrap(payload: Any) -> dict[str, Any]:

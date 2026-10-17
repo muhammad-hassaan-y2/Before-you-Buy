@@ -302,6 +302,23 @@ async def catalog_examples(request: Request) -> list[dict]:
     return response.json()
 
 
+@app.get("/api/v1/catalog/{sku}")
+async def catalog_one(sku: str, request: Request) -> dict:
+    """One SKU with its dropship terms, for a product page that only needs the one shelf."""
+    transport: DaprTransport = request.app.state.transport
+    try:
+        response = await request.app.state.http.get(
+            transport.url("catalog-service", f"/api/v1/catalog/{sku}"), headers=transport.headers(), timeout=10
+        )
+        if response.status_code == 404:
+            raise HTTPException(status_code=404, detail=f"no SKU {sku}")
+        response.raise_for_status()
+    except httpx.HTTPError as exc:
+        logger.warning("catalog-service unreachable: %s", exc)
+        raise HTTPException(status_code=502, detail="catalog-service unavailable") from exc
+    return response.json()
+
+
 def start() -> None:
     """`poetry run start` - production entrypoint used by the Docker image."""
     import uvicorn
