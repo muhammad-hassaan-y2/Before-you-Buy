@@ -1,83 +1,141 @@
 "use client"
 
+import { Box, Camera, Sparkles } from "lucide-react"
 import Link from "next/link"
+import { useState } from "react"
 
 import { AddToBag } from "@/components/bag-drawer"
-import { ProductFigure } from "@/components/product-figure"
+import { ProductIso } from "@/components/product-iso"
 import { Badge } from "@/components/ui/badge"
-import type { CatalogRow } from "@/lib/api"
-import { price, verdictLabel, verdictVariant } from "@/lib/store"
+import type { CatalogRow, StockRow } from "@/lib/api"
+import { getProductImage } from "@/lib/product-images"
+import { price, stockLine, stockTone, verdictLabel, verdictVariant } from "@/lib/store"
+import { cn } from "@/lib/utils"
 
 type Props = {
   row: CatalogRow
-  /** The geometry engine's verdict for this piece in the room on screen, or undefined when the
-   *  room has not been measured against it yet. */
   verdict?: string
-  /** The simulation that produced that verdict. Bagging the piece with it attached means the bag
-   *  inherits a proven line instead of paying a GPU job to reach the same answer again. */
   simulationId?: string | null
+  stock?: StockRow
   roomWidthM: number
   roomDepthM: number
   roomHeightM: number
 }
 
-/** A card for a piece nobody has to guess about: the drawing is the catalog's own centimetres on
- *  the shopper's floor, and the price, margin and lead time are the catalog service's numbers. */
-export function ProductCard({ row, verdict, simulationId, roomWidthM, roomDepthM, roomHeightM }: Props) {
+export function ProductCard({ row, verdict, simulationId, stock, roomWidthM, roomDepthM, roomHeightM }: Props) {
   const { commerce, geometry } = row
+  const [viewMode, setViewMode] = useState<"photo" | "schematic">("photo")
   const variant = verdictVariant(verdict)
-  const tone = variant === "success" || variant === "warning" ? "pass" : variant === "destructive" ? "fail" : "unmeasured"
   const overruns = geometry.width_cm / 100 > roomWidthM || geometry.depth_cm / 100 > roomDepthM
+  const image = getProductImage(row.sku, row.category)
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-xl hover:shadow-black/20">
-      <Link
-        href={`/product/${row.sku}`}
-        className="rounded-2xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-      >
-        <div className="relative flex items-center justify-center bg-surface px-6 pt-6 pb-5">
-          <Badge variant={variant} className="absolute top-4 left-4">
-            {verdictLabel(verdict)}
-          </Badge>
-          <ProductFigure
-            widthCm={geometry.width_cm}
-            depthCm={geometry.depth_cm}
-            clearanceCm={geometry.clearance_cm}
-            roomWidthM={roomWidthM}
-            roomDepthM={roomDepthM}
-            tone={tone}
-            name={row.name}
-            className="max-w-[19rem] transition-transform duration-500 group-hover:scale-[1.015]"
-          />
-          <p className="num absolute right-4 bottom-2.5 text-[10px] text-muted-foreground">
-            {roomWidthM} × {roomDepthM} m
+    <article className="group flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-black/90 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:border-white/25 hover:shadow-2xl hover:shadow-black/50">
+      <div className="relative">
+        <Link
+          href={`/product/${row.sku}`}
+          className="block rounded-3xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          {/* Top Hero Media Area */}
+          <div className="relative flex h-60 w-full items-center justify-center overflow-hidden bg-zinc-950 px-6 pt-6">
+            {/* Verdict Badge */}
+            <Badge variant={variant} className="absolute top-4 left-4 z-10 shadow-sm backdrop-blur-md">
+              {verdictLabel(verdict)}
+            </Badge>
+
+            {/* Live Stock Status */}
+            <p className={`absolute top-4 right-4 z-10 text-[11px] font-medium backdrop-blur-md rounded-full px-2 py-0.5 bg-black/40 border border-white/10 ${stockTone(stock?.state)}`}>
+              {stock ? stockLine(stock) : "reading the shelf…"}
+            </p>
+
+            {/* View Mode Content: Real Photo vs CAD Schematic */}
+            {viewMode === "photo" ? (
+              <div className="relative h-full w-full overflow-hidden rounded-2xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={image.url}
+                  alt={image.alt}
+                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+              </div>
+            ) : (
+              <div className="flex h-full w-full items-center justify-center py-2 transition-transform duration-500 group-hover:scale-[1.04]">
+                <ProductIso
+                  parts={row.parts}
+                  widthCm={geometry.width_cm}
+                  depthCm={geometry.depth_cm}
+                  heightCm={geometry.height_cm}
+                  clearanceCm={geometry.clearance_cm}
+                  material={row.material}
+                  name={row.name}
+                />
+              </div>
+            )}
+
+            {/* Dimensions HUD tag */}
+            <p className="num absolute bottom-3 left-4 z-10 rounded-full border border-white/10 bg-black/60 px-2 py-0.5 text-[10px] font-mono text-zinc-300 backdrop-blur-md">
+              {geometry.width_cm.toFixed(0)} × {geometry.depth_cm.toFixed(0)} × {geometry.height_cm.toFixed(0)} cm
+            </p>
+          </div>
+        </Link>
+
+        {/* Photo vs 3D Schematic Toggle Button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            setViewMode((m) => (m === "photo" ? "schematic" : "photo"))
+          }}
+          className="absolute bottom-3 right-4 z-20 flex items-center gap-1 rounded-full border border-white/20 bg-black/70 px-2.5 py-1 text-[11px] font-medium text-white shadow-md backdrop-blur-md transition-colors hover:bg-white/20"
+        >
+          {viewMode === "photo" ? (
+            <>
+              <Box className="size-3 text-primary" /> 3D CAD
+            </>
+          ) : (
+            <>
+              <Camera className="size-3 text-primary" /> Photo
+            </>
+          )}
+        </button>
+      </div>
+
+      <Link href={`/product/${row.sku}`} className="px-5 pt-4 pb-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="eyebrow truncate text-zinc-400">
+            {row.brand} · {row.category}
           </p>
+          <span className="flex items-center gap-1 text-[10px] text-zinc-400 font-mono">
+            <Sparkles className="size-2.5 text-primary" /> AI Verified
+          </span>
         </div>
-        <div className="px-5 pb-1">
-          <p className="eyebrow truncate text-muted-foreground">{row.brand} · {row.category}</p>
-          <h3 className="mt-1.5 truncate text-[15px] font-semibold tracking-tight">{row.name}</h3>
-          <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
-            <span className="num text-2xl font-semibold">{price(commerce.retail_eur)}</span>
-            <span className="text-xs text-muted-foreground">+{commerce.margin_pct.toFixed(0)}% margin</span>
-          </p>
-        </div>
+        <h3 className="mt-1 truncate text-base font-semibold tracking-tight text-white group-hover:text-primary transition-colors">
+          {row.name}
+        </h3>
+        <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
+          <span className="num text-2xl font-semibold tracking-tight text-white">{price(commerce.retail_eur)}</span>
+          <span className="text-xs text-zinc-400 font-medium">+{commerce.margin_pct.toFixed(0)}% margin</span>
+        </p>
       </Link>
 
-      <dl className="mt-auto space-y-1.5 border-t border-border/50 px-5 py-4 text-xs">
+      <dl className="mt-auto space-y-1.5 border-t border-white/10 px-5 py-3.5 text-xs">
         {(
           [
             ["Ships", `${commerce.lead_days} days · ${commerce.freight} freight`, null],
             ["Sold by", `${commerce.supplier.name} · ${commerce.supplier.region}`, null],
             [
-              "Box",
-              `${geometry.width_cm.toFixed(0)} × ${geometry.depth_cm.toFixed(0)} × ${geometry.height_cm.toFixed(0)} cm${overruns ? " · larger than this room" : ""}`,
-              overruns ? "text-destructive" : null,
+              "In a",
+              `${roomWidthM} × ${roomDepthM} m room`,
+              overruns ? "text-destructive font-medium" : verdict ? "text-white" : "text-zinc-400",
             ],
           ] as const
         ).map(([labelText, value, tone]) => (
           <div key={labelText} className="flex items-baseline justify-between gap-3">
-            <dt className="shrink-0 text-muted-foreground">{labelText}</dt>
-            <dd className={tone ?? "min-w-0 truncate text-foreground"}>{value}</dd>
+            <dt className="shrink-0 text-zinc-400">{labelText}</dt>
+            <dd className={tone ?? "min-w-0 truncate text-zinc-300"}>{value}</dd>
           </div>
         ))}
       </dl>
@@ -88,7 +146,7 @@ export function ProductCard({ row, verdict, simulationId, roomWidthM, roomDepthM
           simulationId={simulationId}
           verdict={verdict}
           room={{ width_m: roomWidthM, depth_m: roomDepthM, height_m: roomHeightM }}
-          className="w-full"
+          className="w-full rounded-full font-medium"
         />
       </div>
     </article>
