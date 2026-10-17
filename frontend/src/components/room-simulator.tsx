@@ -4,10 +4,12 @@ import { AlertTriangle, ImageIcon, Link2, Loader2, Ruler, Sofa, X } from "lucide
 import { useEffect, useRef, useState } from "react"
 
 import { FitResult, ProgressStrip, STEPS } from "@/components/fit-result"
+import { SimulatingRoom } from "@/components/simulating-room"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { createSimulation, pollSimulation, type Simulation } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -22,9 +24,32 @@ export function RoomSimulator() {
   const [error, setError] = useState<string | null>(null)
   const [simulation, setSimulation] = useState<Simulation | null>(null)
   const [placement, setPlacement] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
   const controller = useRef<AbortController | null>(null)
 
   useEffect(() => () => controller.current?.abort(), [])
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    const droppedFile = e.dataTransfer.files?.[0]
+    if (droppedFile && droppedFile.type.startsWith("image/")) {
+      setFile(droppedFile)
+    }
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -93,12 +118,22 @@ export function RoomSimulator() {
               </Label>
               <label
                 htmlFor="photo"
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
                 className={cn(
-                  "flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-3 text-sm transition-colors",
-                  file ? "border-primary/60 bg-primary/5" : "hover:border-ring hover:bg-muted/40",
+                  "flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-3 text-sm transition-all",
+                  isDragging
+                    ? "border-primary bg-primary/10 ring-2 ring-primary/40 scale-[1.01]"
+                    : file
+                      ? "border-primary/60 bg-primary/5"
+                      : "hover:border-ring hover:bg-muted/40",
                 )}
               >
-                <span className="truncate text-muted-foreground">{file ? file.name : "Drop or choose a JPG/PNG"}</span>
+                <span className="truncate text-muted-foreground">
+                  {isDragging ? "Drop your room photo here..." : file ? file.name : "Drop or choose a JPG/PNG"}
+                </span>
                 <input
                   id="photo"
                   type="file"
@@ -139,11 +174,12 @@ export function RoomSimulator() {
               <Label htmlFor="notes" className="text-muted-foreground">
                 Notes for the model
               </Label>
-              <Input
+              <Textarea
                 id="notes"
+                rows={3}
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
-                placeholder="three-seater linen sofa, oak legs"
+                placeholder="three-seater linen sofa, oak legs, needs to leave walkway to balcony..."
                 disabled={busy}
               />
             </div>
@@ -173,7 +209,20 @@ export function RoomSimulator() {
             </div>
           )}
 
-          {!report && !error && (
+          {/* Real-time simulated room appeared while simulation is processing */}
+          {(busy || (simulation && !report && simulation.status !== "failed")) && (
+            <SimulatingRoom
+              widthM={Number(width) || 4}
+              depthM={Number(depth) || 3.5}
+              heightM={Number(height) || 2.4}
+              status={simulation?.status ?? (busy ? "pending" : undefined)}
+              notes={notes || link}
+              photoName={file?.name}
+              candidate={simulation?.product_profile}
+            />
+          )}
+
+          {!busy && !simulation && !report && !error && (
             <div className="rounded-2xl border border-dashed border-border/70 bg-surface/70 px-6 py-10 text-center">
               <svg viewBox="0 0 120 84" className="mx-auto h-auto w-40" aria-hidden>
                 <rect x="6" y="6" width="108" height="72" rx="4" className="fill-room-floor/20 stroke-muted-foreground/40" strokeWidth="1" strokeDasharray="3 3" />

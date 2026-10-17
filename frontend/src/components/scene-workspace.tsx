@@ -7,6 +7,7 @@ import { DeliveryPath } from "@/components/delivery-path"
 import { FitViews } from "@/components/fit-views"
 import { DimensionEstimateWarning, ProductSourceBadge } from "@/components/product-provenance"
 import { SceneViewer } from "@/components/scene-viewer"
+import { SimulatingRoom } from "@/components/simulating-room"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -197,6 +198,15 @@ export function SceneWorkspace() {
               obstacles={simulation.room_scan?.obstacles ?? simulation.fit_report.obstacles}
               scene={simulation.scene ?? null}
               start="3d"
+            />
+          ) : busy || (stage >= 0 && !simulation?.scene) ? (
+            <SimulatingRoom
+              widthM={Number(width) || 4}
+              depthM={Number(depth) || 3.5}
+              heightM={Number(height) || 2.4}
+              status={simulation?.status ?? (busy ? "pending" : undefined)}
+              productName={picked?.name}
+              candidate={picked ? { name: picked.name, geometry: picked.geometry } : undefined}
             />
           ) : (
             <SceneViewer spec={simulation?.scene ?? null} />

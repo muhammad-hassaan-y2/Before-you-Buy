@@ -19,7 +19,7 @@ export function SiteNav() {
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3">
         <Link href="/store" className="text-sm font-semibold tracking-[0.18em] text-primary uppercase">
-          Buy you before
+          Before you buy
         </Link>
         <nav className="flex items-center gap-1 text-sm">
           {LINKS.map((link) => (

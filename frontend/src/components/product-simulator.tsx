@@ -4,6 +4,7 @@ import { AlertTriangle, ImageIcon, Loader2, Ruler, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 import { FitResult, ProgressStrip } from "@/components/fit-result"
+import { SimulatingRoom } from "@/components/simulating-room"
 import { AddToBag } from "@/components/bag-drawer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,6 +25,7 @@ export function ProductSimulator({ row }: Props) {
   const [depth, setDepth] = useState(String(room?.depth_m ?? "3.5"))
   const [height, setHeight] = useState(String(room?.height_m ?? "2.4"))
   const [file, setFile] = useState<File | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [simulation, setSimulation] = useState<Simulation | null>(null)
@@ -31,6 +33,28 @@ export function ProductSimulator({ row }: Props) {
   const controller = useRef<AbortController | null>(null)
 
   useEffect(() => () => controller.current?.abort(), [])
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    const droppedFile = e.dataTransfer.files?.[0]
+    if (droppedFile && droppedFile.type.startsWith("image/")) {
+      setFile(droppedFile)
+    }
+  }
 
   async function run() {
     controller.current?.abort()
@@ -70,7 +94,7 @@ export function ProductSimulator({ row }: Props) {
         <CardDescription>
           {busy
             ? "Reading the listing, measuring the room and solving the footprint…"
-            : "The same six services the fit agent calls, run live on this piece."}
+            : "The same pipeline the fit agent calls, run live on this piece."}
         </CardDescription>
         <ProgressStrip status={simulation?.status} started={busy} />
       </CardHeader>
@@ -99,12 +123,22 @@ export function ProductSimulator({ row }: Props) {
           </Label>
           <label
             htmlFor="pdp-photo"
+            onDragOver={handleDragOver}
+            onDragEnter={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
             className={cn(
-              "flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed px-3 py-3 text-sm transition-colors",
-              file ? "border-primary/60 bg-primary/5" : "hover:border-ring hover:bg-muted/40",
+              "flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed px-3 py-3 text-sm transition-all",
+              isDragging
+                ? "border-primary bg-primary/10 ring-2 ring-primary/40 scale-[1.01]"
+                : file
+                  ? "border-primary/60 bg-primary/5"
+                  : "hover:border-ring hover:bg-muted/40",
             )}
           >
-            <span className="truncate text-muted-foreground">{file ? file.name : "Drop or choose a JPG/PNG to measure the room from"}</span>
+            <span className="truncate text-muted-foreground">
+              {isDragging ? "Drop your room photo here..." : file ? file.name : "Drop or choose a JPG/PNG to measure the room from"}
+            </span>
             <input id="pdp-photo" type="file" accept="image/*" className="sr-only" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
           </label>
           {file && (
@@ -124,6 +158,19 @@ export function ProductSimulator({ row }: Props) {
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             <span>{error}</span>
           </div>
+        )}
+
+        {/* Real-time simulated room appeared while simulation is processing */}
+        {(busy || (simulation && !report && simulation.status !== "failed")) && (
+          <SimulatingRoom
+            widthM={Number(width) || 4}
+            depthM={Number(depth) || 3.5}
+            heightM={Number(height) || 2.4}
+            status={simulation?.status ?? (busy ? "pending" : undefined)}
+            productName={row.name}
+            candidate={{ name: row.name, geometry: row.geometry }}
+            photoName={file?.name}
+          />
         )}
 
         {report && simulation && <FitResult simulation={simulation} placement={placement} onPlacement={setPlacement} />}

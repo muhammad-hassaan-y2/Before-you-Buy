@@ -18,11 +18,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Buy You Before",
-    template: "%s · Buy You Before",
+    default: "Before You Buy",
+    template: "%s · Before You Buy",
   },
   description: "Check a piece fits your room before you buy it.",
-  applicationName: "Buy You Before",
+  applicationName: "Before You Buy",
 }
 
 export const viewport: Viewport = {

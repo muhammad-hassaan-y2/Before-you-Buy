@@ -6,8 +6,8 @@ import { useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { chat, type ChatReply } from "@/lib/agent"
 
 type Turn = { role: "user" | "assistant"; content: string; answeredBy?: string }
@@ -90,17 +90,35 @@ export function AgentChat() {
         {error && <p className="flex items-center gap-2 text-sm text-destructive">{error}</p>}
 
         <form
-          className="flex gap-2"
+          className="flex flex-col gap-2 sm:flex-row sm:items-end"
           onSubmit={(event) => {
             event.preventDefault()
             void send(draft)
           }}
         >
-          <Label htmlFor="agent-chat" className="sr-only">
-            Ask about a piece, a room or a verdict
-          </Label>
-          <Input id="agent-chat" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Ask about a piece, a room or a verdict" disabled={busy} />
-          <Button type="submit" disabled={busy || !draft.trim()}>
+          <div className="relative flex-1">
+            <Label htmlFor="agent-chat" className="sr-only">
+              Ask about a piece, a room or a verdict
+            </Label>
+            <Textarea
+              id="agent-chat"
+              rows={2}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault()
+                  if (draft.trim() && !busy) {
+                    void send(draft)
+                  }
+                }
+              }}
+              placeholder="Ask about a piece, a room or a verdict (Shift+Enter for newline)"
+              disabled={busy}
+              className="min-h-[56px] resize-none pr-3"
+            />
+          </div>
+          <Button type="submit" className="h-10 self-end sm:self-auto" disabled={busy || !draft.trim()}>
             {busy ? <Loader2 className="animate-spin" /> : <Send className="size-4" />}
             <span className="sr-only">Send</span>
           </Button>

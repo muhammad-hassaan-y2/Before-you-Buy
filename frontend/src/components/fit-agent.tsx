@@ -29,6 +29,7 @@ export function FitAgent() {
   const [depth, setDepth] = useState("3.5")
   const [height, setHeight] = useState("2.4")
   const [photo, setPhoto] = useState<File | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
   const [run, setRun] = useState<AgentRun | null>(null)
   const [fit, setFit] = useState<{ id: string; detail: Simulation } | null>(null)
   const [busy, setBusy] = useState(false)
@@ -36,6 +37,28 @@ export function FitAgent() {
   const controller = useRef<AbortController | null>(null)
 
   useEffect(() => () => controller.current?.abort(), [])
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    const droppedFile = e.dataTransfer.files?.[0]
+    if (droppedFile && droppedFile.type.startsWith("image/")) {
+      setPhoto(droppedFile)
+    }
+  }
 
   const fittedId = run?.decision?.simulation_id ?? null
 
@@ -108,6 +131,12 @@ export function FitAgent() {
                 rows={4}
                 value={brief}
                 onChange={(event) => setBrief(event.target.value)}
+                onKeyDown={(event) => {
+                  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+                    event.preventDefault()
+                    void submit(event)
+                  }
+                }}
                 placeholder="A sofa that seats three, under 900, and leaves a walkway to the balcony"
                 disabled={busy}
               />
@@ -135,13 +164,21 @@ export function FitAgent() {
               </Label>
               <label
                 htmlFor="agent-photo"
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
                 className={cn(
-                  "flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-3 text-sm transition-colors",
-                  photo ? "border-primary/60 bg-primary/5" : "hover:border-ring hover:bg-muted/40",
+                  "flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-3 text-sm transition-all",
+                  isDragging
+                    ? "border-primary bg-primary/10 ring-2 ring-primary/40 scale-[1.01]"
+                    : photo
+                      ? "border-primary/60 bg-primary/5"
+                      : "hover:border-ring hover:bg-muted/40",
                 )}
               >
                 <span className="truncate text-muted-foreground">
-                  {photo ? photo.name : "Drop or choose a JPG/PNG of the room"}
+                  {isDragging ? "Drop your room photo here..." : photo ? photo.name : "Drop or choose a JPG/PNG of the room"}
                 </span>
                 <input
                   id="agent-photo"
