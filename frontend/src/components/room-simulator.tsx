@@ -1,34 +1,15 @@
 "use client"
 
-import { AlertTriangle, CheckCircle2, ImageIcon, Link2, Loader2, Ruler, Sofa, X } from "lucide-react"
+import { AlertTriangle, ImageIcon, Link2, Loader2, Ruler, Sofa, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
-import { DeliveryPath } from "@/components/delivery-path"
-import { FitViews } from "@/components/fit-views"
-import { DimensionEstimateWarning, ProductSourceBadge } from "@/components/product-provenance"
-import { Badge } from "@/components/ui/badge"
+import { FitResult, ProgressStrip, STEPS } from "@/components/fit-result"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { createSimulation, pollSimulation, ROOM_SCAN_LABEL, type Simulation } from "@/lib/api"
+import { createSimulation, pollSimulation, type Simulation } from "@/lib/api"
 import { cn } from "@/lib/utils"
-
-const STEPS = [
-  { key: "pending", label: "Queued" },
-  { key: "cataloguing", label: "Matching the SKU" },
-  { key: "enriching", label: "Reading the listing" },
-  { key: "scanning", label: "Measuring the room" },
-  { key: "fitting", label: "Fitting the floor plan" },
-  { key: "completed", label: "Ready" },
-] as const
-
-const VERDICT: Record<string, { label: string; variant: "success" | "warning" | "destructive" }> = {
-  fits: { label: "Fits with room to move", variant: "success" },
-  tight: { label: "Fits, but tight", variant: "warning" },
-  too_large: { label: "Too large for this room", variant: "destructive" },
-  blocked: { label: "No clear placement", variant: "destructive" },
-}
 
 export function RoomSimulator() {
   const [link, setLink] = useState("")
@@ -77,12 +58,6 @@ export function RoomSimulator() {
   }
 
   const report = simulation?.fit_report ?? null
-  const profile = simulation?.product_profile ?? null
-  const scan = simulation?.room_scan ?? null
-  // Geometry measures the scanned room, which is the shopper's own when the photo could not be read.
-  const roomWidth = scan?.width_m ?? simulation?.room_width_m ?? 4
-  const roomDepth = scan?.depth_m ?? simulation?.room_depth_m ?? 3.5
-  const activeSpot = report?.placements.find((spot) => spot.label === placement) ?? null
   const stepIndex = simulation ? STEPS.findIndex((step) => step.key === simulation.status) : busy ? 0 : -1
 
   return (
@@ -185,30 +160,9 @@ export function RoomSimulator() {
         <CardHeader>
           <CardTitle>Result</CardTitle>
           <CardDescription>
-            {stepIndex >= 0 && !report
-              ? STEPS[Math.min(stepIndex, STEPS.length - 1)].label + "…"
-              : "Geometry from the Shapely worker."}
+            {stepIndex >= 0 && !report ? STEPS[Math.min(stepIndex, STEPS.length - 1)].label + "…" : "Geometry from the Shapely worker."}
           </CardDescription>
-          {stepIndex >= 0 && (
-            <ol className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              {STEPS.map((step, index) => (
-                <li key={step.key} className="flex items-center gap-1.5">
-                  <span
-                    className={cn(
-                      "size-1.5 rounded-full transition-colors",
-                      index < stepIndex || simulation?.status === "completed"
-                        ? "bg-success"
-                        : index === stepIndex
-                          ? "bg-primary animate-pulse"
-                          : "bg-muted-foreground/30",
-                    )}
-                  />
-                  {index > 0 && <span className="mr-1 h-px w-4 bg-border" />}
-                  {step.label}
-                </li>
-              ))}
-            </ol>
-          )}
+          <ProgressStrip status={simulation?.status} started={busy} />
         </CardHeader>
 
         <CardContent className="space-y-5">
@@ -226,86 +180,8 @@ export function RoomSimulator() {
             </div>
           )}
 
-          {report && (
-            <>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={VERDICT[report.verdict]?.variant ?? "secondary"}>{VERDICT[report.verdict]?.label ?? report.verdict}</Badge>
-                {profile && (
-                  <Badge variant="outline">
-                    {profile.geometry.width_cm.toFixed(0)} × {profile.geometry.depth_cm.toFixed(0)} × {profile.geometry.height_cm.toFixed(0)} cm
-                  </Badge>
-                )}
-                {profile && <ProductSourceBadge profile={profile} />}
-                {scan && <Badge variant="outline">{ROOM_SCAN_LABEL[scan.method] ?? scan.method}</Badge>}
-              </div>
-
-              {profile && <DimensionEstimateWarning profile={profile} />}
-
-              <FitViews
-                report={report}
-                widthM={roomWidth}
-                depthM={roomDepth}
-                placement={activeSpot}
-                obstacles={scan?.obstacles ?? report.obstacles}
-                scene={simulation?.scene ?? null}
-              />
-
-              <dl className="grid grid-cols-3 gap-3 text-sm">
-                {[
-                  ["Room", `${report.room_area_m2.toFixed(1)} m²`],
-                  ["Usable", `${report.usable_area_m2.toFixed(1)} m²`],
-                  ["Occupied", `${report.coverage_pct.toFixed(1)} %`],
-                ].map(([labelText, value]) => (
-                  <div key={labelText} className="rounded-lg border p-3">
-                    <dt className="text-xs text-muted-foreground">{labelText}</dt>
-                    <dd className="font-mono text-base tabular-nums">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-
-              <div className="rounded-lg border p-3">
-                <DeliveryPath report={report} />
-              </div>
-
-              {profile && (
-                <div className="rounded-lg border p-3 text-sm">
-                  <p className="font-medium">{profile.name}</p>
-                  <p className="mt-1 text-muted-foreground">{profile.summary}</p>
-                </div>
-              )}
-
-              {report.conflicts.length > 0 && (
-                <ul className="space-y-1.5 text-sm">
-                  {report.conflicts.map((conflict) => (
-                    <li key={conflict} className="flex gap-2 text-muted-foreground">
-                      <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-warning" />
-                      {conflict}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
+          {simulation && report && <FitResult simulation={simulation} placement={placement} onPlacement={setPlacement} />}
         </CardContent>
-
-        {report && report.placements.length > 0 && (
-          <CardFooter className="border-t bg-muted/20">
-            <div className="flex w-full flex-wrap gap-2">
-              {report.placements.map((spot) => (
-                <Button
-                  key={spot.label}
-                  type="button"
-                  size="sm"
-                  variant={activeSpot?.label === spot.label ? "default" : "outline"}
-                  onClick={() => setPlacement(spot.label)}
-                >
-                  {spot.fits ? <CheckCircle2 className="size-3.5" /> : <AlertTriangle className="size-3.5" />}
-                  {spot.label}
-                </Button>
-              ))}
-            </div>
-          </CardFooter>
-        )}
       </Card>
     </div>
   )

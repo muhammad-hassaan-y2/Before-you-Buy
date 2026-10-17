@@ -3,7 +3,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.78rem;
 
   --background: oklch(0.985 0.002 85);
   --foreground: oklch(0.21 0.02 60);
@@ -81,6 +81,10 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-room-floor: var(--room-floor);
+  --color-room-wall: var(--room-wall);
+  --color-room-product: var(--room-product);
+  --color-room-blocked: var(--room-blocked);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
