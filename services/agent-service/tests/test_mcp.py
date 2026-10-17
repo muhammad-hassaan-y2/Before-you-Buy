@@ -14,7 +14,7 @@ from mcp.server.elicitation import AcceptedElicitation, DeclinedElicitation
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.shared.exceptions import NoBackChannelError
 
-from byb_agent.mcp_server import INSTRUCTIONS, HoldWords, _ask, build_server, connect, http_app
+from byb_agent.mcp_server import INSTRUCTIONS, ConsentWords, _ask, build_server, connect, http_app
 from byb_agent.runs import Reservations, RunStore
 from byb_agent.settings import Settings
 from byb_agent.tools import SPEC, Tools, _new_run_id
@@ -30,6 +30,12 @@ TOOL_NAMES = {
     "fit_catalog",
     "proven_fit_offer",
     "reserve_fit",
+    "add_to_cart",
+    "view_cart",
+    "remove_from_cart",
+    "measure_cart",
+    "checkout",
+    "order_status",
     "returns_estimate",
     "start_journey",
     "journey_status",
@@ -75,9 +81,9 @@ async def test_every_capability_says_whether_it_only_measures(server):
     """The read-only hint is what lets a client run a measuring tool without stopping the human,
     so it is a claim: a tool that touches stock must never be marked as if it only looked."""
     by_name = {tool.name: tool for tool in await server.list_tools()}
-    for name in ("catalog_search", "simulate_product", "fit_catalog", "joint_fit", "start_journey", "returns_estimate"):
+    for name in ("catalog_search", "simulate_product", "fit_catalog", "joint_fit", "start_journey", "returns_estimate", "view_cart", "order_status"):
         assert by_name[name].annotations.read_only_hint is True, name
-    for name in ("proven_fit_offer", "reserve_fit"):
+    for name in ("proven_fit_offer", "reserve_fit", "add_to_cart", "remove_from_cart", "measure_cart", "checkout"):
         assert by_name[name].annotations.read_only_hint is False, name
         assert by_name[name].annotations.destructive_hint is False, name
     assert all(tool.annotations.title for tool in by_name.values())
@@ -88,6 +94,7 @@ async def test_the_evidence_is_readable_as_context_as_well_as_callable(server):
     assert {template.uri_template for template in await server.list_resource_templates()} == {
         "byb://fit/{simulation_id}",
         "byb://run/{run_id}",
+        "byb://cart/{cart_id}",
     }
     catalog = json.loads((await server.read_resource("byb://catalog"))[0].content)
     assert {item["sku"] for item in catalog} == {"SOF-001", "SOF-002", "SOF-003", "ARM-001", "BCK-001"}
@@ -212,10 +219,10 @@ class _Client:
 
 
 async def test_the_shopper_is_asked_in_their_own_client_when_the_client_can_ask():
-    """A hold is the one tool that costs the merchant stock, so an elicitation-capable client is
-    asked to put the question to the human, and the words that come back are the gate's input."""
-    client = _Client(AcceptedElicitation(data=HoldWords(confirmation="yes, hold it for me")))
-    words, through = await _ask(client, "sim0001", "the agent swears they said yes")
+    """A hold and an order cost the merchant stock, so an elicitation-capable client is asked to put
+    the question to the human, and the words that come back are the gate's input."""
+    client = _Client(AcceptedElicitation(data=ConsentWords(confirmation="yes, hold it for me")))
+    words, through = await _ask(client, "Shall I hold the piece from sim0001?", "reserved", "the agent swears they said yes")
     assert words == "yes, hold it for me"
     assert through == "asked in the client"
     assert "sim0001" in client.asked[0]
@@ -223,14 +230,14 @@ async def test_the_shopper_is_asked_in_their_own_client_when_the_client_can_ask(
 
 async def test_a_shopper_who_declines_in_the_client_gets_no_hold():
     with pytest.raises(ToolError, match="declined"):
-        await _ask(_Client(DeclinedElicitation()), "sim0001", "yes")
+        await _ask(_Client(DeclinedElicitation()), "Shall I place this order?", "ordered", "yes")
 
 
 @pytest.mark.parametrize("error", [NoBackChannelError("elicitation/create"), ValueError("not in a request"), RuntimeError("closed")])
 async def test_a_client_that_cannot_ask_falls_back_to_the_words_the_agent_relayed(error):
     """The gate cannot depend on a client feature ChatGPT or an older Claude may not have: when the
     question cannot be put, the shopper's relayed words are still checked, not trusted."""
-    words, through = await _ask(_Client(error=error), "sim0001", "yes hold it")
+    words, through = await _ask(_Client(error=error), "Shall I hold it?", "reserved", "yes hold it")
     assert (words, through) == ("yes hold it", "relayed by the agent")
 
 
@@ -240,6 +247,50 @@ async def test_a_stateless_connector_still_refuses_a_hold_it_cannot_ask_about(se
     measured = _payload(await server.call_tool("simulate_product", {"sku": "SOF-002"}))
     refused = await _expect_error(server.call_tool("reserve_fit", {"simulation_id": measured["attempt"]["simulation_id"]}))
     assert "shopper's own yes" in refused
+
+
+async def test_a_bag_can_be_filled_measured_and_bought_over_mcp(server):
+    """The whole purchase, through the door an shopper's ChatGPT or Claude actually uses: a piece the
+    engine cleared goes in the bag, the bag is judged as one purchase, and the order is a draft."""
+    measured = _payload(await server.call_tool("simulate_product", {"sku": "SOF-002"}))
+    bag = _payload(
+        await server.call_tool("add_to_cart", {"sku": "SOF-002", "simulation_id": measured["attempt"]["simulation_id"]})
+    )
+    assert bag["lines"][0]["verdict"] == "fits"
+    assert bag["checkout"]["ready"] is True
+
+    swept = _payload(await server.call_tool("measure_cart", {"cart_id": bag["cart_id"]}))
+    assert swept["measured"] == [], "a line already proved for this room is not measured twice"
+    assert swept["set"]["verdict"] == "fits"
+
+    refused = await _expect_error(server.call_tool("checkout", {"cart_id": bag["cart_id"]}))
+    assert "shopper's own yes" in refused
+    placed = _payload(await server.call_tool("checkout", {"cart_id": bag["cart_id"], "confirmation": "yes, place it"}))
+    assert placed["status"] == "awaiting_merchant"
+    assert placed["confirmation"] == "yes, place it"
+    assert placed["confirmed_through"] == "relayed by the agent"
+    order = _payload(await server.call_tool("order_status", {"order_id": placed["id"]}))
+    assert order["proofs"][0]["simulation_id"] == measured["attempt"]["simulation_id"]
+
+
+async def test_an_unmeasured_bag_is_not_sellable_over_mcp(server):
+    bag = _payload(await server.call_tool("add_to_cart", {"sku": "SOF-002"}))
+    assert bag["unproven"] == ["SOF-002"]
+    refused = await _expect_error(server.call_tool("checkout", {"cart_id": bag["cart_id"], "confirmation": "yes"}))
+    assert "nothing is sold unchecked" in refused
+
+
+async def test_the_bag_is_readable_as_context_as_well_as_callable(server):
+    bag = _payload(await server.call_tool("add_to_cart", {"sku": "ARM-001", "room_width_m": 3.0}))
+    attached = json.loads((await server.read_resource(f"byb://cart/{bag['cart_id']}"))[0].content)
+    assert [line["sku"] for line in attached["lines"]] == ["ARM-001"]
+    assert attached["room"]["width_m"] == 3.0
+
+
+async def test_a_shopper_can_hand_the_agent_the_whole_purchase(server):
+    filled = (await server.get_prompt("fill-a-cart", {"width_m": 3.6, "depth_m": 3.0, "what": "sofa"})).messages[0].content.text
+    assert "add_to_cart" in filled and "measure_cart" in filled and "checkout" in filled
+    assert "my own words" in filled, "the prompt has to keep the yes on the shopper, not the model"
 
 
 async def test_the_business_math_is_a_tool_the_agent_can_quote(server):
@@ -339,9 +390,14 @@ def test_the_install_guide_tells_each_client_how_to_add_the_connector(settings):
     assert set(guide["clients"]) == {"chatgpt", "claude", "claude-code", "cursor", "evolus"}
     assert guide["auth"]["type"] == "none"
     assert guide["capabilities"]["tools"] == sorted(SPEC)
-    assert guide["capabilities"]["prompts"] == ["fit-my-room", "hold-the-fit"]
+    assert guide["capabilities"]["prompts"] == ["fit-my-room", "hold-the-fit", "fill-a-cart"]
+    assert "byb://cart/{cart_id}" in guide["capabilities"]["resources"]
     assert "Add custom MCP server" in " ".join(guide["clients"]["chatgpt"]["steps"])
     assert "Add custom connector" in " ".join(guide["clients"]["claude"]["steps"])
+    # Buying is now a thing a person can do through this connector, so both app doors say so.
+    assert any("check out" in step for step in guide["clients"]["chatgpt"]["steps"])
+    assert any("check out" in step for step in guide["clients"]["claude"]["steps"])
+    assert "checkout" in guide["clients"]["chatgpt"]["note"]
     assert guide["clients"]["claude-code"]["command"].startswith("claude mcp add --transport http")
     # Asking a shopper a question mid-tool is only possible over a session, and that is opt-in.
     assert guide["elicitation"] is False

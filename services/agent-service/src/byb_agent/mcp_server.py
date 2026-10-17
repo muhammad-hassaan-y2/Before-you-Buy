@@ -29,27 +29,30 @@ from byb_agent.tools import SPEC, Tools
 logger = logging.getLogger("byb.mcp")
 
 # Some clients keep only the start of a server's instructions, so the four rules that change what
-# a model does - measure, use the photo, distrust an unproven piece, ask before a hold - are said
-# first and in as few words as they can be said. The tour of the tools follows the rules.
+# a model does - measure, use the photo, distrust an unproven piece, ask before a hold or an order
+# - are said first and in as few words as they can be said. The tour of the tools follows the rules.
 INSTRUCTIONS = (
     "Buy You Before measures furniture against a real room before it is bought. Four rules: "
     "(1) Never recommend from a listed dimension - run simulate_product, joint_fit or fit_catalog "
     "and quote the verdict fit_report or explain_fit returns. (2) If the shopper sent a photo of "
     "the room, pass the image_key the gateway returned for it, so the room measured from the photo "
     "is used instead of typed numbers. (3) A piece the pipeline did not settle is unproven, not a "
-    "fit. (4) Ask the shopper before a hold: reserve_fit takes their own words, and a yes you "
-    "assumed for them is refused. "
+    "fit. (4) Ask the shopper before a hold or an order: reserve_fit and checkout take their own "
+    "words, and a yes you assumed for them is refused. "
     "read_brief turns a brief into a category, a price band and a room; catalog_search finds "
     "pieces; fit_catalog answers 'which of your sofas fit me' by measuring a slice of the catalog "
     "at once and splitting it into fits, non-fits and unproven; joint_fit judges several pieces as "
-    "one purchase; find_alternatives looks for no-wider pieces; start_journey runs the whole "
-    "search behind a brief and journey_status reads its trace. proven_fit_offer backs an offer "
-    "only with a fit the engine proved. Report the verdict, the floor coverage and the tightest "
-    "walkway, and hand the case to a person when the decision is handoff."
+    "one purchase; find_alternatives looks for no-wider pieces; add_to_cart bags a piece with the "
+    "proof it came from, measure_cart measures the bag against its room and judges the pieces as "
+    "one purchase, and checkout writes a draft only when every line cleared; start_journey runs "
+    "the whole search behind a brief and journey_status reads its trace. proven_fit_offer backs an "
+    "offer only with a fit the engine proved. Report the verdict, the floor coverage and the "
+    "tightest walkway, and hand the case to a person when the decision is handoff."
 )
 
 # A client asks the human before running a tool it does not trust, and `readOnlyHint` is how it
-# knows it can skip that. Measuring a room cannot hurt anything; putting a hold on stock can.
+# knows it can skip that. Reading a bag cannot hurt anything; adding to it, measuring it (a GPU job
+# the merchant pays for) and ordering from it all deserve the question.
 _MEASURE = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
 _ACT = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
 
@@ -216,39 +219,119 @@ def register(server: MCPServer, tools: Tools) -> None:
 
     @tool("reserve_fit", "Hold a proven fit for the shopper", acts=True)
     async def reserve_fit(simulation_id: str, confirmation: str = "", ctx: Context | None = None) -> dict[str, Any]:
-        words, through = await _ask(ctx, simulation_id, confirmation)
+        words, through = await _ask(
+            ctx,
+            f"Shall I hold the piece from simulation {simulation_id} for you until someone at the shop "
+            "confirms it? Nothing is charged and nothing ships.",
+            "reserved",
+            confirmation,
+        )
         held = await _answer(tools.reserve_fit, simulation_id=simulation_id, confirmation=words)
         return {"confirmed_through": through, **held}
 
+    @tool("add_to_cart", "Put a piece in the bag", acts=True)
+    async def add_to_cart(
+        sku: str | None = None,
+        link: str | None = None,
+        cart_id: str | None = None,
+        quantity: int = 1,
+        simulation_id: str | None = None,
+        room_width_m: float | None = None,
+        room_depth_m: float | None = None,
+        room_height_m: float | None = None,
+    ) -> dict[str, Any]:
+        return await _answer(
+            tools.add_to_cart,
+            sku=sku,
+            link=link,
+            cart_id=cart_id,
+            quantity=quantity,
+            simulation_id=simulation_id,
+            room_width_m=room_width_m,
+            room_depth_m=room_depth_m,
+            room_height_m=room_height_m,
+        )
 
-class HoldWords(BaseModel):
+    @tool("view_cart", "Read the bag")
+    async def view_cart(cart_id: str) -> dict[str, Any]:
+        return await _answer(tools.view_cart, cart_id=cart_id)
+
+    @tool("remove_from_cart", "Take a piece out of the bag", acts=True)
+    async def remove_from_cart(cart_id: str, sku: str) -> dict[str, Any]:
+        return await _answer(tools.remove_from_cart, cart_id=cart_id, sku=sku)
+
+    @tool("measure_cart", "Measure the bag as one purchase", acts=True, fetching=True)
+    async def measure_cart(
+        cart_id: str,
+        room_width_m: float | None = None,
+        room_depth_m: float | None = None,
+        room_height_m: float | None = None,
+        image_key: str | None = None,
+    ) -> dict[str, Any]:
+        return await _answer(
+            tools.measure_cart,
+            cart_id=cart_id,
+            room_width_m=room_width_m,
+            room_depth_m=room_depth_m,
+            room_height_m=room_height_m,
+            image_key=image_key,
+        )
+
+    @tool("order_status", "Read an order draft")
+    async def order_status(order_id: str) -> dict[str, Any]:
+        return await _answer(tools.order_status, order_id=order_id)
+
+    @tool("checkout", "Place the order draft", acts=True)
+    async def checkout(cart_id: str, confirmation: str = "", ctx: Context | None = None) -> dict[str, Any]:
+        """Ask the shopper about an order they can see, not one the agent described.
+
+        The bag is read first because a consent line naming no pieces and no number is not
+        consent, and `Tools.checkout` then refuses anything the engine has not cleared.
+        """
+        bag = await _answer(tools.view_cart, cart_id=cart_id)
+        names = ", ".join(f"{line['name']} x{line['quantity']}" for line in bag["lines"]) or "nothing yet"
+        words, through = await _ask(
+            ctx,
+            f"Shall I place this order for {names} - EUR {bag['total_eur']} for {bag['items']} "
+            f"piece(s), about {bag['lead_days']} days by {bag['freight']} freight? No card is taken: "
+            "a person at the shop confirms the draft.",
+            "ordered",
+            confirmation,
+        )
+        placed = await _answer(tools.checkout, cart_id=cart_id, confirmation=words)
+        return {"confirmed_through": through, **placed}
+
+
+class ConsentWords(BaseModel):
     """One flat string, because an elicitation form only carries primitives: the client renders it
     as a field, not as a nested editor."""
 
-    confirmation: str = Field(description="Your own words, kept verbatim so the shop can audit the hold. For example: yes, hold it.")
+    confirmation: str = Field(description="Your own words, kept verbatim so the shop can audit the decision. For example: yes, go ahead.")
 
 
-async def _ask(ctx: Context | None, simulation_id: str, relayed: str) -> tuple[str, str]:
+# A client that is not agreeing says so with one of these words, and the shopper's answer belongs
+# in the refusal in their own language rather than as a stem with "ed" glued on.
+_ANSWERS = {"decline": "declined", "cancel": "cancelled"}
+
+
+async def _ask(ctx: Context | None, question: str, past: str, relayed: str) -> tuple[str, str]:
     """Put the question in front of the shopper themselves whenever the client can.
 
     Elicitation is the difference between a human's yes and a model's guess of one, so it is
     tried first and its answer wins over whatever the agent relays. A client that cannot answer
     - no back-channel, no elicitation capability, or a decline we should not misread - falls back
-    to the shopper's words as the agent heard them, and `Tools.reserve_fit` still refuses a hold
-    that is not an explicit yes.
+    to the shopper's words as the agent heard them, and the tool behind this door still refuses a
+    hold or an order that is not an explicit yes.
     """
     if ctx is not None:
         try:
-            result = await ctx.elicit(
-                f"Shall I hold the piece from simulation {simulation_id} for you until someone at the shop "
-                "confirms it? Nothing is charged and nothing ships.",
-                HoldWords,
-            )
+            result = await ctx.elicit(question, ConsentWords)
         except (MCPError, ValueError, RuntimeError) as exc:
             logger.debug("client cannot ask the shopper (%s), using the words the agent relayed", type(exc).__name__)
         else:
             if result.action != "accept":
-                raise ToolError(f"the shopper {result.action}d the hold, so nothing is reserved.")
+                said = _ANSWERS.get(result.action, str(result.action))
+                raise ToolError(f"the shopper {said} the question, so nothing was {past}.")
             return result.data.confirmation, "asked in the client"
     return relayed, "relayed by the agent"
 
@@ -290,6 +373,16 @@ def publish(server: MCPServer, tools: Tools) -> None:
     async def run(run_id: str) -> str:
         return json.dumps(await _answer(tools.journey_status, run_id=run_id), indent=2)
 
+    @server.resource(
+        "byb://cart/{cart_id}",
+        name="cart",
+        title="One shopping bag",
+        description="The bag, its room, every line's price and the fit verdict behind it.",
+        mime_type="application/json",
+    )
+    async def cart(cart_id: str) -> str:
+        return json.dumps(await _answer(tools.view_cart, cart_id=cart_id), indent=2)
+
     @server.prompt(name="fit-my-room", title="Fit my room", description="Work out what of this shop fits a room the shopper describes.")
     async def fit_my_room(width_m: float = 4.0, depth_m: float = 3.5, what: str = "sofa") -> list[dict[str, str]]:
         return [
@@ -316,9 +409,24 @@ def publish(server: MCPServer, tools: Tools) -> None:
             }
         ]
 
+    @server.prompt(name="fill-a-cart", title="Fill a cart with what fits", description="Buy the pieces the engine cleared, checking out on my own yes.")
+    async def fill_a_cart(width_m: float = 4.0, depth_m: float = 3.5, what: str = "sofa") -> list[dict[str, str]]:
+        return [
+            {
+                "role": "user",
+                "content": (
+                    f"My room is {width_m} m by {depth_m} m. Run fit_catalog for {what} in it, add the pieces that "
+                    "cleared to one cart with add_to_cart - pass each simulation_id so the bag carries its proof - "
+                    "then call measure_cart to judge the set as one purchase and tell me the combined verdict and "
+                    "total. Ask me plainly whether to place the order: checkout takes my own words, never a yes you "
+                    "assume for me, and nothing the engine did not clear goes in the bag."
+                ),
+            }
+        ]
 
-RESOURCES = ("byb://catalog", "byb://fit/{simulation_id}", "byb://run/{run_id}")
-PROMPTS = ("fit-my-room", "hold-the-fit")
+
+RESOURCES = ("byb://catalog", "byb://fit/{simulation_id}", "byb://run/{run_id}", "byb://cart/{cart_id}")
+PROMPTS = ("fit-my-room", "hold-the-fit", "fill-a-cart")
 
 
 def connect(settings: Settings) -> dict[str, Any]:
@@ -362,11 +470,15 @@ def connect(settings: Settings) -> dict[str, Any]:
                 "Name it Buy You Before and paste the URL below - the shop's own origin, /mcp/.",
                 "Leave authentication on No authentication, or on OAuth if the shop put OAuth in front.",
                 "Create it, then @-mention Buy You Before in a chat and give it a room to measure.",
+                "Finish the purchase in the same chat: ask it to add what cleared to a cart, measure the "
+                "bag and check out - an order is refused until every line carries a cleared verdict.",
             ],
             "note": "ChatGPT reaches the connector through the shop's own origin, so one https tunnel "
                     "is enough; it will not accept a static bearer header, so this door only opens "
-                    "while MCP_CONNECT_TOKEN is empty or the shop speaks OAuth. Asking it to fit a "
-                    "room is the demo: it calls fit_catalog and gets a measured answer.",
+                    "while MCP_CONNECT_TOKEN is empty or the shop speaks OAuth. The demo is a whole "
+                    "purchase: it calls fit_catalog, adds what cleared to a cart, measures the bag and "
+                    "comes back to the shopper for the yes before checkout - ChatGPT shows that question "
+                    "as its own confirmation card, since a stateless door has no back-channel to ask on.",
         },
         "claude": {
             "label": "Claude (claude.ai)",
@@ -378,6 +490,8 @@ def connect(settings: Settings) -> dict[str, Any]:
                 "Connect it as-is, or set an OAuth Client ID under Advanced settings when the shop "
                 "speaks OAuth; Claude takes no typed key the way Claude Code does.",
                 "Switch the connector on inside the chat, then ask it which sofas fit the room.",
+                "Ask it to add the ones that cleared to a cart and check out: an order is only written "
+                "once every line in the bag has a verdict the engine actually gave.",
             ],
             "note": "claude.ai adds a connector unauthenticated or through OAuth; it cannot send a "
                     "header you typed. Keys belong to Claude Code below. On a Team or Enterprise "
@@ -398,7 +512,8 @@ def connect(settings: Settings) -> dict[str, Any]:
                 "Type /mcp to confirm it connected, then /-mention the fit-my-room prompt.",
             ],
             "note": "Claude Code is where the resources and prompts on this connector show up: "
-                    "@byb://catalog attaches the shop's catalog as context.",
+                    "@byb://catalog attaches the shop's catalog as context and @byb://cart/<id> the bag "
+                    "it is holding, so a terminal conversation quotes the same file the page does.",
         },
         "cursor": {
             "label": "Cursor",

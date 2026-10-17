@@ -16,12 +16,12 @@ from typing import Any
 
 from byb_agent import evidence
 from byb_agent.brief import read as read_brief
-from byb_agent.contracts import AgentRun, BriefRequest, FitAttempt, Reservation, ShopperBrief
+from byb_agent.contracts import AgentRun, BriefRequest, Cart, CartLine, FitAttempt, Order, Reservation, ShopperBrief
 from byb_agent.evolus import Evolus
-from byb_agent.journey import FAIL_VERDICTS, PASS_VERDICTS, Journey, evaluate
+from byb_agent.journey import FAIL_VERDICTS, PASS_VERDICTS, Journey, best_walkway, evaluate
 from byb_agent.model import AMDModel
 from byb_agent.pipeline import Pipeline
-from byb_agent.runs import Reservations, RunStore
+from byb_agent.runs import Carts, Orders, Reservations, RunStore
 from byb_agent.settings import Settings
 from byb_agent.shortlist import listing_url, rank, score, to_candidate
 
@@ -31,6 +31,7 @@ logger = logging.getLogger("byb.tools")
 # because the cost of a wrong yes is a truck and a restocking fee.
 CONFIRMATIONS = {"yes", "y", "yeah", "yep", "ok", "okay", "confirm", "confirmed", "i confirm", "hold it", "hold this", "please hold it", "approved", "go ahead"}
 CONFIRM_QUESTION = 'Ask the shopper plainly: "Shall I hold this piece for you until the shop confirms?" Then pass their own words as confirmation.'
+CHECKOUT_QUESTION = 'Ask the shopper plainly: "Shall I place this order for the pieces the engine cleared?" Then pass their own words as confirmation.'
 
 
 def _confirmed(confirmation: str) -> bool:
@@ -50,6 +51,8 @@ class Tools:
         store: RunStore,
         settings: Settings,
         reservations: Reservations | None = None,
+        carts: Carts | None = None,
+        orders: Orders | None = None,
     ) -> None:
         self._pipeline = pipeline
         self._evolus = evolus
@@ -57,6 +60,8 @@ class Tools:
         self._store = store
         self._settings = settings
         self._reservations = reservations if reservations is not None else Reservations()
+        self._carts = carts if carts is not None else Carts()
+        self._orders = orders if orders is not None else Orders()
         self._journey = Journey(pipeline, evolus, model, store, settings)
 
     async def catalog_search(self, query: str = "", category: str | None = None, price_band: str | None = None, limit: int = 5) -> list[dict[str, Any]]:
@@ -380,6 +385,241 @@ class Tools:
             "next": "A person at the shop accepts or releases it. Nothing is charged and nothing ships from this service.",
         }
 
+    async def add_to_cart(
+        self,
+        sku: str | None = None,
+        link: str | None = None,
+        cart_id: str | None = None,
+        quantity: int = 1,
+        simulation_id: str | None = None,
+        room_width_m: float | None = None,
+        room_depth_m: float | None = None,
+        room_height_m: float | None = None,
+    ) -> dict[str, Any]:
+        """Put a piece in the bag at the shop's own listed price, with the fit proof attached when one exists."""
+        row = await self._row(sku, link)
+        if row is None:
+            raise ValueError("give a sku from catalog_search, or a product link")
+        cart = self._carts.get(cart_id) if cart_id else None
+        if cart_id and cart is None:
+            raise ValueError(f"cart {cart_id!r} is not in this process - a restart drops bags. Start a fresh one and give the shopper the new id.")
+        if cart is None:
+            cart = Cart(id=_new_run_id(), room=_room(room_width_m, room_depth_m, room_height_m), updated_at=_now())
+        listed = str(row["sku"])
+        line = next((item for item in cart.lines if item.sku.lower() == listed.lower()), None)
+        if line is None:
+            if len(cart.lines) >= self._settings.max_cart_lines:
+                raise ValueError(
+                    f"a bag here holds at most {self._settings.max_cart_lines} pieces; check out or clear one with remove_from_cart."
+                )
+            commerce = row.get("commerce") or {}
+            line = CartLine(
+                sku=listed,
+                name=str(row.get("name") or listed),
+                price_eur=float(commerce.get("retail_eur") or evidence.price_for(row.get("price_band"))),
+                cost_eur=float(commerce.get("cost_eur") or 0.0),
+                lead_days=int(commerce.get("lead_days") or 0),
+                freight=str(commerce.get("freight") or "parcel"),
+                volume_m3=float(commerce.get("volume_m3") or 0.0),
+                added_at=_now(),
+            )
+            cart.lines.append(line)
+        line.quantity = max(int(quantity), 1)
+        if simulation_id:
+            self._attach(cart, line, simulation_id, await self._pipeline.simulation(simulation_id), row.get("geometry"))
+        cart.updated_at = _now()
+        self._carts.put(cart)
+        return self._view(cart)
+
+    async def view_cart(self, cart_id: str) -> dict[str, Any]:
+        """What is in the bag, what it costs the shopper and the shop, and which lines are still unproven."""
+        return self._view(self._cart(cart_id))
+
+    async def remove_from_cart(self, cart_id: str, sku: str) -> dict[str, Any]:
+        """Take one piece out of the bag."""
+        cart = self._cart(cart_id)
+        wanted = str(sku).strip().lower()
+        kept = [line for line in cart.lines if line.sku.lower() != wanted]
+        if len(kept) == len(cart.lines):
+            raise ValueError(f"{sku!r} is not in cart {cart.id}. Read the bag with view_cart first.")
+        cart.lines = kept
+        cart.updated_at = _now()
+        self._carts.put(cart)
+        return self._view(cart)
+
+    async def measure_cart(
+        self,
+        cart_id: str,
+        room_width_m: float | None = None,
+        room_depth_m: float | None = None,
+        room_height_m: float | None = None,
+        image_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Measure what is in the bag against its room, and judge the pieces together as one purchase."""
+        cart = self._cart(cart_id)
+        if not cart.lines:
+            raise ValueError("the bag is empty; add_to_cart before measuring it.")
+        if room_width_m or room_depth_m or room_height_m:
+            cart.room = _room(room_width_m, room_depth_m, room_height_m)
+        room = dict(cart.room or _room(None, None, None))
+        cart.room = room
+        brief = _room_brief("cart", room["width_m"], room["depth_m"], room["height_m"])
+        rows = {str(row["sku"]).lower(): row for row in await self._pipeline.catalog()}
+        stale = [line for line in cart.lines if line.simulation_id is None or line.room != room]
+        semaphore = asyncio.Semaphore(self._settings.parallel_fits)
+
+        async def measure(line: CartLine) -> dict[str, Any]:
+            row = rows.get(line.sku.lower())
+            if row is None:
+                return {"sku": line.sku, "verdict": None, "reason": "no longer in the catalog"}
+            async with semaphore:
+                attempt, ms = await evaluate(self._pipeline, brief, row, 1.0, image_key)
+            detail = await self._pipeline.simulation(attempt.simulation_id) if attempt.simulation_id else {}
+            self._attach(cart, line, attempt.simulation_id, detail, row.get("geometry"))
+            return {
+                "sku": line.sku,
+                "name": line.name,
+                "verdict": line.verdict,
+                "quantity": line.quantity,
+                "tightest_walkway_m": round(min(line.walkway_m.values()), 2) if line.walkway_m else None,
+                "ms": ms,
+                "verify": self._link(f"/api/v1/simulations/{line.simulation_id}") if line.simulation_id else None,
+            }
+
+        measured = list(await asyncio.gather(*(measure(line) for line in stale)))
+        cart.updated_at = _now()
+        self._carts.put(cart)
+        rest = {id(line) for line in stale}
+        return {
+            "measured": measured,
+            "already_proven": [line.sku for line in cart.lines if id(line) not in rest],
+            **self._view(cart, combined=self._combine(cart)),
+        }
+
+    async def checkout(self, cart_id: str, confirmation: str) -> dict[str, Any]:
+        """Turn a bag of proven fits into an order draft - on the shopper's own yes, and on nothing less."""
+        words = str(confirmation or "").strip()
+        if not _confirmed(words):
+            raise ValueError(f"An order needs the shopper's own yes, not the agent's. {CHECKOUT_QUESTION}")
+        cart = self._cart(cart_id)
+        if not cart.lines:
+            raise ValueError("the bag is empty; add_to_cart before checking out.")
+        unproven = [line.sku for line in cart.lines if line.verdict not in PASS_VERDICTS]
+        if unproven:
+            raise ValueError(
+                f"nothing is sold unchecked: {', '.join(unproven)} has no cleared fit report. "
+                "Run measure_cart on this bag, then put only what the engine clears in the order."
+            )
+        combined = self._combine(cart)
+        totals = _totals(cart.lines)
+        order = Order(
+            id=_new_run_id(),
+            cart_id=cart.id,
+            lines=[line.model_copy(deep=True) for line in cart.lines],
+            currency="EUR",
+            confirmation=words,
+            created_at=_now(),
+            proofs=[
+                {
+                    "sku": line.sku,
+                    "simulation_id": line.simulation_id,
+                    "verdict": line.verdict,
+                    "quantity": line.quantity,
+                    "tightest_walkway_m": round(min(line.walkway_m.values()), 2) if line.walkway_m else None,
+                    "verify": self._link(f"/api/v1/simulations/{line.simulation_id}") if line.simulation_id else None,
+                }
+                for line in cart.lines
+            ],
+            combined=combined,
+            room=dict(cart.room or {}),
+            **totals,
+        )
+        self._orders.put(order)
+        return {
+            **order.model_dump(),
+            "next": "A person at the shop accepts or releases this draft. No card is taken and nothing ships from this service.",
+        }
+
+    async def order_status(self, order_id: str) -> dict[str, Any]:
+        """One order draft, with the fit proofs and the words that let it be placed."""
+        order = self._orders.get(order_id)
+        if order is None:
+            raise ValueError(f"unknown order {order_id!r}")
+        return order.model_dump()
+
+    def list_orders(self, limit: int = 20) -> list[dict[str, Any]]:
+        """Order drafts waiting on a person at the shop, newest first."""
+        shown = {"id", "cart_id", "status", "total_eur", "margin_eur", "confirmation", "created_at"}
+        return [order.model_dump(include=shown) for order in self._orders.recent(limit)]
+
+    def _cart(self, cart_id: str) -> Cart:
+        cart = self._carts.get(cart_id)
+        if cart is None:
+            raise ValueError(f"unknown cart {cart_id!r}. Bags live in this process; start one with add_to_cart.")
+        return cart
+
+    def _attach(self, cart: Cart, line: CartLine, simulation_id: str | None, detail: dict[str, Any], geometry: dict | None) -> None:
+        """Copy the engine's own word for a piece onto the line, so a bag can be checked out without re-measuring it."""
+        fit = detail.get("fit_report") or {}
+        verdict = str(fit.get("verdict") or "")
+        if not verdict or not simulation_id:
+            return
+        line.simulation_id = str(simulation_id)
+        line.verdict = verdict
+        line.coverage_pct = round(float(fit.get("coverage_pct") or 0.0), 1)
+        line.footprint_m2, line.placement_proved = evidence.footprint(fit, geometry)
+        line.walkway_m = best_walkway(fit)
+        # The proof carries the room it was made in, and that is the report's own numbers rather
+        # than whatever the bag says: a sofa cleared for a 4.0 m room proves nothing about a 3.4 m
+        # one, and `measure_cart` re-measures a line the moment the two disagree.
+        line.room = _room(detail.get("room_width_m"), detail.get("room_depth_m"), detail.get("room_height_m"))
+        cart.usable_area_m2 = max(cart.usable_area_m2, float(fit.get("usable_area_m2") or 0.0))
+
+    def _pieces(self, cart: Cart) -> list[dict[str, Any]]:
+        """The bag as one purchase: the box the engine cleared, times the quantity in the bag."""
+        return [
+            {
+                "sku": line.sku,
+                "name": line.name,
+                "price_band": None,
+                "verdict": line.verdict or "unknown",
+                "coverage_pct": line.coverage_pct,
+                "walkway_m": line.walkway_m,
+                "footprint_m2": round(line.footprint_m2 * line.quantity, 3),
+                "placement_proved": line.placement_proved,
+            }
+            for line in cart.lines
+        ]
+
+    def _combine(self, cart: Cart) -> dict[str, Any]:
+        room = cart.room or _room(None, None, None)
+        return evidence.combine(
+            self._pieces(cart),
+            usable_area_m2=cart.usable_area_m2 or room["width_m"] * room["depth_m"],
+            min_walkway_m=self._settings.min_walkway_m,
+            max_coverage=self._settings.max_joint_coverage,
+        )
+
+    def _view(self, cart: Cart, *, combined: dict | None = None) -> dict[str, Any]:
+        unproven = [line.sku for line in cart.lines if line.verdict not in PASS_VERDICTS]
+        return {
+            "cart_id": cart.id,
+            "room": cart.room,
+            "lines": [line.model_dump() for line in cart.lines],
+            "items": sum(line.quantity for line in cart.lines),
+            **_totals(cart.lines),
+            "unproven": unproven,
+            "set": combined,
+            "checkout": {
+                "tool": "checkout",
+                "ready": not unproven and bool(cart.lines),
+                "needs": "the shopper's own confirmation words",
+                "how": CHECKOUT_QUESTION,
+                "refuses": "a bag with any line the engine has not cleared, so measure_cart comes before it",
+            },
+            "note": "Prices are the catalog's own listed terms. Nothing is charged here: checkout writes a draft a person at the shop accepts.",
+        }
+
     async def returns_estimate(
         self,
         orders_per_month: float = 1000,
@@ -440,6 +680,33 @@ def _room_brief(notes: str, width: float, depth: float, height: float) -> Shoppe
     return ShopperBrief(raw=notes or "agent simulation", room_width_m=width, room_depth_m=depth, room_height_m=height, source="agent", confidence=0.8)
 
 
+def _room(width: float | None, depth: float | None, height: float | None) -> dict[str, float]:
+    """One shape for a room, so a line's room and the bag's room can be compared at all.
+
+    Not rounded: a line is stale when its room and the bag's differ, and rounding would hide a
+    5 cm change of mind behind a proof that no longer describes the room being bought for.
+    """
+    return {"width_m": float(width or 4.0), "depth_m": float(depth or 3.5), "height_m": float(height or 2.4)}
+
+
+def _totals(lines: list[CartLine]) -> dict[str, Any]:
+    """Money and freight for a bag. The lead is the slowest piece and the freight is the heaviest.
+
+    Quantity moves the price and the volume; the engine measures one of a kind, so a bag of four
+    identical chairs is quoted as four boxes of floor and one verdict for the shape.
+    """
+    total = round(sum(line.price_eur * line.quantity for line in lines), 2)
+    cost = round(sum(line.cost_eur * line.quantity for line in lines), 2)
+    return {
+        "total_eur": total,
+        "cost_eur": cost,
+        "margin_eur": round(total - cost, 2),
+        "volume_m3": round(sum(line.volume_m3 * line.quantity for line in lines), 3),
+        "lead_days": max((line.lead_days for line in lines), default=0),
+        "freight": "pallet" if any(line.freight == "pallet" for line in lines) else "parcel",
+    }
+
+
 def _evidence(detail: dict[str, Any]) -> dict[str, Any]:
     fit = detail.get("fit_report") or {}
     return {
@@ -474,6 +741,12 @@ SPEC: dict[str, str] = {
     "fit_catalog": "Which of the shop's pieces actually fit this room, measured in parallel and split into fits, does-not-fit and unproven.",
     "proven_fit_offer": "An agent-readable offer that only a proven fit can back.",
     "reserve_fit": "Hold a proven-fitting piece, gated behind the shopper's own confirmation; the MCP door asks them in their own client when it can.",
+    "add_to_cart": "Put a piece in the bag at the shop's listed price, carrying a simulation's verdict when one is given.",
+    "view_cart": "Read the bag: lines, quantities, totals and margin, which lines are unproven, and whether checkout would accept it.",
+    "remove_from_cart": "Take one piece out of the bag.",
+    "measure_cart": "Measure every line the bag has no cleared proof for against the bag's room, then judge the pieces as one purchase.",
+    "checkout": "Write an order draft for a bag whose every line the engine cleared, gated behind the shopper's own yes.",
+    "order_status": "Read an order draft, its fit proofs and the words that let it be placed.",
     "returns_estimate": "What a fit check is worth, as arithmetic over stated assumptions.",
     "start_journey": "Run the whole fit-assurance process for a shopper brief, against a photo-measured room when image_key is given.",
     "journey_status": "The trace of a journey, including the final decision.",

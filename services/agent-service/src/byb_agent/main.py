@@ -7,6 +7,7 @@ One set of capabilities, reachable through several doors:
 * `/agent/connect` - how to add that connector, per client.
 * `/agent/brief`, `/agent/runs`, `/agent/chat` - the shop's own UI.
 * `/agent/reservations` - the holds a human agreed to, waiting on a person at the shop.
+* `/agent/orders` - the checkout drafts a human's own yes released, waiting on the same person.
 
 Everything upstream is configured by environment: the Evolus workspace, the open model served
 on AMD, and the six-service pipeline. Absent credentials degrade, they do not stall.
@@ -29,7 +30,7 @@ from byb_agent.mcp_server import build_server, http_app
 from byb_agent.mcp_server import connect as connect_manifest
 from byb_agent.model import AMDModel
 from byb_agent.pipeline import Pipeline
-from byb_agent.runs import Reservations, RunStore
+from byb_agent.runs import Carts, Orders, Reservations, RunStore
 from byb_agent.settings import settings
 from byb_agent.tools import SPEC, Tools
 
@@ -42,10 +43,12 @@ INTERNAL_TOKEN_HEADER = "x-byb-token"
 HTTP = httpx.AsyncClient(timeout=httpx.Timeout(30.0, read=120.0))
 STORE = RunStore()
 RESERVATIONS = Reservations()
+CARTS = Carts()
+ORDERS = Orders()
 PIPELINE = Pipeline(HTTP, settings)
 EVOLUS = Evolus(HTTP, settings)
 MODEL = AMDModel(HTTP, settings)
-TOOLS = Tools(PIPELINE, EVOLUS, MODEL, STORE, settings, RESERVATIONS)
+TOOLS = Tools(PIPELINE, EVOLUS, MODEL, STORE, settings, RESERVATIONS, CARTS, ORDERS)
 MCP_SERVER = build_server(TOOLS, settings)
 MCP_APP = http_app(MCP_SERVER, settings)
 
@@ -94,6 +97,8 @@ def health() -> dict[str, Any]:
         "runs": str(len(STORE)),
         "tools": str(len(SPEC)),
         "reservations": str(len(RESERVATIONS)),
+        "carts": str(len(CARTS)),
+        "orders": str(len(ORDERS)),
     }
 
 
@@ -154,6 +159,12 @@ def get_run(run_id: str) -> dict[str, Any]:
 def list_reservations(limit: int = 20) -> list[dict[str, Any]]:
     """Holds the agent took on a shopper's own yes, newest first, waiting on a person."""
     return TOOLS.list_reservations(limit)
+
+
+@app.get("/agent/orders")
+def list_orders(limit: int = 20) -> list[dict[str, Any]]:
+    """Order drafts a shopper's own yes released, newest first. Drafts, not payments."""
+    return TOOLS.list_orders(limit)
 
 
 @app.post("/agent/webhooks/evolus", status_code=202)

@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 
 from byb_agent import main
 from byb_agent.contracts import AgentRun
-from byb_agent.runs import Reservations, RunStore
+from byb_agent.runs import Carts, Orders, Reservations, RunStore
 from byb_agent.tools import SPEC, Tools
 
 
@@ -36,13 +36,17 @@ def api(client, rows, settings, monkeypatch):
     model = StubModel()
     store = RunStore()
     reservations = Reservations()
+    carts = Carts()
+    orders = Orders()
     monkeypatch.setattr(main, "STORE", store)
     monkeypatch.setattr(main, "RESERVATIONS", reservations)
+    monkeypatch.setattr(main, "CARTS", carts)
+    monkeypatch.setattr(main, "ORDERS", orders)
     monkeypatch.setattr(main, "PIPELINE", pipeline)
     monkeypatch.setattr(main, "EVOLUS", evolus)
     monkeypatch.setattr(main, "MODEL", model)
-    monkeypatch.setattr(main, "TOOLS", Tools(pipeline, evolus, model, store, settings, reservations))
-    return SimpleNamespace(client=client, pipeline=pipeline, evolus=evolus, model=model, store=store, reservations=reservations)
+    monkeypatch.setattr(main, "TOOLS", Tools(pipeline, evolus, model, store, settings, reservations, carts, orders))
+    return SimpleNamespace(client=client, pipeline=pipeline, evolus=evolus, model=model, store=store, reservations=reservations, carts=carts, orders=orders)
 
 
 def settled(client: TestClient, run_id: str, timeout: float = 5.0) -> dict:
@@ -136,6 +140,25 @@ def test_the_new_capabilities_are_callable_over_rest(api):
     assert held["status"] == "pending_merchant"
     assert [item["id"] for item in api.client.get("/agent/reservations").json()] == [held["id"]]
     assert api.client.get("/healthz").json()["reservations"] == "1"
+
+
+def test_a_bag_is_filled_measured_and_ordered_over_rest(api):
+    """The cart through the door an Evolus workflow step uses: the shopper's own words stay the gate,
+    and `/agent/orders` is what a person at the shop reads."""
+    measured = api.client.post("/agent/tools/simulate_product", json={"sku": "SOF-001"}).json()["result"]
+    simulation_id = measured["attempt"]["simulation_id"]
+    bag = api.client.post("/agent/tools/add_to_cart", json={"sku": "SOF-001", "simulation_id": simulation_id}).json()["result"]
+    assert bag["lines"][0]["verdict"] == "fits"
+    assert bag["checkout"]["ready"] is True
+
+    refused = api.client.post("/agent/tools/checkout", json={"cart_id": bag["cart_id"], "confirmation": "they liked it"})
+    assert refused.status_code == 422
+    assert "own yes" in refused.json()["detail"]
+
+    placed = api.client.post("/agent/tools/checkout", json={"cart_id": bag["cart_id"], "confirmation": "yes, order it"}).json()["result"]
+    assert placed["status"] == "awaiting_merchant"
+    assert [item["id"] for item in api.client.get("/agent/orders").json()] == [placed["id"]]
+    assert api.client.get("/healthz").json()["orders"] == "1"
 
 
 def test_a_multi_piece_brief_is_answered_over_rest(api):

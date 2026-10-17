@@ -69,5 +69,9 @@ class Settings(BaseSettings):
     max_joint_coverage: float = 0.6
     min_walkway_m: float = 0.6
 
+    # A bag is a claim the shopper has to pay for, so it is bounded the same way: an agent in
+    # ChatGPT can be asked to "add your whole catalog", and each line is a GPU job to measure.
+    max_cart_lines: int = 6
+
 
 settings = Settings()

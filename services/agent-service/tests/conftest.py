@@ -63,6 +63,7 @@ class StubPipeline:
         self._crash = crash or set()
         self.started: list[dict[str, Any]] = []
         self._sku_by_id: dict[str, str] = {}
+        self._room_by_id: dict[str, tuple[float, float, float]] = {}
         self._photo: dict[str, bool] = {}
         self._next = 0
 
@@ -90,6 +91,9 @@ class StubPipeline:
         self._next += 1
         simulation_id = f"sim{self._next:04d}"
         self._photo[simulation_id] = bool(image_key)
+        # The gateway stores the room it was asked for and echoes it back, photo or not: a bag that
+        # re-measures only when its own room moved needs the stub to answer with the same numbers.
+        self._room_by_id[simulation_id] = (room_width_m, room_depth_m, room_height_m)
         # The journey names the SKU it queued, which is how a test maps a verdict back to a product.
         for item in self._rows:
             if notes and f"shortlisted {item['sku']}" in notes:
@@ -105,6 +109,7 @@ class StubPipeline:
     async def simulation(self, simulation_id: str) -> dict[str, Any]:
         sku = self._sku_by_id.get(simulation_id, "")
         verdict = self._verdicts.get(sku or "", self._verdicts.get("default", "fits"))
+        width, depth, height = self._room_by_id.get(simulation_id, (4.0, 3.5, 2.4))
         if sku in self._crash:
             return {"id": simulation_id, "status": "failed", "error": "geometry-service unavailable", "has_model": False, "fit_report": None}
         row = next((item for item in self._rows if str(item["sku"]) == sku), None)
@@ -116,9 +121,9 @@ class StubPipeline:
             "error": None,
             "has_model": True,
             "product_link": f"https://shop.example.com/p/{sku.lower()}/",
-            "room_width_m": 4.0,
-            "room_depth_m": 3.5,
-            "room_height_m": 2.4,
+            "room_width_m": width,
+            "room_depth_m": depth,
+            "room_height_m": height,
             "product_profile": {"name": sku, "geometry": geometry, "confidence": 0.7},
             "catalog_candidate": {
                 "sku": sku,
