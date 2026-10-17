@@ -1,5 +1,5 @@
 """
-BeforeYouBuy AI - Simulation & Geometry Engine (Part 2, Shapely version)
+BeforeYouBuy AI - Simulation & Geometry Engine
 
 Deterministic checks:
   1. Room boundary (all four walls) + tight-fit tolerance
@@ -32,9 +32,9 @@ SIDES = ("+x", "-x", "+y", "-y")
 _ROTATE_CW = {"+y": "+x", "+x": "-y", "-y": "-x", "-x": "+y"}  # 90 deg clockwise
 
 
-# --------------------------------------------------------------------------- 
+
 # Data models
-# --------------------------------------------------------------------------- 
+
 @dataclass
 class Door:
     wall: str = "-y"                 # which wall the door is on
@@ -88,9 +88,9 @@ class FurnitureItem:
     front_faces: str = "+y"          # side drawers/doors open toward (at rotation 0)
 
 
-# --------------------------------------------------------------------------- 
+
 # Helpers
-# --------------------------------------------------------------------------- 
+
 def _wall_frame(wall: str, length: float, width: float):
     """(start point, unit vector along wall, inward unit normal) for a wall."""
     return {
@@ -114,9 +114,9 @@ def _coords(poly) -> List[Tuple[float, float]]:
     return [(round(x, 2), round(y, 2)) for x, y in poly.exterior.coords]
 
 
-# --------------------------------------------------------------------------- 
+
 # Engine
-# --------------------------------------------------------------------------- 
+
 class SimulationEngine:
     def __init__(self, room: Room):
         self.room = room
@@ -140,7 +140,7 @@ class SimulationEngine:
         self.swing_zone = Point(p0).buffer(r, 64).intersection(quadrant).intersection(self.room_poly)
         self._base_cache: Dict[float, Tuple[bool, int]] = {}
 
-    # ----------------------------- validation ------------------------------ 
+    # validation 
     def _validate(self, item: FurnitureItem, x: float, y: float, rotation: int):
         if min(item.length_cm, item.width_cm, item.height_cm) <= 0:
             raise ValueError("Item dimensions must be positive.")
@@ -153,7 +153,7 @@ class SimulationEngine:
         if rotation not in (0, 90):
             raise ValueError("rotation_deg must be 0 or 90.")
 
-    # ------------------------------- doorway -------------------------------- 
+    # doorway
     def _doorway_ok(self, item: FurnitureItem, margin: float) -> bool:
         """Item may be tilted: its two smallest dimensions must fit door width x height."""
         a, b, _ = sorted([item.length_cm, item.width_cm, item.height_cm])
@@ -161,7 +161,7 @@ class SimulationEngine:
         h = self.room.door.height_cm - margin
         return (a <= w and b <= h) or (b <= w and a <= h)
 
-    # ------------------------------- walkway -------------------------------- 
+    # walkway 
     def _reach(self, footprint: Optional[Polygon], clearance: float) -> Tuple[bool, int]:
         """
         Erode the free floor by clearance/2 (a person `clearance` wide).
@@ -188,7 +188,7 @@ class SimulationEngine:
             self._base_cache[clearance] = self._reach(None, clearance)
         return self._base_cache[clearance]
 
-    # ---------------------------- drawer geometry --------------------------- #
+    #  drawer geometry
     @staticmethod
     def _drawer_zone(fp: Polygon, front: str, depth: float) -> Polygon:
         x0, y0, x1, y1 = fp.bounds
@@ -208,7 +208,7 @@ class SimulationEngine:
             return "tight"
         return None
 
-    # ------------------------------ core check ------------------------------ #
+    # core check 
     def _evaluate(self, item: FurnitureItem, x: float, y: float, rotation: int) -> Dict[str, Any]:
         self._validate(item, x, y, rotation)
         room, tol = self.room, self.room.tolerance_margin_cm
@@ -224,7 +224,7 @@ class SimulationEngine:
         def add(code: str, severity: str, message: str):
             checks.append({"code": code, "severity": severity, "message": message})
 
-        # 1. Boundary --------------------------------------------------------
+        # 1. Boundary 
         in_room = self._room_eps.covers(fp)
         if not in_room:
             for side, gap in gaps.items():
@@ -236,27 +236,27 @@ class SimulationEngine:
                 add("tight_fit", "fragile",
                     f"Only {spare:.1f} cm spare across the room: within the +/-{tol} cm measurement margin.")
 
-        # 2. Ceiling ---------------------------------------------------------
+        # 2. Ceiling 
         if item.height_cm > room.ceiling_height_cm + EPS:
             add("ceiling", "fail",
                 f"Item is {item.height_cm - room.ceiling_height_cm:.1f} cm taller than the ceiling.")
         elif room.ceiling_height_cm - item.height_cm < tol:
             add("ceiling_tight", "fragile", f"Ceiling clearance is within +/-{tol} cm.")
 
-        # 3. Doorway ---------------------------------------------------------
+        # 3. Doorway 
         if not self._doorway_ok(item, 0):
             add("doorway", "fail", "Item cannot pass through the doorway, even when tilted.")
         elif not self._doorway_ok(item, tol):
             add("doorway_tight", "fragile", f"Doorway fit is within +/-{tol} cm: it may not pass.")
 
-        # 4. Door swing ------------------------------------------------------
+        # 4. Door swing
         clash = self._clash(fp, self.swing_zone)
         if clash == "overlap":
             add("door_swing_blocked", "fail", "Item sits inside the door swing area.")
         elif clash == "tight":
             add("door_swing_tight", "fragile", "Item is within tolerance of the door swing area.")
 
-        # 5. Drawers ---------------------------------------------------------
+        # 5. Drawers
         drawer_zone = None
         if item.drawer_depth_cm > 0:
             d = item.drawer_depth_cm
@@ -274,7 +274,7 @@ class SimulationEngine:
             if drawer_zone.intersection(self.swing_zone).area > EPS:
                 add("drawer_in_swing", "warning", "Drawer zone overlaps the door swing area.")
 
-        # 6. Obstacles -------------------------------------------------------
+        # 6. Obstacles 
         for ob, poly in zip(room.obstacles, self._obstacle_polys):
             clash = self._clash(fp, poly)
             if clash == "overlap":
@@ -282,7 +282,7 @@ class SimulationEngine:
             elif clash == "tight":
                 add("obstacle_tight", "fragile", f"Item is within +/-{tol} cm of '{ob.name}'.")
 
-        # 7. Walkway (only meaningful if nothing has failed yet) --------------
+        # 7. Walkway (only meaningful if nothing has failed yet)
         if not any(c["severity"] == "fail" for c in checks):
             clearance = room.min_walkway_clearance_cm
             base_ok, base_pockets = self._baseline(clearance)
@@ -307,7 +307,7 @@ class SimulationEngine:
                             add("walkway_tight", "fragile",
                                 f"Walkway only works if measurements are exact (+/-{tol} cm breaks it).")
 
-        # Status -------------------------------------------------------------
+        # Status
         sev = {c["severity"] for c in checks}
         if "fail" in sev:
             status = "FAIL"
@@ -338,7 +338,7 @@ class SimulationEngine:
             },
         }
 
-    # ------------------------------ public API ------------------------------ 
+    # public API
     def evaluate_fit(self, item: FurnitureItem, x_cm: float, y_cm: float,
                      rotation_deg: int = 0, suggest: bool = True) -> Dict[str, Any]:
         result = self._evaluate(item, x_cm, y_cm, rotation_deg)
@@ -404,7 +404,7 @@ class SimulationEngine:
         return tips
 
 
-# --------------------------------------------------------------------------- #
+
 if __name__ == "__main__":
     room = Room(length_cm=400, width_cm=300,
                 door=Door(wall="-y", offset_cm=50, width_cm=80, height_cm=200))
