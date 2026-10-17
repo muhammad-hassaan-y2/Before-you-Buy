@@ -8,6 +8,7 @@ arithmetic - and that the price on a line is the one the shop itself lists.
 import pytest
 from conftest import StubEvolus, StubModel, StubPipeline
 
+from byb_agent.pipeline import PipelineError
 from byb_agent.runs import Carts, Orders, Reservations, RunStore
 from byb_agent.tools import Tools
 
@@ -229,3 +230,38 @@ async def test_an_empty_bag_is_refused_before_a_fit_is_spent(shelf, settings):
     with pytest.raises(ValueError, match="empty"):
         await tools.checkout(bag["cart_id"], "yes")
     assert pipeline.started == []
+
+
+async def test_an_order_takes_its_units_off_the_shelf(shelf, settings):
+    tools, pipeline = build(shelf, settings)
+    bag = await tools.add_to_cart(sku="SOF-001", simulation_id=await fitted(tools, "SOF-001"))
+    bag = await tools.add_to_cart(
+        sku="SOF-002", cart_id=bag["cart_id"], quantity=2, simulation_id=await fitted(tools, "SOF-002")
+    )
+    placed = await tools.checkout(bag["cart_id"], "yes, order it")
+
+    assert placed["stock"]["claimed"] is True
+    assert pipeline.claims[0]["key"] == f"order:{placed['id']}"
+    assert pipeline.claims[0]["lines"] == [{"sku": "SOF-001", "qty": 1}, {"sku": "SOF-002", "qty": 2}]
+
+
+async def test_a_bag_the_shop_cannot_supply_is_refused_by_the_shelf(shelf, settings):
+    tools, pipeline = build(shelf, settings)
+    bag = await tools.add_to_cart(sku="SOF-001", simulation_id=await fitted(tools, "SOF-001"))
+    pipeline.short.add("SOF-001")
+    with pytest.raises(ValueError, match="cannot supply"):
+        await tools.checkout(bag["cart_id"], "yes, order it")
+    assert pipeline.claims == [], "an order that never happened claims nothing"
+
+
+async def test_an_unreachable_shelf_is_said_rather_than_read_as_empty(shelf, settings):
+    tools, pipeline = build(shelf, settings)
+    bag = await tools.add_to_cart(sku="SOF-001", simulation_id=await fitted(tools, "SOF-001"))
+
+    async def down(**_kwargs):
+        raise PipelineError("could not reach the shelf: connection refused")
+
+    pipeline.claim_stock = down
+    placed = await tools.checkout(bag["cart_id"], "yes, order it")
+    assert placed["stock"]["claimed"] is False
+    assert "connection refused" in placed["stock"]["why"], "a count nobody read is not a zero"

@@ -16,6 +16,7 @@ on AMD, and the six-service pipeline. Absent credentials degrade, they do not st
 from __future__ import annotations
 
 import inspect
+import json
 import logging
 from contextlib import asynccontextmanager
 from typing import Any
@@ -23,6 +24,7 @@ from typing import Any
 import httpx
 from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 from byb_agent.contracts import BriefRequest
 from byb_agent.evolus import Evolus, EvolusError
@@ -165,6 +167,46 @@ def list_reservations(limit: int = 20) -> list[dict[str, Any]]:
 def list_orders(limit: int = 20) -> list[dict[str, Any]]:
     """Order drafts a shopper's own yes released, newest first. Drafts, not payments."""
     return TOOLS.list_orders(limit)
+
+
+@app.get("/agent/fit/stream")
+async def fit_stream(
+    category: str | None = None,
+    price_band: str | None = None,
+    query: str = "",
+    room_width_m: float = 4.0,
+    room_depth_m: float = 3.5,
+    room_height_m: float = 2.4,
+    limit: int = 8,
+    image_key: str | None = None,
+) -> StreamingResponse:
+    """The catalog sweep as it happens: one `verdict` event per piece the geometry worker settles.
+
+    A GET with a query, because that is what a browser can stream from, and the storefront is its
+    only customer - an agent asks `fit_catalog` and takes the same numbers in one answer.
+    """
+
+    async def events():
+        try:
+            async for event in TOOLS.sweep(
+                category=category or None,
+                price_band=price_band or None,
+                query=query,
+                room_width_m=room_width_m,
+                room_depth_m=room_depth_m,
+                room_height_m=room_height_m,
+                limit=limit,
+                image_key=image_key or None,
+            ):
+                yield f"event: {event['event']}\ndata: {json.dumps(_jsonable(event))}\n\n"
+        except ValueError as refused:
+            yield f"event: error\ndata: {json.dumps({'detail': str(refused)})}\n\n"
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.post("/agent/webhooks/evolus", status_code=202)

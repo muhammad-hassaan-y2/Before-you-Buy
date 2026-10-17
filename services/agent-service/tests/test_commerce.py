@@ -211,3 +211,41 @@ async def test_a_photo_room_is_swept_as_the_measured_room(rows, settings):
     answer = await tools.fit_catalog(category="sofa", image_key=photo, limit=2)
     assert answer["room"]["measured_from_photo"] is True
     assert {run["image_key"] for run in pipeline.started} == {photo}
+
+
+async def test_a_hold_takes_its_unit_off_the_shelf(rows, settings):
+    tools, pipeline = build(rows, settings)
+    held = await tools.reserve_fit(await fitted(tools, "SOF-001"), "yes, hold it")
+    assert held["stock"]["claimed"] is True
+    assert pipeline.claims[0]["key"] == f"hold:{held['id']}"
+    assert pipeline.claims[0]["lines"] == [{"sku": "SOF-001", "qty": 1}]
+
+
+async def test_a_hold_the_shelf_refuses_is_not_written(rows, settings):
+    tools, pipeline = build(rows, settings)
+    simulation_id = await fitted(tools, "SOF-001")
+    pipeline.short.add("SOF-001")
+    with pytest.raises(ValueError, match="cannot supply"):
+        await tools.reserve_fit(simulation_id, "yes, hold it")
+    assert tools.list_reservations() == []
+
+
+async def test_the_sweep_hands_over_each_verdict_the_moment_it_settles(rows, settings):
+    tools, _ = build(rows, settings)
+    events = [event async for event in tools.sweep(category="sofa", limit=3)]
+
+    assert events[0]["event"] == "start" and events[0]["total"] == 3
+    verdicts = [event for event in events if event["event"] == "verdict"]
+    assert [event["of"] for event in verdicts] == [1, 2, 3], "one event per piece, as it lands"
+    assert all({"sku", "verdict", "simulation_id"} <= set(event) for event in verdicts)
+    done = events[-1]
+    assert done["event"] == "done" and done["checked"] == 3
+    assert len(done["fits"]) + len(done["does_not_fit"]) + len(done["unproven"]) == 3
+
+
+async def test_the_streamed_sweep_and_the_tool_answer_are_the_one_sweep(rows, settings):
+    tools, _ = build(rows, settings)
+    answer = await tools.fit_catalog(category="sofa", limit=3)
+    streamed = [event async for event in tools.sweep(category="sofa", limit=3)]
+    measured = {event["sku"] for event in streamed if event["event"] == "verdict"}
+    assert measured == {item["sku"] for item in answer["fits"] + answer["does_not_fit"] + answer["unproven"]}

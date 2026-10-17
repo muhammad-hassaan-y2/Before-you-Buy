@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 from byb_agent.evolus import EvolusError
+from byb_agent.pipeline import StockShort
 from byb_agent.runs import RunStore
 from byb_agent.settings import Settings
 from byb_agent.tools import Tools
@@ -62,10 +63,21 @@ class StubPipeline:
         self._verdicts = verdicts or {}
         self._crash = crash or set()
         self.started: list[dict[str, Any]] = []
+        self.claims: list[dict[str, Any]] = []
+        # SKUs the shelf refuses, so a test can prove a bag is stopped by stock as well as by geometry.
+        self.short: set[str] = set()
         self._sku_by_id: dict[str, str] = {}
         self._room_by_id: dict[str, tuple[float, float, float]] = {}
         self._photo: dict[str, bool] = {}
         self._next = 0
+
+    async def claim_stock(self, *, key: str, lines: list[dict], reason: str) -> dict[str, Any]:
+        """The shelf as the agent sees it: it hands over what it has and refuses what it does not."""
+        for line in lines:
+            if str(line["sku"]).lower() in {sku.lower() for sku in self.short}:
+                raise StockShort(f"{line['sku']} has 0 on the shelf; {line['qty']} asked for.")
+        self.claims.append({"key": key, "lines": lines, "reason": reason})
+        return {"key": key, "lines": lines, "at": "2026-10-17T00:00:00+00:00", "reason": reason}
 
     async def catalog(self) -> list[dict]:
         return self._rows

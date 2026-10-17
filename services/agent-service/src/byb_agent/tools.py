@@ -11,6 +11,7 @@ import asyncio
 import logging
 import re
 import uuid
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -20,7 +21,7 @@ from byb_agent.contracts import AgentRun, BriefRequest, Cart, CartLine, FitAttem
 from byb_agent.evolus import Evolus
 from byb_agent.journey import FAIL_VERDICTS, PASS_VERDICTS, Journey, best_walkway, evaluate
 from byb_agent.model import AMDModel
-from byb_agent.pipeline import Pipeline
+from byb_agent.pipeline import Pipeline, PipelineError, StockShort
 from byb_agent.runs import Carts, Orders, Reservations, RunStore
 from byb_agent.settings import Settings
 from byb_agent.shortlist import listing_url, rank, score, to_candidate
@@ -221,8 +222,9 @@ class Tools:
 
         return list(await asyncio.gather(*(test(candidate, value) for candidate, value in ranked)))
 
-    async def fit_catalog(
+    async def sweep(
         self,
+        *,
         category: str | None = None,
         price_band: str | None = None,
         query: str = "",
@@ -231,8 +233,13 @@ class Tools:
         room_height_m: float = 2.4,
         limit: int = 6,
         image_key: str | None = None,
-    ) -> dict[str, Any]:
-        """Answer the question a shopper actually asks a shop: which of your pieces fit my room."""
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Measure the ranked candidates, yielding each verdict the moment its own simulation settles.
+
+        One fan-out, two doors: `fit_catalog` folds this into a single answer for an agent, and
+        `/agent/fit/stream` prints it as it goes so a storefront flips a card the second the engine
+        clears that piece instead of waiting for the slowest one in the sweep.
+        """
         rows = await self._pipeline.catalog()
         brief = _room_brief(query, room_width_m, room_depth_m, room_height_m)
         ranked = rank(
@@ -245,29 +252,47 @@ class Tools:
         )
         if not ranked:
             raise ValueError("nothing in the catalog matches that. Widen it with catalog_search before spending a fit on it.")
+        room = {
+            "width_m": room_width_m,
+            "depth_m": room_depth_m,
+            "height_m": room_height_m,
+            "measured_from_photo": bool(image_key),
+        }
+        yield {"event": "start", "room": room, "total": len(ranked), "skus": [str(row["sku"]) for row, _ in ranked]}
         semaphore = asyncio.Semaphore(self._settings.parallel_fits)
+        settled: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
 
-        async def test(row: dict, value: float) -> dict[str, Any]:
+        async def test(row: dict, value: float) -> None:
             async with semaphore:
                 attempt, ms = await evaluate(self._pipeline, brief, row, value, image_key)
             geometry = row.get("geometry") or {}
-            return {
-                **attempt.model_dump(),
-                "ms": ms,
-                "size_cm": {key: geometry.get(key) for key in ("width_cm", "depth_cm", "height_cm")},
-                "tightest_walkway_m": round(min(attempt.walkway_m.values()), 2) if attempt.walkway_m else None,
-                "verify": self._link(f"/api/v1/simulations/{attempt.simulation_id}") if attempt.simulation_id else None,
-            }
+            await settled.put(
+                {
+                    **attempt.model_dump(),
+                    "ms": ms,
+                    "size_cm": {key: geometry.get(key) for key in ("width_cm", "depth_cm", "height_cm")},
+                    "tightest_walkway_m": round(min(attempt.walkway_m.values()), 2) if attempt.walkway_m else None,
+                    "verify": self._link(f"/api/v1/simulations/{attempt.simulation_id}") if attempt.simulation_id else None,
+                }
+            )
 
-        tested = list(await asyncio.gather(*(test(row, value) for row, value in ranked)))
+        tasks = [asyncio.create_task(test(row, value)) for row, value in ranked]
+        tested: list[dict[str, Any]] = []
+        try:
+            while len(tested) < len(ranked):
+                item = await settled.get()
+                tested.append(item)
+                yield {"event": "verdict", "of": len(tested), "total": len(ranked), **item}
+        finally:
+            # A shopper who closes the tab stops the sweep; a GPU job nobody is waiting for is waste.
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
         verdicts = {item["verdict"] for item in tested}
-        return {
-            "room": {
-                "width_m": room_width_m,
-                "depth_m": room_depth_m,
-                "height_m": room_height_m,
-                "measured_from_photo": bool(image_key),
-            },
+        yield {
+            "event": "done",
+            "room": room,
             "checked": len(tested),
             "fits": [item for item in tested if item["verdict"] in PASS_VERDICTS],
             "does_not_fit": [item for item in tested if item["verdict"] in FAIL_VERDICTS],
@@ -280,6 +305,32 @@ class Tools:
                 else "No candidate settled, so nothing here is a fit."
             ),
         }
+
+    async def fit_catalog(
+        self,
+        category: str | None = None,
+        price_band: str | None = None,
+        query: str = "",
+        room_width_m: float = 4.0,
+        room_depth_m: float = 3.5,
+        room_height_m: float = 2.4,
+        limit: int = 6,
+        image_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Answer the question a shopper actually asks a shop: which of your pieces fit my room."""
+        final: dict[str, Any] = {}
+        async for event in self.sweep(
+            category=category,
+            price_band=price_band,
+            query=query,
+            room_width_m=room_width_m,
+            room_depth_m=room_depth_m,
+            room_height_m=room_height_m,
+            limit=limit,
+            image_key=image_key,
+        ):
+            final = event
+        return {key: value for key, value in final.items() if key != "event"}
 
     async def start_journey(
         self,
@@ -378,6 +429,10 @@ class Tools:
             confirmation=words,
             created_at=_now(),
         )
+        if reservation.sku:
+            reservation.stock = await self._claim(
+                f"hold:{reservation.id}", [reservation], reason=f"hold {reservation.id} on {reservation.sku}"
+            )
         self._reservations.put(reservation)
         return {
             **reservation.model_dump(),
@@ -512,8 +567,10 @@ class Tools:
             )
         combined = self._combine(cart)
         totals = _totals(cart.lines)
+        order_id = _new_run_id()
+        claim = await self._claim(f"order:{order_id}", cart.lines, reason=f"order draft {order_id}")
         order = Order(
-            id=_new_run_id(),
+            id=order_id,
             cart_id=cart.id,
             lines=[line.model_copy(deep=True) for line in cart.lines],
             currency="EUR",
@@ -532,6 +589,7 @@ class Tools:
             ],
             combined=combined,
             room=dict(cart.room or {}),
+            stock=claim,
             **totals,
         )
         self._orders.put(order)
@@ -557,6 +615,23 @@ class Tools:
         if cart is None:
             raise ValueError(f"unknown cart {cart_id!r}. Bags live in this process; start one with add_to_cart.")
         return cart
+
+    async def _claim(self, key: str, lines: list[Any], *, reason: str) -> dict[str, Any]:
+        """Ask the shelf for the units a hold or a draft commits, keyed so a retry does not take twice.
+
+        A short shelf stops the order — the shop cannot sell what it does not have. A shelf that
+        cannot be read does not: an unreachable count is not an empty one, and what the merchant
+        sees is the difference.
+        """
+        wanted = [{"sku": str(line.sku), "qty": int(getattr(line, "quantity", 1) or 1)} for line in lines]
+        try:
+            claim = await self._pipeline.claim_stock(key=key, lines=wanted, reason=reason)
+        except StockShort as short:
+            raise ValueError(f"the shop cannot supply it: {short}") from short
+        except PipelineError as unreachable:
+            logger.warning("stock claim %s: %s", key, unreachable)
+            return {"claimed": False, "key": key, "units": wanted, "why": str(unreachable)}
+        return {"claimed": True, "key": key, "units": claim.get("lines"), "at": claim.get("at")}
 
     def _attach(self, cart: Cart, line: CartLine, simulation_id: str | None, detail: dict[str, Any], geometry: dict | None) -> None:
         """Copy the engine's own word for a piece onto the line, so a bag can be checked out without re-measuring it."""

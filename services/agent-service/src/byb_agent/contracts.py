@@ -100,6 +100,7 @@ class Reservation(JsonModel):
     confirmation: str = Field(description="What the human said, verbatim.")
     status: str = Field(default="pending_merchant", description="pending_merchant, accepted or released.")
     created_at: str = ""
+    stock: dict | None = Field(default=None, description="What the shelf gave up for this hold, or why it could not say.")
 
 
 class BriefRequest(JsonModel):
@@ -176,3 +177,4 @@ class Order(JsonModel):
     proofs: list[dict] = Field(default_factory=list, description="One entry per line: the simulation that cleared it and the room it cleared.")
     combined: dict | None = Field(default=None, description="The set verdict - footprints and walkways added across the bag.")
     room: dict | None = None
+    stock: dict | None = Field(default=None, description="The units this draft took off the shelf, or the reason the shop could not read the count.")

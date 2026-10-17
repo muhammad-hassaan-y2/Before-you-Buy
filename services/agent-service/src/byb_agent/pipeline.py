@@ -23,6 +23,10 @@ class PipelineError(RuntimeError):
     """The pipeline could not be reached or refused the job."""
 
 
+class StockShort(PipelineError):
+    """The shelf refused a claim: the shop has fewer of a piece than the bag asks for."""
+
+
 class Pipeline:
     def __init__(self, client: httpx.AsyncClient, settings: Settings) -> None:
         self._client = client
@@ -31,6 +35,42 @@ class Pipeline:
     @property
     def gateway(self) -> str:
         return self._settings.gateway_url.rstrip("/")
+
+    @property
+    def catalog(self) -> str:
+        """catalog-service owns the shelf, so a claim goes to it rather than through a queue."""
+        return self._settings.catalog_url.rstrip("/")
+
+    async def stock(self) -> list[dict[str, Any]]:
+        response = await self._client.get(f"{self.catalog}/api/v1/stock", timeout=15)
+        response.raise_for_status()
+        return list(response.json())
+
+    async def claim_stock(self, *, key: str, lines: list[dict[str, Any]], reason: str) -> dict[str, Any]:
+        """Take the units a hold or an order draft is committing, once and only once for that key.
+
+        Raises StockShort when the shop cannot supply the bag. It does not raise when the shelf
+        cannot be read: an unreachable count is not an empty one, and the caller says which it got.
+        """
+        try:
+            response = await self._client.post(
+                f"{self.catalog}/api/v1/stock/claim",
+                json={"key": key, "lines": lines, "reason": reason},
+                timeout=15,
+            )
+        except httpx.HTTPError as exc:
+            raise PipelineError(f"could not reach the shelf: {exc}") from exc
+        if response.status_code == 409:
+            raise StockShort(str(response.json().get("detail", "the shelf refused the claim")))
+        response.raise_for_status()
+        return dict(response.json())
+
+    async def release_stock(self, key: str) -> None:
+        """Put a claim back, when a person at the shop releases the hold or drops the draft."""
+        try:
+            await self._client.post(f"{self.catalog}/api/v1/stock/release", json={"key": key}, timeout=15)
+        except httpx.HTTPError as exc:
+            logger.warning("could not release claim %s: %s", key, exc)
 
     async def catalog(self) -> list[dict[str, Any]]:
         response = await self._client.get(f"{self.gateway}/api/v1/catalog", timeout=20)
