@@ -260,6 +260,24 @@ export async function fetchSimulation(id: string): Promise<Simulation> {
   return response.json()
 }
 
+export type Supplier = { name: string; region: string }
+
+/** The terms catalog-service derives for one SKU. Read from the service rather than written
+ *  here because a storefront that invents its own prices cannot be checked against anything. */
+export type CommerceTerms = {
+  currency: string
+  retail_eur: number
+  cost_eur: number
+  margin_eur: number
+  margin_pct: number
+  volume_m3: number
+  supplier: Supplier
+  lead_days: number
+  freight: string
+  product_url: string
+  basis: string
+}
+
 export type CatalogRow = {
   sku: string
   name: string
@@ -268,11 +286,19 @@ export type CatalogRow = {
   material?: string | null
   price_band?: string | null
   geometry: ProductGeometry
+  commerce: CommerceTerms
 }
 
 /** The gateway proxies catalog-service, so the browser still talks to one origin. */
 export async function fetchCatalog(): Promise<CatalogRow[]> {
   const response = await fetch(`${BASE}/catalog`, { cache: "no-store" })
+  if (!response.ok) throw new ApiError(await message(response))
+  return response.json()
+}
+
+/** One shelf of it, for a product page that only needs the piece it is showing. */
+export async function fetchProduct(sku: string): Promise<CatalogRow> {
+  const response = await fetch(`${BASE}/catalog/${encodeURIComponent(sku)}`, { cache: "no-store" })
   if (!response.ok) throw new ApiError(await message(response))
   return response.json()
 }

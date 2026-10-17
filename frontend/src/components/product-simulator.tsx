@@ -1,0 +1,129 @@
+"use client"
+
+import { AlertTriangle, ImageIcon, Loader2, Ruler, X } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+
+import { FitResult, ProgressStrip } from "@/components/fit-result"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { createSimulation, pollSimulation, type CatalogRow, type Simulation } from "@/lib/api"
+import { cn } from "@/lib/utils"
+
+type Props = { row: CatalogRow }
+
+/** The listing tests itself against the shopper's room by pasting its own URL — which is the
+ *  round trip the catalog service guarantees: this link resolves back to this SKU. */
+export function ProductSimulator({ row }: Props) {
+  const [width, setWidth] = useState("4.0")
+  const [depth, setDepth] = useState("3.5")
+  const [height, setHeight] = useState("2.4")
+  const [file, setFile] = useState<File | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [simulation, setSimulation] = useState<Simulation | null>(null)
+  const [placement, setPlacement] = useState<string | null>(null)
+  const controller = useRef<AbortController | null>(null)
+
+  useEffect(() => () => controller.current?.abort(), [])
+
+  async function run() {
+    controller.current?.abort()
+    controller.current = new AbortController()
+    setBusy(true)
+    setError(null)
+    setSimulation(null)
+    setPlacement(null)
+    try {
+      const accepted = await createSimulation({
+        link: row.commerce.product_url,
+        file,
+        roomWidthM: Number(width) || 4,
+        roomDepthM: Number(depth) || 3.5,
+        roomHeightM: Number(height) || 2.4,
+        notes: [row.brand, row.name, row.material].filter(Boolean).join(" "),
+      })
+      const settled = await pollSimulation(accepted.id, setSimulation, { signal: controller.current.signal })
+      if (settled && settled.status !== "completed") {
+        setError(settled.error ?? "The workers did not finish in time. Check the service logs.")
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unexpected error")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const report = simulation?.fit_report ?? null
+
+  return (
+    <Card className="shadow-lg shadow-black/5">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Ruler className="size-4 text-primary" /> Test it in your room
+        </CardTitle>
+        <CardDescription>
+          {busy
+            ? "Reading the listing, measuring the room and solving the footprint…"
+            : "The same six services the fit agent calls, run live on this piece."}
+        </CardDescription>
+        <ProgressStrip status={simulation?.status} started={busy} />
+      </CardHeader>
+
+      <CardContent className="space-y-5">
+        <div className="grid grid-cols-3 gap-3">
+          {(
+            [
+              ["Width", width, setWidth, "pdp-width"],
+              ["Depth", depth, setDepth, "pdp-depth"],
+              ["Height", height, setHeight, "pdp-height"],
+            ] as const
+          ).map(([labelText, value, setter, id]) => (
+            <div key={id} className="space-y-1.5">
+              <Label htmlFor={id} className="text-xs text-muted-foreground">
+                {labelText} (m)
+              </Label>
+              <Input id={id} inputMode="decimal" value={value} onChange={(event) => setter(event.target.value)} disabled={busy} className="text-center" />
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="pdp-photo" className="text-xs text-muted-foreground">
+            <ImageIcon className="size-3.5" /> Room photo (optional)
+          </Label>
+          <label
+            htmlFor="pdp-photo"
+            className={cn(
+              "flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed px-3 py-3 text-sm transition-colors",
+              file ? "border-primary/60 bg-primary/5" : "hover:border-ring hover:bg-muted/40",
+            )}
+          >
+            <span className="truncate text-muted-foreground">{file ? file.name : "Drop or choose a JPG/PNG to measure the room from"}</span>
+            <input id="pdp-photo" type="file" accept="image/*" className="sr-only" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+          </label>
+          {file && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => setFile(null)}>
+              <X className="size-3.5" /> Remove
+            </Button>
+          )}
+        </div>
+
+        <Button size="lg" className="w-full" onClick={run} disabled={busy}>
+          {busy ? <Loader2 className="animate-spin" /> : <Ruler className="size-4" />}
+          {busy ? "Running simulation…" : "Simulate in my room"}
+        </Button>
+
+        {error && (
+          <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {report && simulation && <FitResult simulation={simulation} placement={placement} onPlacement={setPlacement} />}
+      </CardContent>
+    </Card>
+  )
+}

@@ -209,6 +209,9 @@ export const reservations = [
   },
 ]
 
+/** Terms as catalog-service derives them for those exact boxes, read off `terms_for` on
+ *  2026-10-17 — a fixture that disagreed with the service would let the shop quote a price
+ *  nothing computes. */
 export const catalog = [
   {
     sku: "BYB-KURA-3S",
@@ -218,6 +221,19 @@ export const catalog = [
     material: "linen",
     price_band: "$$",
     geometry: { width_cm: 200, depth_cm: 90, height_cm: 44, clearance_cm: 10 },
+    commerce: {
+      currency: "EUR",
+      retail_eur: 919.0,
+      cost_eur: 515.0,
+      margin_eur: 404.0,
+      margin_pct: 44.0,
+      volume_m3: 1.512,
+      supplier: { name: "Porto Frame Works", region: "PT" },
+      lead_days: 18,
+      freight: "pallet",
+      product_url: "https://shop.example.com/p/kura-kura-three-seat-sofa-bybkura3s/",
+      basis: "derived from the SKU's price band, category and box size; no supplier feed connected",
+    },
   },
   {
     sku: "BYB-BILLY-80",
@@ -227,8 +243,68 @@ export const catalog = [
     material: "oak veneer",
     price_band: "$",
     geometry: { width_cm: 80, depth_cm: 28, height_cm: 202, clearance_cm: 5 },
+    commerce: {
+      currency: "EUR",
+      retail_eur: 399.0,
+      cost_eur: 176.0,
+      margin_eur: 223.0,
+      margin_pct: 55.9,
+      volume_m3: 0.4525,
+      supplier: { name: "Silesia Board Mills", region: "PL" },
+      lead_days: 15,
+      freight: "pallet",
+      product_url: "https://shop.example.com/p/billy-billy-bookcase-80-cm-bybbilly80/",
+      basis: "derived from the SKU's price band, category and box size; no supplier feed connected",
+    },
   },
 ]
+
+/** What `fit_catalog` answered for a 4 × 3.5 m room: one clears the walkway, one does not. */
+export const catalogFits = {
+  tool: "fit_catalog",
+  result: {
+    room: { width_m: 4, depth_m: 3.5, height_m: 2.4, measured_from_photo: false },
+    checked: 2,
+    fits: [
+      {
+        sku: "BYB-KURA-3S",
+        name: "KURA three-seat sofa",
+        price_band: "$$",
+        score: 0.81,
+        simulation_id: "sim-e2e-1",
+        status: "completed",
+        verdict: "fits",
+        coverage_pct: 12.4,
+        walkway_m: { front: 0.6 },
+        reason: null,
+        ms: 2400,
+        size_cm: { width_cm: 200, depth_cm: 90, height_cm: 84 },
+        tightest_walkway_m: 0.6,
+        verify: null,
+      },
+    ],
+    does_not_fit: [
+      {
+        sku: "BYB-BILLY-80",
+        name: "BILLY bookcase 80 cm",
+        price_band: "$",
+        score: 0.6,
+        simulation_id: "sim-e2e-2",
+        status: "completed",
+        verdict: "too_large",
+        coverage_pct: 0,
+        walkway_m: {},
+        reason: null,
+        ms: 1900,
+        size_cm: { width_cm: 80, depth_cm: 28, height_cm: 202 },
+        tightest_walkway_m: null,
+        verify: null,
+      },
+    ],
+    unproven: [],
+    note: "Only the geometry engine's own verdict is reported here.",
+  },
+}
 
 export const simulation = {
   id: "sim-e2e-1",

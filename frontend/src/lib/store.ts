@@ -1,0 +1,90 @@
+/** The shop's own reading of a catalog row. Everything here is arithmetic over what the
+ *  gateway already sent — the storefront never holds a price the service did not compute. */
+
+import type { CatalogRow } from "@/lib/api"
+
+export type StoreSort = "fit" | "price" | "margin" | "lead" | "size"
+
+export type StoreFilter = {
+  query: string
+  category: string | null
+  priceBand: string | null
+  freight: string | null
+  sort: StoreSort
+}
+
+export const EMPTY_FILTER: StoreFilter = { query: "", category: null, priceBand: null, freight: null, sort: "fit" }
+
+/** Verdicts the geometry engine passes. Mirrors PASS_VERDICTS in agent-service, which is the
+ *  set that can be recommended, so a card never shows green for something the agent would refuse. */
+export const PASS_VERDICTS = ["fits", "tight"]
+export const FAIL_VERDICTS = ["too_large", "blocked"]
+
+const eur = new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 })
+
+export function price(value: number): string {
+  return eur.format(value)
+}
+
+export function match(row: CatalogRow, filter: StoreFilter): boolean {
+  if (filter.category && row.category !== filter.category) return false
+  if (filter.priceBand && row.price_band !== filter.priceBand) return false
+  if (filter.freight && row.commerce.freight !== filter.freight) return false
+  const words = filter.query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  if (!words.length) return true
+  const haystack = [row.name, row.brand, row.category, row.material ?? "", row.sku, row.commerce.supplier.name]
+    .join(" ")
+    .toLowerCase()
+  return words.every((word) => haystack.includes(word))
+}
+
+export function sortRows(rows: CatalogRow[], filter: StoreFilter, verdicts: Record<string, string>): CatalogRow[] {
+  const listed = [...rows]
+  if (filter.sort === "fit") {
+    // Measured pieces first, and inside them the shop's own walkway verdict, then price.
+    return listed.sort((a, b) => rank(verdicts[a.sku]) - rank(verdicts[b.sku]) || a.commerce.retail_eur - b.commerce.retail_eur)
+  }
+  const key: Record<Exclude<StoreSort, "fit">, (row: CatalogRow) => number> = {
+    price: (row) => row.commerce.retail_eur,
+    margin: (row) => -row.commerce.margin_pct,
+    lead: (row) => row.commerce.lead_days,
+    size: (row) => -row.commerce.volume_m3,
+  }
+  const read = key[filter.sort]
+  return listed.sort((a, b) => read(a) - read(b) || a.name.localeCompare(b.name))
+}
+
+function rank(verdict: string | undefined): number {
+  if (!verdict) return 3
+  if (PASS_VERDICTS.includes(verdict)) return 0
+  return FAIL_VERDICTS.includes(verdict) ? 2 : 1
+}
+
+export function categories(rows: CatalogRow[]): string[] {
+  return [...new Set(rows.map((row) => row.category))].sort()
+}
+
+export function bands(rows: CatalogRow[]): string[] {
+  return [...new Set(rows.map((row) => row.price_band).filter((band) => !!band))].sort() as string[]
+}
+
+/** The words a card puts next to a verdict, so the badge says what was measured rather than
+ *  looking like a stock indicator. */
+export function verdictLabel(verdict: string | undefined): string {
+  if (!verdict) return "Not measured"
+  return (
+    {
+      fits: "Fits",
+      tight: "Tight fit",
+      too_large: "Too large",
+      blocked: "No clear spot",
+    }[verdict] ?? verdict
+  )
+}
+
+export function verdictVariant(verdict: string | undefined): "success" | "warning" | "destructive" | "outline" {
+  if (!verdict) return "outline"
+  if (PASS_VERDICTS.includes(verdict)) return verdict === "tight" ? "warning" : "success"
+  if (FAIL_VERDICTS.includes(verdict)) return "destructive"
+  return "outline"
+}

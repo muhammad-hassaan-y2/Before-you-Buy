@@ -65,6 +65,32 @@ export type AgentRun = {
 
 export type ToolSpec = { name: string; description: string }
 
+/** One piece the geometry worker actually measured, from the `fit_catalog` capability. */
+export type CatalogFit = FitAttempt & {
+  ms: number
+  size_cm: { width_cm: number | null; depth_cm: number | null; height_cm: number | null }
+  tightest_walkway_m: number | null
+  verify: string | null
+}
+
+/** Which of the shop's pieces fit the room the caller described. Split the way the service
+ *  splits it, because "unproven" is not the same claim as "does not fit". */
+export type CatalogFits = {
+  room: { width_m: number; depth_m: number; height_m: number; measured_from_photo: boolean }
+  checked: number
+  fits: CatalogFit[]
+  does_not_fit: CatalogFit[]
+  unproven: CatalogFit[]
+  note: string
+}
+
+/** sku -> verdict, for a grid that wants to badge every card from one measured sweep. */
+export function verdictsOf(fits: CatalogFits): Record<string, string> {
+  const verdicts: Record<string, string> = {}
+  for (const attempt of [...fits.fits, ...fits.does_not_fit, ...fits.unproven]) verdicts[attempt.sku] = attempt.verdict ?? "unproven"
+  return verdicts
+}
+
 /** How to add the MCP connector to a client, as agent-service itself describes it. Read from the
  *  service rather than written here because the answer changes with the shop's own environment:
  *  whether there is a public URL at all, and whether the door is keyed. */
