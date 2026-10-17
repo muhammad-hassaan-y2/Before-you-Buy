@@ -319,6 +319,40 @@ async def catalog_one(sku: str, request: Request) -> dict:
     return response.json()
 
 
+@app.get("/api/v1/stock")
+async def stock_browse(request: Request) -> list[dict]:
+    """The shelf, read-only: the storefront polls this so a count it shows is the shop's, not its own."""
+    return await _catalog(request, "/api/v1/stock")
+
+
+@app.get("/api/v1/stock/events")
+async def stock_events(request: Request) -> list[dict]:
+    """Every unit this shop's own holds and order drafts took, newest first."""
+    return await _catalog(request, "/api/v1/stock/events")
+
+
+@app.get("/api/v1/stock/{sku}")
+async def stock_one(sku: str, request: Request) -> dict:
+    return await _catalog(request, f"/api/v1/stock/{sku}")
+
+
+async def _catalog(request: Request, path: str):
+    transport: DaprTransport = request.app.state.transport
+    try:
+        response = await request.app.state.http.get(
+            transport.url("catalog-service", path), headers=transport.headers(), timeout=10
+        )
+        if response.status_code == 404:
+            raise HTTPException(status_code=404, detail=f"nothing at {path}")
+        response.raise_for_status()
+    except HTTPException:
+        raise
+    except httpx.HTTPError as exc:
+        logger.warning("catalog-service unreachable: %s", exc)
+        raise HTTPException(status_code=502, detail="catalog-service unavailable") from exc
+    return response.json()
+
+
 def start() -> None:
     """`poetry run start` - production entrypoint used by the Docker image."""
     import uvicorn
