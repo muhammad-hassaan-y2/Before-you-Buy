@@ -19,8 +19,16 @@ export const tools = {
       description: "Judge two or more pieces as one purchase, measuring each and combining the footprints.",
     },
     { name: "find_alternatives", description: "Pieces in the same category that are no wider, each tested against the room." },
+    {
+      name: "fit_catalog",
+      description:
+        "Which of the shop's pieces actually fit this room, measured in parallel and split into fits, does-not-fit and unproven.",
+    },
     { name: "proven_fit_offer", description: "An agent-readable offer that only a proven fit can back." },
-    { name: "reserve_fit", description: "Hold a proven-fitting piece, gated behind the shopper's own confirmation." },
+    {
+      name: "reserve_fit",
+      description: "Hold a proven-fitting piece, gated behind the shopper's own confirmation; the MCP door asks them in their own client when it can.",
+    },
     { name: "returns_estimate", description: "What a fit check is worth, as arithmetic over stated assumptions." },
     {
       name: "start_journey",
@@ -28,6 +36,47 @@ export const tools = {
     },
     { name: "journey_status", description: "The trace of a journey, including the final decision." },
   ],
+}
+
+/** What agent-service says about its own connector. A local run has no public address, which is
+ *  exactly the case the page has to explain rather than hide. */
+export const connect = {
+  name: "buy-you-before",
+  title: "Buy You Before fit assurance",
+  url: "/mcp/",
+  transport: "streamable-http",
+  public: false,
+  mode: "stateless",
+  elicitation: false,
+  auth: {
+    type: "none",
+    header: null,
+    works_in: ["chatgpt", "claude.ai", "claude-code", "cursor", "evolus"],
+    does_not_work_in: [],
+    why: "Anyone with the URL can spend the shop's GPU jobs, so this is a demo setting.",
+  },
+  capabilities: {
+    tools: ["catalog_search", "fit_catalog", "reserve_fit"],
+    resources: ["byb://catalog", "byb://fit/{simulation_id}", "byb://run/{run_id}"],
+    prompts: ["fit-my-room", "hold-the-fit"],
+  },
+  clients: {
+    chatgpt: {
+      label: "ChatGPT (web)",
+      requires_https: true,
+      steps: [
+        "Set PUBLIC_BASE_URL to the https tunnel URL and restart agent-service.",
+        "In chatgpt.com, open Plugins -> + -> Add custom MCP server.",
+        "Accept the warning, create it as a plugin, then @-mention Buy You Before in a chat.",
+      ],
+      note: "ChatGPT will not accept a static bearer header.",
+    },
+    claude: { label: "Claude (claude.ai)", requires_https: true, steps: ["Settings -> Connectors -> Add custom connector."] },
+    "claude-code": { label: "Claude Code", requires_https: false, command: "claude mcp add --transport http buy-you-before /mcp/" },
+    cursor: { label: "Cursor", requires_https: false, config: { mcpServers: { "buy-you-before": { url: "/mcp/" } } } },
+    evolus: { label: "Evolus Studio", requires_https: true, steps: ["Add an MCP connector and paste the URL."] },
+  },
+  wiring: { PUBLIC_BASE_URL: "the https origin a client can reach" },
 }
 
 export const journey = {

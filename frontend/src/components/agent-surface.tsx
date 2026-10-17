@@ -1,37 +1,35 @@
 "use client"
 
-import { Check, Copy, Wrench } from "lucide-react"
+import { Wrench } from "lucide-react"
 import { useEffect, useState } from "react"
 
+import { ConnectorInstall } from "@/components/connector-install"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { fetchTools, type ToolSpec } from "@/lib/agent"
+import { fetchConnect, fetchTools, type ConnectGuide, type ToolSpec } from "@/lib/agent"
+
+/** Where this page can reach the connector. Read from the window, so it is only called once the
+ *  component is a browser: Evolus and ChatGPT need https, localhost does not. */
+function browserMcpUrl(): string {
+  const origin = window.location.origin
+  const host = window.location.hostname
+  const secure = origin.startsWith("https:") || (origin.startsWith("http:") && !["localhost", "127.0.0.1", "::1"].includes(host))
+  return `${secure ? origin.replace(/^http:/, "https:") : origin}/mcp/`
+}
 
 /** The capability surface an Evolus agent, a workflow step or an MCP client is handed. */
 export function AgentSurface() {
   const [tools, setTools] = useState<ToolSpec[]>([])
-  const [copied, setCopied] = useState(false)
+  const [guide, setGuide] = useState<ConnectGuide | null>(null)
   const [mcpUrl, setMcpUrl] = useState("")
 
   useEffect(() => {
     fetchTools().then(setTools, () => setTools([]))
-    // Evolus reaches a tunnel host over https; localhost stays as it is.
-    const origin = window.location.origin
-    const host = window.location.hostname
-    const secure = origin.startsWith("https:") || (origin.startsWith("http:") && !["localhost", "127.0.0.1", "::1"].includes(host))
-    setMcpUrl(`${secure ? origin.replace(/^http:/, "https:") : origin}/mcp/`)
+    fetchConnect().then((known) => {
+      setMcpUrl(browserMcpUrl())
+      setGuide(known)
+    })
   }, [])
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(mcpUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1800)
-    } catch {
-      setCopied(false)
-    }
-  }
 
   return (
     <Card className="shadow-lg shadow-black/5">
@@ -57,15 +55,15 @@ export function AgentSurface() {
           ))}
         </ul>
 
-        {mcpUrl && (
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 p-3">
-            <span className="text-xs tracking-[0.12em] text-muted-foreground uppercase">MCP endpoint</span>
-            <code className="min-w-0 flex-1 truncate font-mono text-xs">{mcpUrl}</code>
-            <Button type="button" variant="outline" size="sm" onClick={copy}>
-              {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-              {copied ? "Copied" : "Copy"}
-            </Button>
-          </div>
+        {guide ? (
+          <ConnectorInstall guide={guide} fallbackUrl={mcpUrl} />
+        ) : (
+          mcpUrl && (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 p-3">
+              <span className="text-xs tracking-[0.12em] text-muted-foreground uppercase">MCP endpoint</span>
+              <code className="min-w-0 flex-1 truncate font-mono text-xs">{mcpUrl}</code>
+            </div>
+          )
         )}
       </CardContent>
     </Card>

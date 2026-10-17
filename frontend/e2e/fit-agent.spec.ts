@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test"
 
-import { estimate, journey, reservations, tools } from "./fixtures"
+import { connect, estimate, journey, reservations, tools } from "./fixtures"
 
 test.beforeEach(async ({ page }) => {
   await page.route("**/agent/tools", (route) => route.fulfill({ json: tools }))
+  await page.route("**/agent/connect", (route) => route.fulfill({ json: connect }))
   await page.route("**/agent/reservations**", (route) => route.fulfill({ json: reservations }))
   await page.route("**/agent/tools/returns_estimate", (route) => route.fulfill({ json: estimate }))
   await page.route("**/agent/brief", (route) => route.fulfill({ status: 202, json: { run_id: journey.id, status: "running", poll: `/agent/runs/${journey.id}` } }))
@@ -59,6 +60,15 @@ test("the capability surface advertises the MCP door", async ({ page }) => {
   await page.goto("/room-simulator")
   await expect(page.getByText("start_journey")).toBeVisible()
   await expect(page.getByText(/\/mcp\/$/)).toBeVisible()
+})
+
+test("the page tells a person how to add the connector to their own assistant", async ({ page }) => {
+  await page.goto("/room-simulator")
+  await expect(page.getByText("Add the connector")).toBeVisible()
+  await expect(page.getByText("Add custom MCP server")).toBeVisible()
+
+  await page.getByRole("button", { name: "Claude Code" }).click()
+  await expect(page.getByText("claude mcp add --transport http buy-you-before")).toBeVisible()
 })
 
 test("no Evolus widget is loaded while the workspace is unconfigured", async ({ page }) => {

@@ -65,6 +65,29 @@ export type AgentRun = {
 
 export type ToolSpec = { name: string; description: string }
 
+/** How to add the MCP connector to a client, as agent-service itself describes it. Read from the
+ *  service rather than written here because the answer changes with the shop's own environment:
+ *  whether there is a public URL at all, and whether the door is keyed. */
+export type ConnectGuide = {
+  name: string
+  title: string
+  url: string
+  transport: string
+  public: boolean
+  mode: "sessions" | "stateless"
+  elicitation: boolean
+  auth: {
+    type: string
+    header: string | null
+    works_in: string[]
+    does_not_work_in: string[]
+    why: string
+  }
+  capabilities: { tools: string[]; resources: string[]; prompts: string[] }
+  clients: Record<string, { label: string; requires_https: boolean; steps?: string[]; command?: string; config?: Record<string, unknown>; note?: string }>
+  wiring: Record<string, string>
+}
+
 /** A hold the agent took on a shopper's own yes. Not an order: nothing is charged and nothing
  *  ships, and the words the confirmation came in with are on the record. */
 export type Reservation = {
@@ -151,6 +174,16 @@ export async function listRuns(limit = 10): Promise<{ id: string; status: string
 export async function fetchTools(): Promise<ToolSpec[]> {
   const body: { tools: ToolSpec[] } = await (await request("/tools")).json()
   return body.tools
+}
+
+/** The install guide for this exact deployment: the URL, the auth it actually expects, and the
+ *  steps per client. Null when the service is older than the guide or not reachable. */
+export async function fetchConnect(): Promise<ConnectGuide | null> {
+  try {
+    return await (await request("/connect")).json()
+  } catch {
+    return null
+  }
 }
 
 /** The holds waiting on a person at the shop, newest first. */

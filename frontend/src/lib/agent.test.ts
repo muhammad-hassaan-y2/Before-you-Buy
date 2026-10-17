@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AgentError, chat, fetchReservations, fetchTools, pollRun, returnsEstimate, runCost, startJourney, type AgentRun, type AgentStep } from "@/lib/agent"
+import { AgentError, chat, fetchConnect, fetchReservations, fetchTools, pollRun, returnsEstimate, runCost, startJourney, type AgentRun, type AgentStep } from "@/lib/agent"
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -109,6 +109,20 @@ describe("fetchTools", () => {
   it("unwraps the catalog the agent service publishes", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ tools: [{ name: "simulate_product", description: "Measure one product." }] })))
     await expect(fetchTools()).resolves.toEqual([{ name: "simulate_product", description: "Measure one product." }])
+  })
+})
+
+describe("fetchConnect", () => {
+  it("reads the install guide the service describes itself with", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ url: "https://byb.test/mcp/", public: true, clients: { chatgpt: { label: "ChatGPT (web)" } } })))
+    const guide = await fetchConnect()
+    expect(guide?.url).toBe("https://byb.test/mcp/")
+    expect(guide?.clients.chatgpt.label).toBe("ChatGPT (web)")
+  })
+
+  it("is quiet about a service that has no guide, rather than failing the page", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ detail: "Not Found" }, 404)))
+    await expect(fetchConnect()).resolves.toBeNull()
   })
 })
 
