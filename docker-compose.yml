@@ -358,7 +358,12 @@ services:
       VLLM_API_KEY: ${VLLM_API_KEY:-}
       # The tunnel address Evolus calls back into, once there is one.
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      # The connector door: a key outside agents must send, and whether it keeps real sessions.
+      MCP_CONNECT_TOKEN: ${AGENT_MCP_CONNECT_TOKEN:-}
+      MCP_SESSIONS: ${AGENT_MCP_SESSIONS:-false}
+      ALLOWED_ORIGINS: ${AGENT_ALLOWED_ORIGINS:-http://localhost:3000,http://frontend:3000,http://localhost:6274,http://127.0.0.1:6274}
       MAX_CANDIDATES: ${AGENT_MAX_CANDIDATES:-4}
+      MAX_CATALOG_FITS: ${AGENT_MAX_CATALOG_FITS:-8}
       PARALLEL_FITS: ${AGENT_PARALLEL_FITS:-2}
       SETTLE_TIMEOUT_S: ${AGENT_SETTLE_TIMEOUT_S:-120}
       MAX_JOINT_PIECES: ${AGENT_MAX_JOINT_PIECES:-4}

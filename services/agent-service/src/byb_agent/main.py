@@ -2,8 +2,9 @@
 
 One set of capabilities, reachable through several doors:
 
+* `/mcp/` - the MCP connector, for the agent itself: ChatGPT, Claude, Cursor or Evolus.
 * `/agent/tools` and `/agent/tools/{name}` - REST, for an Evolus workflow step or a webhook.
-* `/mcp/` - the MCP connector, for the agent itself.
+* `/agent/connect` - how to add that connector, per client.
 * `/agent/brief`, `/agent/runs`, `/agent/chat` - the shop's own UI.
 * `/agent/reservations` - the holds a human agreed to, waiting on a person at the shop.
 
@@ -25,6 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from byb_agent.contracts import BriefRequest
 from byb_agent.evolus import Evolus, EvolusError
 from byb_agent.mcp_server import build_server, http_app
+from byb_agent.mcp_server import connect as connect_manifest
 from byb_agent.model import AMDModel
 from byb_agent.pipeline import Pipeline
 from byb_agent.runs import Reservations, RunStore
@@ -44,7 +46,7 @@ PIPELINE = Pipeline(HTTP, settings)
 EVOLUS = Evolus(HTTP, settings)
 MODEL = AMDModel(HTTP, settings)
 TOOLS = Tools(PIPELINE, EVOLUS, MODEL, STORE, settings, RESERVATIONS)
-MCP_SERVER = build_server(TOOLS)
+MCP_SERVER = build_server(TOOLS, settings)
 MCP_APP = http_app(MCP_SERVER, settings)
 
 
@@ -59,10 +61,20 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="Buy You Before - Agent Service", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://frontend:3000"],
+    allow_origins=settings.origin_list,
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", INTERNAL_TOKEN_HEADER, "X-Conversation-Id"],
+    allow_headers=[
+        "Content-Type",
+        INTERNAL_TOKEN_HEADER,
+        "X-Conversation-Id",
+        # An MCP client outside our own page: ChatGPT, Claude, Cursor, the MCP inspector.
+        "Authorization",
+        "Mcp-Session-Id",
+        "Mcp-Protocol-Version",
+        "Last-Event-ID",
+    ],
+    expose_headers=["Mcp-Session-Id", "Mcp-Protocol-Version"],
 )
 app.mount("/mcp", MCP_APP)
 
@@ -78,6 +90,7 @@ def health() -> dict[str, Any]:
         "workflow": settings.evolus_workflow_id or "-",
         "library": settings.evolus_library_id or "-",
         "mcp": "/mcp",
+        "connect": "/agent/connect",
         "runs": str(len(STORE)),
         "tools": str(len(SPEC)),
         "reservations": str(len(RESERVATIONS)),
@@ -88,6 +101,16 @@ def health() -> dict[str, Any]:
 def tools_catalog() -> dict[str, Any]:
     """What the agent can do, in the shape an Evolus AI Tool list wants."""
     return {"tools": [{"name": name, "description": description} for name, description in SPEC.items()]}
+
+
+@app.get("/agent/connect")
+def connect() -> dict[str, Any]:
+    """How to add this connector to ChatGPT, Claude, Claude Code, Cursor or Evolus.
+
+    The page and a person both read this, because the honest answer differs per client and per
+    how the shop wired its own environment.
+    """
+    return connect_manifest(settings)
 
 
 @app.post("/agent/tools/{name}")

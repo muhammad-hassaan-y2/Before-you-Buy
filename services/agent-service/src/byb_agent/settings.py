@@ -10,6 +10,19 @@ class Settings(BaseSettings):
 
     internal_token: str = "dev-internal-token"
 
+    # Browser origins allowed to call this service. The MCP Inspector is in the list because that
+    # is how someone pokes a connector without writing a client for it.
+    allowed_origins: str = "http://localhost:3000,http://frontend:3000,http://localhost:6274,http://127.0.0.1:6274"
+
+    @property
+    def origin_list(self) -> list[str]:
+        origins = [origin.strip() for origin in self.allowed_origins.split(",") if origin.strip()]
+        # The shop's own page is served from the public origin, so that origin is allowed too.
+        base = self.public_base_url.rstrip("/")
+        if base and base not in origins:
+            origins.append(base)
+        return origins
+
     # The deterministic pipeline the agent drives.
     gateway_url: str = "http://localhost:8001"
     catalog_url: str = "http://localhost:8004"
@@ -31,9 +44,19 @@ class Settings(BaseSettings):
 
     # Where Evolus can reach this service, for workflow webhook callbacks.
     public_base_url: str = ""
+    # The key an external MCP client must send as `Authorization: Bearer`. Empty means the
+    # connector answers anyone, which is what a hackathon demo wants and a live shop does not.
+    mcp_connect_token: str = ""
+    # Real MCP sessions instead of one stateless request per call. Sessions need a back-channel, so
+    # this is what lets a client ask the shopper a question mid-tool; it costs a standing SSE stream
+    # per conversation and only works while one process holds them.
+    mcp_sessions: bool = False
 
     # Loop and fan-out boundaries of the fit search.
     max_candidates: int = 4
+    # A catalog sweep is the same engine over more pieces, so it is capped: each fit costs
+    # the merchant a GPU job, and an agent in ChatGPT can ask for "all your sofas".
+    max_catalog_fits: int = 8
     parallel_fits: int = 2
     settle_timeout_s: int = 120
     poll_interval_s: float = 1.5

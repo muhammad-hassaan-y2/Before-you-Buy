@@ -18,7 +18,7 @@ from byb_agent import evidence
 from byb_agent.brief import read as read_brief
 from byb_agent.contracts import AgentRun, BriefRequest, FitAttempt, Reservation, ShopperBrief
 from byb_agent.evolus import Evolus
-from byb_agent.journey import PASS_VERDICTS, Journey, evaluate
+from byb_agent.journey import FAIL_VERDICTS, PASS_VERDICTS, Journey, evaluate
 from byb_agent.model import AMDModel
 from byb_agent.pipeline import Pipeline
 from byb_agent.runs import Reservations, RunStore
@@ -101,7 +101,7 @@ class Tools:
             "placements": fit.get("placements") or [],
             "door_swing_m": fit.get("door_swing_m"),
             "room": {"width_m": detail.get("room_width_m"), "depth_m": detail.get("room_depth_m"), "height_m": detail.get("room_height_m")},
-            "model_download": f"/api/v1/simulations/{simulation_id}/model" if detail.get("has_model") else None,
+            "model_download": self._link(f"/api/v1/simulations/{simulation_id}/model") if detail.get("has_model") else None,
         }
 
     async def explain_fit(self, simulation_id: str) -> dict[str, Any]:
@@ -216,6 +216,66 @@ class Tools:
 
         return list(await asyncio.gather(*(test(candidate, value) for candidate, value in ranked)))
 
+    async def fit_catalog(
+        self,
+        category: str | None = None,
+        price_band: str | None = None,
+        query: str = "",
+        room_width_m: float = 4.0,
+        room_depth_m: float = 3.5,
+        room_height_m: float = 2.4,
+        limit: int = 6,
+        image_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Answer the question a shopper actually asks a shop: which of your pieces fit my room."""
+        rows = await self._pipeline.catalog()
+        brief = _room_brief(query, room_width_m, room_depth_m, room_height_m)
+        ranked = rank(
+            rows,
+            category=category,
+            price_band=price_band,
+            must_haves=_words(query),
+            limit=min(limit, self._settings.max_catalog_fits),
+            room=(room_width_m, room_depth_m),
+        )
+        if not ranked:
+            raise ValueError("nothing in the catalog matches that. Widen it with catalog_search before spending a fit on it.")
+        semaphore = asyncio.Semaphore(self._settings.parallel_fits)
+
+        async def test(row: dict, value: float) -> dict[str, Any]:
+            async with semaphore:
+                attempt, ms = await evaluate(self._pipeline, brief, row, value, image_key)
+            geometry = row.get("geometry") or {}
+            return {
+                **attempt.model_dump(),
+                "ms": ms,
+                "size_cm": {key: geometry.get(key) for key in ("width_cm", "depth_cm", "height_cm")},
+                "tightest_walkway_m": round(min(attempt.walkway_m.values()), 2) if attempt.walkway_m else None,
+                "verify": self._link(f"/api/v1/simulations/{attempt.simulation_id}") if attempt.simulation_id else None,
+            }
+
+        tested = list(await asyncio.gather(*(test(row, value) for row, value in ranked)))
+        verdicts = {item["verdict"] for item in tested}
+        return {
+            "room": {
+                "width_m": room_width_m,
+                "depth_m": room_depth_m,
+                "height_m": room_height_m,
+                "measured_from_photo": bool(image_key),
+            },
+            "checked": len(tested),
+            "fits": [item for item in tested if item["verdict"] in PASS_VERDICTS],
+            "does_not_fit": [item for item in tested if item["verdict"] in FAIL_VERDICTS],
+            "unproven": [item for item in tested if item["verdict"] not in PASS_VERDICTS | FAIL_VERDICTS],
+            "note": (
+                "Only the geometry engine's own verdict is reported here: fits and tight clear the "
+                "walkway, blocked and too_large do not, and unproven means the pipeline never settled "
+                "so nothing is claimed about that piece."
+                if verdicts - {None}
+                else "No candidate settled, so nothing here is a fit."
+            ),
+        }
+
     async def start_journey(
         self,
         brief: str,
@@ -236,7 +296,7 @@ class Tools:
         self._store.put(run)
         task = asyncio.create_task(self._journey.run(request, run))
         task.add_done_callback(lambda finished: self._failed(run, finished))
-        return {"run_id": run.id, "status": run.status, "poll": f"/agent/runs/{run.id}"}
+        return {"run_id": run.id, "status": run.status, "poll": self._link(f"/agent/runs/{run.id}")}
 
     async def journey_status(self, run_id: str) -> dict[str, Any]:
         """The trace of a journey: every step, its tool, its duration and the final decision."""
@@ -281,8 +341,8 @@ class Tools:
                 "door_pass": explained["door_pass"],
                 "fragile": explained["fragile"],
                 "room": {"width_m": detail.get("room_width_m"), "depth_m": detail.get("room_depth_m"), "height_m": detail.get("room_height_m")},
-                "verify": f"/api/v1/simulations/{simulation_id}",
-                "model_download": f"/api/v1/simulations/{simulation_id}/model" if detail.get("has_model") else None,
+                "verify": self._link(f"/api/v1/simulations/{simulation_id}"),
+                "model_download": self._link(f"/api/v1/simulations/{simulation_id}/model") if detail.get("has_model") else None,
             },
             "assurance": {
                 "promise": "Measured against this room before the order was placed.",
@@ -342,6 +402,12 @@ class Tools:
     def list_reservations(self, limit: int = 20) -> list[dict[str, Any]]:
         """The holds waiting on a person at the shop, newest first."""
         return [reservation.model_dump() for reservation in self._reservations.recent(limit)]
+
+    def _link(self, path: str) -> str:
+        """An agent in ChatGPT or Claude can only follow an absolute link, so the public origin is
+        used when it is configured and a relative path stays honest about a local run."""
+        base = (self._settings.public_base_url or "").rstrip("/")
+        return f"{base}{path}" if base else path
 
     async def _row(self, sku: str | None, link: str | None) -> dict | None:
         rows = await self._pipeline.catalog()
@@ -405,8 +471,9 @@ SPEC: dict[str, str] = {
     "explain_fit": "Read a fit report back in words: the facts behind the verdict and what to change.",
     "joint_fit": "Judge two or more pieces as one purchase, measuring each and combining the footprints.",
     "find_alternatives": "Pieces in the same category that are no wider, each tested against the room.",
+    "fit_catalog": "Which of the shop's pieces actually fit this room, measured in parallel and split into fits, does-not-fit and unproven.",
     "proven_fit_offer": "An agent-readable offer that only a proven fit can back.",
-    "reserve_fit": "Hold a proven-fitting piece, gated behind the shopper's own confirmation.",
+    "reserve_fit": "Hold a proven-fitting piece, gated behind the shopper's own confirmation; the MCP door asks them in their own client when it can.",
     "returns_estimate": "What a fit check is worth, as arithmetic over stated assumptions.",
     "start_journey": "Run the whole fit-assurance process for a shopper brief, against a photo-measured room when image_key is given.",
     "journey_status": "The trace of a journey, including the final decision.",

@@ -176,3 +176,38 @@ async def test_a_merchants_own_numbers_replace_the_defaults(rows, settings):
     assert figures["revenue_kept_eur_per_month"] == 60300.0
     assert figures["assumptions"]["average_order_value_eur"] == 900.0
     assert figures["assumptions"]["return_rate"] == 0.4
+
+
+async def test_which_of_the_catalog_fits_is_measured_not_guessed(rows, settings):
+    tools, pipeline = build(rows, settings, verdicts={"SOF-003": "blocked"})
+    answer = await tools.fit_catalog(category="sofa", room_width_m=4.0, room_depth_m=3.5, limit=3)
+    assert {piece["sku"] for piece in answer["fits"]} == {"SOF-001", "SOF-002"}
+    assert [piece["sku"] for piece in answer["does_not_fit"]] == ["SOF-003"]
+    assert answer["unproven"] == []
+    assert answer["checked"] == len(pipeline.started) == 3
+    # The sizes an agent quotes come from the catalog row, the verdict from the engine.
+    assert answer["fits"][0]["size_cm"] == {"width_cm": 160, "depth_cm": 88, "height_cm": 80}
+    assert all(set(piece["size_cm"]) == {"width_cm", "depth_cm", "height_cm"} for piece in answer["fits"])
+    assert all(piece["verify"] for piece in answer["fits"])
+
+
+async def test_a_piece_that_never_settled_is_reported_as_unproven(rows, settings):
+    tools, _ = build(rows, settings, crash={"SOF-002"})
+    answer = await tools.fit_catalog(category="sofa", limit=3)
+    assert [piece["sku"] for piece in answer["unproven"]] == ["SOF-002"]
+    assert all(piece["sku"] != "SOF-002" for piece in answer["fits"]), "a crash is not a fit"
+
+
+async def test_a_sweep_is_capped_because_every_fit_costs_a_gpu_job(rows, settings):
+    settings.max_catalog_fits = 2
+    tools, pipeline = build(rows, settings)
+    answer = await tools.fit_catalog(limit=50)
+    assert answer["checked"] == 2 == len(pipeline.started)
+
+
+async def test_a_photo_room_is_swept_as_the_measured_room(rows, settings):
+    tools, pipeline = build(rows, settings)
+    photo = f"{'ab' * 16}-living-room.jpg"
+    answer = await tools.fit_catalog(category="sofa", image_key=photo, limit=2)
+    assert answer["room"]["measured_from_photo"] is True
+    assert {run["image_key"] for run in pipeline.started} == {photo}

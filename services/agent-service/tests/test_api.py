@@ -76,6 +76,15 @@ def test_the_tool_catalog_is_what_the_agent_sees(api):
     assert all(tool["description"] for tool in tools)
 
 
+def test_the_page_can_tell_a_person_how_to_add_the_connector(api):
+    """The shopper's browser reads this to print the ChatGPT and Claude steps, so it has to be a
+    door on the REST surface as well as text in the README."""
+    guide = api.client.get("/agent/connect").json()
+    assert guide["url"] == "/mcp/"
+    assert set(guide["clients"]) >= {"chatgpt", "claude", "claude-code", "cursor"}
+    assert guide["auth"]["type"] == "none", "nothing here is keyed unless the shop set a key"
+
+
 def test_an_unknown_tool_is_a_404(api):
     assert api.client.post("/agent/tools/measure_the_moon", json={}).status_code == 404
 
