@@ -58,9 +58,70 @@ function respondingTo(handler: (url: string, init?: RequestInit) => unknown) {
   )
 }
 
+/** The winner's own fit: a room measured from the shopper's photo, with the report the engine published. */
+const fitted = {
+  id: "sim-1",
+  status: "completed",
+  room_width_m: 4,
+  room_depth_m: 3.5,
+  room_height_m: 2.4,
+  fit_report: {
+    room_area_m2: 10.8,
+    usable_area_m2: 10.1,
+    placements: [],
+    conflicts: [],
+    coverage_pct: 16.4,
+    verdict: "fits",
+    obstacles: [],
+    door_swing_m: 0.85,
+    door_pass: "pass",
+    walkway_connected: true,
+    isolated_pockets: 0,
+    fragile: false,
+    tolerance_cm: 2,
+    suggestions: [],
+  },
+  room_scan: { width_m: 3.6, depth_m: 3.0, height_m: 2.4, obstacles: [], measured: true, method: "photo", confidence: 0.8 },
+  scene: null,
+}
+
+function attachPhoto() {
+  fireEvent.change(screen.getByLabelText(/Photo of the room/i), {
+    target: { files: [new File(["\u00ff\u00d8\u00ff\u00e1"], "living-room.jpg", { type: "image/jpeg" })] },
+  })
+}
+
 afterEach(() => vi.unstubAllGlobals())
 
 describe("FitAgent", () => {
+  it("sends the room photo first, then fits every candidate into the room measured from it", async () => {
+    respondingTo((url) => {
+      if (url === "/api/v1/uploads") return { image_key: "abc123-living-room.jpg" }
+      if (url === "/agent/brief") return { run_id: "abc123", status: "running", poll: "/agent/runs/abc123" }
+      if (url.startsWith("/api/v1/simulations/")) return fitted
+      return run
+    })
+    render(<FitAgent />)
+    attachPhoto()
+    fireEvent.click(screen.getByRole("button", { name: /Find what fits/i }))
+
+    expect(await screen.findByText(/The KURA sofa fits/)).toBeInTheDocument()
+    const calls = (fetch as ReturnType<typeof vi.fn>).mock.calls.map(([url, init]) => [String(url), init] as const)
+    expect(calls[0][0]).toBe("/api/v1/uploads")
+    expect(JSON.parse(String(calls[1][1]?.body)).image_key).toBe("abc123-living-room.jpg")
+  })
+
+  it("shows the recommended fit in the room it was measured in, as a plan and a 3D option", async () => {
+    respondingTo((url) => (url.startsWith("/api/v1/simulations/") ? fitted : run))
+    render(<FitAgent />)
+    fireEvent.click(screen.getByRole("button", { name: /Find what fits/i }))
+
+    expect(await screen.findByText("Room measured from your photo")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /2D plan/i })).toBeInTheDocument()
+    expect(screen.getByRole("img", { name: /Room 3.6 by 3 metres/ })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /3D room/i })).toBeDisabled()
+  })
+
   it("starts a journey from the shopper's own words and shows the room it heard", async () => {
     respondingTo((url) => (url === "/agent/brief" ? { run_id: "abc123", status: "running", poll: "/agent/runs/abc123" } : run))
     render(<FitAgent />)

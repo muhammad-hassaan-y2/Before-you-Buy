@@ -4,8 +4,8 @@ import { AlertTriangle, Box, Download, Loader2, Ruler, Sofa } from "lucide-react
 import { useEffect, useMemo, useRef, useState } from "react"
 
 import { DeliveryPath } from "@/components/delivery-path"
+import { FitViews } from "@/components/fit-views"
 import { DimensionEstimateWarning, ProductSourceBadge } from "@/components/product-provenance"
-import { RoomPlan } from "@/components/room-plan"
 import { SceneViewer } from "@/components/scene-viewer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -189,24 +189,29 @@ export function SceneWorkspace() {
         </CardHeader>
 
         <CardContent className="space-y-5">
-          <SceneViewer spec={simulation?.scene ?? null} />
+          {simulation?.fit_report ? (
+            <FitViews
+              report={simulation.fit_report}
+              widthM={simulation.room_scan?.width_m ?? simulation.room_width_m}
+              depthM={simulation.room_scan?.depth_m ?? simulation.room_depth_m}
+              obstacles={simulation.room_scan?.obstacles ?? simulation.fit_report.obstacles}
+              scene={simulation.scene ?? null}
+              start="3d"
+            />
+          ) : (
+            <SceneViewer spec={simulation?.scene ?? null} />
+          )}
 
           {simulation?.fit_report && (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant="outline">{simulation.room_width_m} × {simulation.room_depth_m} m</Badge>
+                <Badge variant="outline">
+                  {simulation.room_scan?.width_m ?? simulation.room_width_m} × {simulation.room_scan?.depth_m ?? simulation.room_depth_m} m
+                </Badge>
                 <span>{simulation.fit_report.room_area_m2.toFixed(1)} m² room</span>
                 <span>{simulation.fit_report.usable_area_m2.toFixed(1)} m² usable</span>
                 {simulation.product_profile && <ProductSourceBadge profile={simulation.product_profile} />}
                 {simulation.product_profile && <DimensionEstimateWarning profile={simulation.product_profile} compact />}
-              </div>
-              <div className="rounded-lg border bg-muted/30 p-3">
-                <RoomPlan
-                  widthM={simulation.room_width_m}
-                  depthM={simulation.room_depth_m}
-                  report={simulation.fit_report}
-                  obstacles={simulation.room_scan?.obstacles ?? simulation.fit_report.obstacles}
-                />
               </div>
               <div className="rounded-lg border p-3">
                 <DeliveryPath report={simulation.fit_report} />

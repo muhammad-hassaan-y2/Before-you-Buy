@@ -1,9 +1,11 @@
 "use client"
 
-import { Bot, CircleSlash, Loader2, Send, Sparkles, UserCheck } from "lucide-react"
+import { Bot, CircleSlash, ImageIcon, Loader2, Send, Sparkles, UserCheck, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 import { AgentRunTrace, RunStatusBadge } from "@/components/agent-run-trace"
+import { FitViews } from "@/components/fit-views"
+import { DimensionEstimateWarning, ProductSourceBadge } from "@/components/product-provenance"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,6 +13,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { pollRun, startJourney, type AgentRun } from "@/lib/agent"
+import { fetchSimulation, ROOM_SCAN_LABEL, uploadRoomPhoto, type Simulation } from "@/lib/api"
+import { cn } from "@/lib/utils"
 
 const EXAMPLES = [
   "Three-seater linen sofa under 900 for a living room, needs to leave a walkway to the balcony",
@@ -23,12 +27,31 @@ export function FitAgent() {
   const [width, setWidth] = useState("4.0")
   const [depth, setDepth] = useState("3.5")
   const [height, setHeight] = useState("2.4")
+  const [photo, setPhoto] = useState<File | null>(null)
   const [run, setRun] = useState<AgentRun | null>(null)
+  const [fit, setFit] = useState<{ id: string; detail: Simulation } | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const controller = useRef<AbortController | null>(null)
 
   useEffect(() => () => controller.current?.abort(), [])
+
+  const fittedId = run?.decision?.simulation_id ?? null
+
+  useEffect(() => {
+    if (!fittedId) return
+    // The recommendation is only worth the room it was measured in, so show that fit's own report.
+    let live = true
+    fetchSimulation(fittedId).then(
+      (detail) => live && setFit({ id: fittedId, detail }),
+      () => live && setFit(null),
+    )
+    return () => {
+      live = false
+    }
+  }, [fittedId])
+
+  const fitted = fit?.id === fittedId ? fit.detail : null
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -40,12 +63,15 @@ export function FitAgent() {
     setBusy(true)
     setError(null)
     setRun(null)
+    setFit(null)
     try {
+      const imageKey = photo ? await uploadRoomPhoto(photo) : undefined
       const accepted = await startJourney({
         brief: brief.trim(),
         roomWidthM: Number(width),
         roomDepthM: Number(depth),
         roomHeightM: Number(height),
+        imageKey,
       })
       const settled = await pollRun(accepted.run_id, setRun, { signal: controller.current?.signal })
       if (settled?.status === "running") setError("The agent is still working. Try again in a moment.")
@@ -68,7 +94,8 @@ export function FitAgent() {
           </CardTitle>
           <CardDescription>
             Say it the way you would to a shop assistant. The agent reads your words, shortlists the catalog, runs a real
-            fit simulation on each candidate and only then recommends.
+            fit simulation on each candidate and only then recommends. Attach a photo of the room and every candidate is
+            measured against the room in it.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -99,6 +126,43 @@ export function FitAgent() {
                   <Sparkles className="size-3" /> Example {index + 1}
                 </Button>
               ))}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="agent-photo">
+                <ImageIcon className="size-3.5" /> Photo of the room (optional)
+              </Label>
+              <label
+                htmlFor="agent-photo"
+                className={cn(
+                  "flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-3 text-sm transition-colors",
+                  photo ? "border-primary/60 bg-primary/5" : "hover:border-ring hover:bg-muted/40",
+                )}
+              >
+                <span className="truncate text-muted-foreground">
+                  {photo ? photo.name : "Drop or choose a JPG/PNG of the room"}
+                </span>
+                <input
+                  id="agent-photo"
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  disabled={busy}
+                  onChange={(event) => setPhoto(event.target.files?.[0] ?? null)}
+                />
+              </label>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {photo
+                    ? "Every candidate is fitted into the room measured from this photo, not the numbers below."
+                    : "Without a photo the agent uses the room you type."}
+                </p>
+                {photo && (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setPhoto(null)}>
+                    <X className="size-3.5" /> Remove
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
@@ -196,6 +260,23 @@ export function FitAgent() {
               {decision.simulation_id && (
                 <p className="mt-1 font-mono text-xs text-muted-foreground">fit run {decision.simulation_id}</p>
               )}
+            </div>
+          )}
+
+          {fitted?.fit_report && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">{ROOM_SCAN_LABEL[fitted.room_scan?.method ?? "declared"]}</Badge>
+                {fitted.product_profile && <ProductSourceBadge profile={fitted.product_profile} />}
+                {fitted.product_profile && <DimensionEstimateWarning profile={fitted.product_profile} compact />}
+              </div>
+              <FitViews
+                report={fitted.fit_report}
+                widthM={fitted.room_scan?.width_m ?? fitted.room_width_m}
+                depthM={fitted.room_scan?.depth_m ?? fitted.room_depth_m}
+                obstacles={fitted.room_scan?.obstacles ?? fitted.fit_report.obstacles}
+                scene={fitted.scene ?? null}
+              />
             </div>
           )}
 

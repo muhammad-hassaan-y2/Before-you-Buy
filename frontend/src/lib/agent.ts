@@ -123,12 +123,19 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
   return response
 }
 
-export async function startJourney(input: { brief: string; roomWidthM?: number; roomDepthM?: number; roomHeightM?: number }): Promise<{ run_id: string; status: string; poll: string }> {
+export async function startJourney(input: {
+  brief: string
+  roomWidthM?: number
+  roomDepthM?: number
+  roomHeightM?: number
+  imageKey?: string
+}): Promise<{ run_id: string; status: string; poll: string }> {
   const body = JSON.stringify({
     brief: input.brief,
     room_width_m: input.roomWidthM ?? null,
     room_depth_m: input.roomDepthM ?? null,
     room_height_m: input.roomHeightM ?? null,
+    image_key: input.imageKey ?? null,
   })
   return (await request("/brief", { method: "POST", headers: { "Content-Type": "application/json" }, body })).json()
 }

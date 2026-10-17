@@ -5,7 +5,10 @@ export const tools = {
   tools: [
     { name: "catalog_search", description: "Find furniture in the shop's catalog by words, category or price band." },
     { name: "read_brief", description: "Turn a shopper's own words into a category, a price band and a room size." },
-    { name: "simulate_product", description: "Measure one product against one room and wait for the fit verdict." },
+    {
+      name: "simulate_product",
+      description: "Measure one product against one room and wait for the fit verdict. Pass image_key to use a room measured from a photo.",
+    },
     { name: "fit_report", description: "The verdict, placements and walkways for a simulation already run." },
     {
       name: "explain_fit",
@@ -19,7 +22,10 @@ export const tools = {
     { name: "proven_fit_offer", description: "An agent-readable offer that only a proven fit can back." },
     { name: "reserve_fit", description: "Hold a proven-fitting piece, gated behind the shopper's own confirmation." },
     { name: "returns_estimate", description: "What a fit check is worth, as arithmetic over stated assumptions." },
-    { name: "start_journey", description: "Run the whole fit-assurance process for a shopper brief." },
+    {
+      name: "start_journey",
+      description: "Run the whole fit-assurance process for a shopper brief, against a photo-measured room when image_key is given.",
+    },
     { name: "journey_status", description: "The trace of a journey, including the final decision." },
   ],
 }
@@ -87,6 +93,26 @@ export const journey = {
   evolus_execution_id: "exec-e2e-1",
   conversation_id: null,
   error: null,
+}
+
+/** The same journey taken with a photo of the room: vision measured it, and the trace says so. */
+export const photoJourney = {
+  ...journey,
+  steps: [
+    journey.steps[0],
+    {
+      index: 1,
+      kind: "room",
+      status: "ok",
+      detail: "every candidate is fitted into the room measured from the shopper's photo, not the typed numbers",
+      tool: null,
+      group: null,
+      iteration: 1,
+      ms: 0,
+      output: null,
+    },
+    ...journey.steps.slice(2).map((step, position) => ({ ...step, index: position + 2 })),
+  ],
 }
 
 /** What `returns_estimate` answered for those inputs, taken off the live service on 2026-10-16. */

@@ -28,7 +28,8 @@ test("each tested piece carries the geometry that decided it", async ({ page }) 
   await page.goto("/room-simulator")
   await page.getByRole("button", { name: /Find what fits/i }).click()
 
-  await expect(page.getByText("KURA three-seat sofa", { exact: true })).toBeVisible()
+  // The name is also on the merchant's hold list below, so check the row the agent tested.
+  await expect(page.getByText("KURA three-seat sofa", { exact: true }).first()).toBeVisible()
   await expect(page.getByText("0.20 m walkway")).toBeVisible()
   await expect(page.getByText("recommend", { exact: true })).toBeVisible()
   await expect(page.getByText("widest walkway of the four tested pieces")).toBeVisible()

@@ -103,6 +103,13 @@ export type RoomScan = {
   confidence: number
 }
 
+/** Which room the fit was measured against, told the way the shopper would read it. */
+export const ROOM_SCAN_LABEL: Record<string, string> = {
+  photo: "Room measured from your photo",
+  "photo-ignored": "Photo unreadable — using your numbers",
+  declared: "Using your numbers",
+}
+
 export type FitPlacement = {
   label: string
   ring: [number, number][]
@@ -199,6 +206,8 @@ export type Simulation = {
 export type SimulationInput = {
   link?: string
   file?: File | null
+  /** A room photo this gateway already stored, so the same room is measured once per piece. */
+  imageKey?: string
   roomWidthM: number
   roomDepthM: number
   roomHeightM: number
@@ -225,6 +234,7 @@ export async function createSimulation(input: SimulationInput): Promise<{ id: st
   const form = new FormData()
   if (input.link) form.set("link", input.link)
   if (input.file) form.set("file", input.file)
+  if (input.imageKey) form.set("image_key", input.imageKey)
   form.set("room_width_m", String(input.roomWidthM))
   form.set("room_depth_m", String(input.roomDepthM))
   form.set("room_height_m", String(input.roomHeightM))
@@ -233,6 +243,15 @@ export async function createSimulation(input: SimulationInput): Promise<{ id: st
   const response = await fetch(`${BASE}/simulations`, { method: "POST", body: form })
   if (!response.ok) throw new ApiError(await message(response))
   return response.json()
+}
+
+/** Store a room photo on its own and return the key a brief or an agent call can point at. */
+export async function uploadRoomPhoto(file: File): Promise<string> {
+  const form = new FormData()
+  form.set("file", file)
+  const response = await fetch(`${BASE}/uploads`, { method: "POST", body: form })
+  if (!response.ok) throw new ApiError(await message(response))
+  return (await response.json()).image_key
 }
 
 export async function fetchSimulation(id: string): Promise<Simulation> {

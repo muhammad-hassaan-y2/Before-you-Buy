@@ -47,14 +47,18 @@ test("placing it somewhere that does not fit is shown as such", async ({ page })
   await expect(page.getByText("floor used 14.2 %")).toBeVisible()
 })
 
-test("the measured plan stays under the 3D view", async ({ page }) => {
+test("the same fit opens in the room and folds down to the measured plan", async ({ page }) => {
   await page.goto("/workspace")
   await page.getByRole("button", { name: /KURA three-seat sofa/ }).click()
   await page.getByRole("button", { name: /Place it in 3D/i }).click()
 
   await expect(page.getByText("14.0 m² room")).toBeVisible()
   await expect(page.getByText("13.6 m² usable")).toBeVisible()
+  await expect(page.locator("canvas")).toBeVisible()
+
+  await page.getByRole("button", { name: /2D plan/i }).click()
   await expect(page.locator("svg").first()).toBeVisible()
+  await expect(page.locator("canvas")).toHaveCount(0)
 })
 
 test("the verdict carries the delivery path the engine checked", async ({ page }) => {

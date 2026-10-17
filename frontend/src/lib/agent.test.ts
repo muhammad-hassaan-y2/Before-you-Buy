@@ -15,7 +15,7 @@ function run(status: AgentRun["status"]): AgentRun {
 describe("startJourney", () => {
   beforeEach(() => vi.restoreAllMocks())
 
-  it("posts the brief with nulls for the room it was not given", async () => {
+  it("posts the brief with nulls for the room and the photo it was not given", async () => {
     const fetch = vi.fn().mockResolvedValue(jsonResponse({ run_id: "r1", status: "running", poll: "/agent/runs/r1" }))
     vi.stubGlobal("fetch", fetch)
 
@@ -23,7 +23,21 @@ describe("startJourney", () => {
     expect(fetch).toHaveBeenCalledTimes(1)
     const [url, init] = fetch.mock.calls[0]
     expect(url).toBe("/agent/brief")
-    expect(JSON.parse(String(init.body))).toEqual({ brief: "a sofa under 900", room_width_m: null, room_depth_m: null, room_height_m: null })
+    expect(JSON.parse(String(init.body))).toEqual({
+      brief: "a sofa under 900",
+      room_width_m: null,
+      room_depth_m: null,
+      room_height_m: null,
+      image_key: null,
+    })
+  })
+
+  it("sends the key of the room photo the shopper attached", async () => {
+    const fetch = vi.fn().mockResolvedValue(jsonResponse({ run_id: "r1", status: "running", poll: "/agent/runs/r1" }))
+    vi.stubGlobal("fetch", fetch)
+
+    await startJourney({ brief: "will a sofa fit the room in my photo", imageKey: "abc123-living-room.jpg" })
+    expect(JSON.parse(String(fetch.mock.calls[0][1].body)).image_key).toBe("abc123-living-room.jpg")
   })
 
   it("turns a rejected run into a readable error", async () => {

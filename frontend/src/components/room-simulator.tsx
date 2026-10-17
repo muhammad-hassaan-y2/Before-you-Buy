@@ -4,15 +4,14 @@ import { AlertTriangle, CheckCircle2, ImageIcon, Link2, Loader2, Ruler, Sofa, X 
 import { useEffect, useRef, useState } from "react"
 
 import { DeliveryPath } from "@/components/delivery-path"
+import { FitViews } from "@/components/fit-views"
 import { DimensionEstimateWarning, ProductSourceBadge } from "@/components/product-provenance"
-import { RoomPlan } from "@/components/room-plan"
-import { SceneViewer } from "@/components/scene-viewer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { createSimulation, pollSimulation, type Simulation } from "@/lib/api"
+import { createSimulation, pollSimulation, ROOM_SCAN_LABEL, type Simulation } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 const STEPS = [
@@ -23,12 +22,6 @@ const STEPS = [
   { key: "fitting", label: "Fitting the floor plan" },
   { key: "completed", label: "Ready" },
 ] as const
-
-const SCAN_LABEL: Record<string, string> = {
-  photo: "Room measured from the photo",
-  "photo-ignored": "Photo unreadable — using your numbers",
-  declared: "Using your numbers",
-}
 
 const VERDICT: Record<string, { label: string; variant: "success" | "warning" | "destructive" }> = {
   fits: { label: "Fits with room to move", variant: "success" },
@@ -243,21 +236,19 @@ export function RoomSimulator() {
                   </Badge>
                 )}
                 {profile && <ProductSourceBadge profile={profile} />}
-                {scan && <Badge variant="outline">{SCAN_LABEL[scan.method] ?? scan.method}</Badge>}
+                {scan && <Badge variant="outline">{ROOM_SCAN_LABEL[scan.method] ?? scan.method}</Badge>}
               </div>
 
               {profile && <DimensionEstimateWarning profile={profile} />}
 
-              <div className="rounded-lg border bg-muted/30 p-3">
-                <RoomPlan widthM={roomWidth} depthM={roomDepth} report={report} placement={activeSpot} obstacles={scan?.obstacles ?? report.obstacles} />
-              </div>
-
-              {simulation?.scene && (
-                <div className="space-y-2">
-                  <p className="text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase">In the room, to scale</p>
-                  <SceneViewer spec={simulation.scene} />
-                </div>
-              )}
+              <FitViews
+                report={report}
+                widthM={roomWidth}
+                depthM={roomDepth}
+                placement={activeSpot}
+                obstacles={scan?.obstacles ?? report.obstacles}
+                scene={simulation?.scene ?? null}
+              />
 
               <dl className="grid grid-cols-3 gap-3 text-sm">
                 {[

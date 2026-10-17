@@ -1,6 +1,6 @@
 "use client"
 
-import { Bot, Check, CircleSlash, GitBranch, Layers, Loader2, MessagesSquare, Search, SkipForward, Sparkles, Wrench } from "lucide-react"
+import { Bot, Camera, Check, CircleSlash, GitBranch, Layers, Loader2, MessagesSquare, Search, SkipForward, Sparkles, Wrench } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -10,6 +10,7 @@ const KIND: Record<string, { label: string; icon: typeof Bot }> = {
   intake: { label: "Shopper brief received", icon: MessagesSquare },
   agent: { label: "Evolus agent told about the case", icon: Bot },
   brief: { label: "Brief read", icon: Search },
+  room: { label: "Room measured from the photo", icon: Camera },
   shortlist: { label: "Catalog shortlisted", icon: Layers },
   simulate: { label: "Fit simulations", icon: Sparkles },
   fit: { label: "Fit report", icon: Check },
