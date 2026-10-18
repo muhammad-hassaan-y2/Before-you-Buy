@@ -19,7 +19,7 @@ export default function RoomSimulatorPage() {
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-14 lg:py-20">
       <header className="mb-12 text-center">
-        <p className="eyebrow text-primary">agent-service · api-gateway · inference-service · geometry-service</p>
+        <p className="eyebrow text-primary">Fit agent</p>
         <h1 className="mx-auto mt-4 max-w-3xl text-4xl font-semibold tracking-[-0.03em] text-balance lg:text-6xl">The fit agent</h1>
         <p className="mx-auto mt-5 max-w-2xl text-base text-pretty text-muted-foreground lg:text-lg">
           An agent shortlists the catalog, runs a real fit simulation for each candidate through the same API your

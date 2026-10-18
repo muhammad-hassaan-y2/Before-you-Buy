@@ -324,7 +324,7 @@ export function InteractiveSimulatorEngine({ className }: { className?: string }
             type="button"
             onClick={() => setMode("2d")}
             className={cn(
-              "flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition-all",
+              "flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium whitespace-nowrap transition-all",
               mode === "2d" ? "bg-foreground text-background shadow-md" : "text-muted-foreground hover:text-foreground",
             )}
           >
@@ -334,7 +334,7 @@ export function InteractiveSimulatorEngine({ className }: { className?: string }
             type="button"
             onClick={() => setMode("3d")}
             className={cn(
-              "flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition-all",
+              "flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium whitespace-nowrap transition-all",
               mode === "3d" ? "bg-foreground text-background shadow-md" : "text-muted-foreground hover:text-foreground",
             )}
           >

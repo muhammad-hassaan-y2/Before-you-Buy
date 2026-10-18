@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowRight, Box, Compass, ShieldCheck, Sparkles, Zap } from "lucide-react"
 
+import { HeroPlan } from "@/components/hero-plan"
 import { InteractiveSimulatorEngine } from "@/components/interactive-simulator"
 import { StoreGrid } from "@/components/store-grid"
 
@@ -20,7 +21,7 @@ async function StoreContent({ searchParams }: { searchParams: Promise<{ category
 
   return (
     <div className="w-full">
-      {/* Apple-style Dramatic Hero Section */}
+      {/* Hero */}
       <section className="relative isolate overflow-hidden border-b border-border bg-gradient-to-b from-card via-background to-background">
         {/* Ambient radial lighting */}
         <div
@@ -28,7 +29,8 @@ async function StoreContent({ searchParams }: { searchParams: Promise<{ category
           className="pointer-events-none absolute -top-32 left-1/2 -z-10 h-[30rem] w-[50rem] -translate-x-1/2 rounded-full bg-primary/20 blur-[120px]"
         />
 
-        <div className="mx-auto w-full max-w-7xl px-6 pt-20 pb-16 lg:pt-28 lg:pb-24">
+        <div className="mx-auto grid w-full max-w-7xl items-center gap-12 px-6 pt-16 pb-16 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:pt-24 lg:pb-24">
+          <div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
               <Sparkles className="size-3" /> Spatial AI Commerce
@@ -36,7 +38,7 @@ async function StoreContent({ searchParams }: { searchParams: Promise<{ category
             <span className="text-xs text-muted-foreground">Powered by AMD ROCm & vLLM</span>
           </div>
 
-          <h1 className="mt-6 max-w-4xl text-5xl font-semibold tracking-[-0.04em] text-foreground text-balance sm:text-6xl lg:text-8xl">
+          <h1 className="mt-6 max-w-4xl text-5xl font-semibold tracking-[-0.04em] text-foreground text-balance sm:text-6xl lg:text-7xl">
             The shop that measures first.
           </h1>
 
@@ -45,11 +47,11 @@ async function StoreContent({ searchParams }: { searchParams: Promise<{ category
             Our spatial AI tests listings in real-time 2D & 3D against your room footprint before checkout.
           </p>
 
-          {/* Apple-style Call to Action Buttons */}
+          {/* Calls to action */}
           <div className="mt-8 flex flex-wrap items-center gap-4 text-sm font-medium">
             <a
               href="#simulator"
-              className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-background font-semibold shadow-lg shadow-white/10 transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-background font-semibold shadow-lg shadow-black/10 transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
             >
               <Zap className="size-4 text-primary" /> Try 2D & 3D Simulator
             </a>
@@ -66,34 +68,8 @@ async function StoreContent({ searchParams }: { searchParams: Promise<{ category
               Browse Catalog ↓
             </a>
           </div>
-
-          {/* Quick Category Filter Pills */}
-          <nav aria-label="Quick links" className="mt-14 flex flex-wrap items-center gap-2 border-t border-border pt-8">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mr-2">Collections:</span>
-            <Link
-              href="/store"
-              className={`rounded-full border px-4 py-1.5 text-xs font-medium transition-all ${
-                shelf === null
-                  ? "border-primary bg-primary text-background font-semibold shadow-sm"
-                  : "border-border bg-foreground/5 text-foreground/80 hover:border-border hover:text-foreground"
-              }`}
-            >
-              All Pieces
-            </Link>
-            {QUICK_LINKS.map((option) => (
-              <Link
-                key={option}
-                href={`/store?category=${option}`}
-                className={`rounded-full border px-4 py-1.5 text-xs font-medium capitalize transition-all ${
-                  shelf === option
-                    ? "border-primary bg-primary text-background font-semibold shadow-sm"
-                    : "border-border bg-foreground/5 text-foreground/80 hover:border-border hover:text-foreground"
-                }`}
-              >
-                {option}s
-              </Link>
-            ))}
-          </nav>
+          </div>
+          <HeroPlan />
         </div>
       </section>
 
