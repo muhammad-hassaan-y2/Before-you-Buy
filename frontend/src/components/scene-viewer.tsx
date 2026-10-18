@@ -63,9 +63,15 @@ export function SceneViewer({ spec, className }: { spec: SceneSpec | null; class
 
   if (!spec) {
     return (
-      <div className={cn("flex min-h-40 items-center justify-center gap-2 rounded-lg border border-dashed bg-[#0f0d0c]/5 text-sm text-muted-foreground", className)}>
-        <Box className="size-6 opacity-50" />
-        Nothing to place yet.
+      <div className={cn("flex min-h-56 flex-col items-center justify-center gap-4 rounded-lg border border-dashed text-sm text-muted-foreground", className)}>
+        <svg viewBox="0 0 160 110" className="w-44" aria-hidden>
+          <path d="M20 40 L80 14 L140 40 L80 66 Z" className="fill-surface stroke-muted-foreground/50" strokeWidth="1.5" />
+          <path d="M20 40 V78 L80 104 V66 M140 40 V78 L80 104" className="fill-none stroke-muted-foreground/50" strokeWidth="1.5" />
+          <path d="M60 46 L82 36 L104 46 L82 56 Z" className="fill-primary/20 stroke-primary" strokeWidth="1.5" strokeDasharray="3 3" />
+        </svg>
+        <span className="flex items-center gap-2">
+          <Box className="size-4 opacity-60" /> Nothing to place yet.
+        </span>
       </div>
     )
   }

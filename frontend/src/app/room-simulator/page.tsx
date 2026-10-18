@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { BadgeCheck, ListFilter, MessageSquareText, Ruler } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { AgentChat } from "@/components/agent-chat"
@@ -21,11 +22,23 @@ export default function RoomSimulatorPage() {
       <header className="mb-12 max-w-3xl">
         <p className="eyebrow text-primary">Fit agent</p>
         <h1 className="display mt-4 text-4xl text-balance lg:text-6xl">The fit agent</h1>
-        <p className="mt-5 max-w-2xl text-base text-pretty text-muted-foreground lg:text-lg">
-          An agent shortlists the catalog, runs a real fit simulation for each candidate through the same API your
-          shoppers use, and only recommends what the geometry says fits. Every step is shown, including the ones that
-          were skipped.
-        </p>
+        <ol className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4" aria-label="How the agent works">
+          {[
+            { icon: MessageSquareText, label: "Reads your brief", note: "in your own words" },
+            { icon: ListFilter, label: "Shortlists", note: "the catalog" },
+            { icon: Ruler, label: "Fits each piece", note: "in your room" },
+            { icon: BadgeCheck, label: "Recommends", note: "only what fits" },
+          ].map(({ icon: Icon, label, note }, at) => (
+            <li key={label} className="relative">
+              <span className="flex size-12 items-center justify-center rounded-full border border-primary/50 text-primary">
+                <Icon className="size-5" />
+              </span>
+              {at < 3 && <span aria-hidden className="absolute top-6 left-14 hidden h-px w-[calc(100%-4rem)] bg-border sm:block" />}
+              <p className="mt-3 text-sm font-medium">{label}</p>
+              <p className="text-xs text-muted-foreground">{note}</p>
+            </li>
+          ))}
+        </ol>
       </header>
 
       <Section>
@@ -41,17 +54,14 @@ export default function RoomSimulatorPage() {
 
       <Section eyebrow="No agent in the loop" title="Or measure one piece yourself">
         <p className="mb-5 max-w-2xl text-sm text-muted-foreground">
-          Paste a product link or attach a room photo and the six-service pipeline does the geometry on that single item —
-          the same call the agent makes when it tests a candidate.
+One link or photo, one piece, the same call the agent makes.
         </p>
         <RoomSimulator />
       </Section>
 
       <Section eyebrow="The shop's side" title="What the shop gets out of it">
         <p className="mb-5 max-w-2xl text-sm text-muted-foreground">
-          The same arithmetic the <span className="font-mono text-xs">returns_estimate</span> capability hands an agent, and
-          the two queues a person at the shop works through: holds and order drafts, each written after a shopper said yes in
-          their own words. Both are the service&apos;s numbers, not the browser&apos;s.
+What a fit check saves, and the two queues a person at the shop works through.
         </p>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
           <ValuePanel />

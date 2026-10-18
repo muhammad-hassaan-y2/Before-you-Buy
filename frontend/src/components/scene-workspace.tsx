@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PriceBand } from "@/components/visuals"
+import { getProductImage } from "@/lib/product-images"
 import { cn } from "@/lib/utils"
 import { createSimulation, fetchCatalog, pollSimulation, type CatalogRow, type Simulation } from "@/lib/api"
 
@@ -107,12 +109,18 @@ export function SceneWorkspace() {
                       sku === row.sku ? "bg-primary/10 text-foreground" : "hover:bg-muted/50",
                     )}
                   >
-                    <span className="flex items-baseline justify-between gap-2">
-                      <span className="truncate font-medium">{row.name}</span>
-                      <span className="shrink-0 text-xs text-muted-foreground">{row.price_band ?? ""}</span>
-                    </span>
-                    <span className="mt-0.5 block font-mono text-[11px] text-muted-foreground">
-                      {row.sku} · {row.geometry.width_cm} × {row.geometry.depth_cm} × {row.geometry.height_cm} cm
+                    <span className="flex items-center gap-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={getProductImage(row.sku, row.category).url} alt="" className="size-11 shrink-0 rounded-md object-cover" />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-baseline justify-between gap-2">
+                          <span className="truncate font-medium">{row.name}</span>
+                          <PriceBand band={row.price_band} />
+                        </span>
+                        <span className="mt-0.5 block font-mono text-[11px] text-muted-foreground">
+                          {row.sku} · {row.geometry.width_cm} × {row.geometry.depth_cm} × {row.geometry.height_cm} cm
+                        </span>
+                      </span>
                     </span>
                   </button>
                 </li>

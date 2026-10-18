@@ -181,3 +181,22 @@ export function Meter({ value, max = 100, label, tone = "primary" }: { value: nu
     </div>
   )
 }
+
+/** Where a record is on its way: filled dots up to its status, hollow after. Statuses the list
+ *  does not know leave every dot hollow and print the status itself, so nothing is made up. */
+export function Stages({ status, steps }: { status: string; steps: string[] }) {
+  const clean = status.replace(/_/g, " ")
+  const at = steps.findIndex((step) => step === clean)
+  return (
+    <ol className="mt-2 flex items-center gap-1.5" aria-label={`Status: ${clean}`}>
+      {steps.map((step, index) => (
+        <li key={step} className="flex items-center gap-1.5">
+          <span className={cn("size-2 rounded-full border", index <= at ? "border-primary bg-primary" : "border-muted-foreground/50")} />
+          <span className={cn("text-[11px]", index === at ? "font-medium text-foreground" : "text-muted-foreground")}>{step}</span>
+          {index < steps.length - 1 && <span aria-hidden className="h-px w-3 bg-border" />}
+        </li>
+      ))}
+      {at < 0 && <li className="text-[11px] text-muted-foreground">· {clean}</li>}
+    </ol>
+  )
+}

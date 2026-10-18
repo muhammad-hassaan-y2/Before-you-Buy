@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react"
 import { AgentRunTrace, RunStatusBadge } from "@/components/agent-run-trace"
 import { AddToBag } from "@/components/bag-drawer"
 import { FitViews } from "@/components/fit-views"
+import { Meter } from "@/components/visuals"
 import { RoomDimensions } from "@/components/room-dimensions"
 import { SimulatingRoom } from "@/components/simulating-room"
 import { DimensionEstimateWarning, ProductSourceBadge } from "@/components/product-provenance"
@@ -102,9 +103,7 @@ export function FitAgent() {
           <CardTitle>Ask the fit agent
           </CardTitle>
           <CardDescription>
-            Say it the way you would to a shop assistant. The agent reads your words, shortlists the catalog, runs a real
-            fit simulation on each candidate and only then recommends. Attach a photo of the room and every candidate is
-            measured against the room in it.
+            Say it the way you would to a shop assistant. Add a photo and every candidate is measured in that room.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -150,9 +149,7 @@ export function FitAgent() {
               <PhotoDropzone file={photo} onFile={setPhoto} disabled={busy} hint="Drop a JPG or PNG of the room, or click to choose" />
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs text-muted-foreground">
-                  {photo
-                    ? "Every candidate is fitted into the room measured from this photo, not the numbers below."
-                    : "Without a photo the agent uses the room you type."}
+                  {photo ? "Measured from this photo, not the numbers below." : "No photo: the agent uses the room you type."}
                 </p>
               </div>
             </div>
@@ -187,9 +184,13 @@ export function FitAgent() {
                   </Badge>
                 ))}
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Read by {run.brief.source} · confidence {(run.brief.confidence * 100).toFixed(0)} %
-              </p>
+              <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="shrink-0">Read by {run.brief.source}</span>
+                <span className="w-24">
+                  <Meter value={run.brief.confidence * 100} tone={run.brief.confidence >= 0.7 ? "success" : "warning"} label={`Confidence ${(run.brief.confidence * 100).toFixed(0)} percent`} />
+                </span>
+                <span className="num">{(run.brief.confidence * 100).toFixed(0)} %</span>
+              </div>
             </div>
           )}
         </CardContent>
@@ -201,7 +202,7 @@ export function FitAgent() {
             <div className="min-w-0">
               <CardTitle>How it was decided</CardTitle>
               <CardDescription className="mt-1">
-                {run ? `Run ${run.id}` : "Every step records which model or endpoint drove it, so the answer can be audited."}
+                {run ? `Run ${run.id}` : "Each step shows what drove it and how long it took."}
               </CardDescription>
             </div>
             {run && <RunStatusBadge status={run.status} />}
@@ -246,7 +247,12 @@ export function FitAgent() {
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="success">{decision.action}</Badge>
                 <span className="font-mono text-xs">{decision.sku ?? "—"}</span>
-                <span className="ml-auto text-xs text-muted-foreground">confidence {(decision.confidence * 100).toFixed(0)} %</span>
+                <span className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="w-20">
+                    <Meter value={decision.confidence * 100} tone="success" label={`Confidence ${(decision.confidence * 100).toFixed(0)} percent`} />
+                  </span>
+                  <span className="num">{(decision.confidence * 100).toFixed(0)} %</span>
+                </span>
               </div>
               {decision.reason && <p className="mt-2 text-muted-foreground">{decision.reason}</p>}
               {decision.simulation_id && (

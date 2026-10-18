@@ -82,8 +82,7 @@ export function RoomSimulator() {
           <CardTitle>What are you considering?
           </CardTitle>
           <CardDescription>
-            Paste a product link and the inference service reads its real dimensions with AMD Token Factory. Or attach a
-            room photo and describe the piece.
+Paste a product link, or attach a room photo and describe the piece.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -188,10 +187,7 @@ export function RoomSimulator() {
                 <rect x="14" y="14" width="42" height="19" rx="3" className="fill-room-product/15 stroke-room-product/50" strokeWidth="1" strokeDasharray="3 3" />
               </svg>
               <p className="mt-4 text-sm font-medium">Nothing measured yet</p>
-              <p className="mx-auto mt-1 max-w-xs text-xs text-muted-foreground">
-                The plan, the walkways and the verdict land here. The geometry worker decides all three — nothing on this
-                page guesses on its behalf.
-              </p>
+              <p className="mx-auto mt-1 max-w-xs text-xs text-muted-foreground">The plan, walkways and verdict land here.</p>
             </div>
           )}
 

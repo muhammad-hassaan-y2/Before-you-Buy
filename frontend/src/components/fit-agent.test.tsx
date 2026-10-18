@@ -134,7 +134,8 @@ describe("FitAgent", () => {
     expect(JSON.parse(String(init.body)).brief).toBe("a 2 door wardrobe, max 600")
 
     expect(screen.getByText("sofa")).toBeInTheDocument()
-    expect(screen.getByText("Read by heuristic · confidence 70 %")).toBeInTheDocument()
+    expect(screen.getByText("Read by heuristic")).toBeInTheDocument()
+    expect(screen.getByRole("img", { name: "Confidence 70 percent" })).toBeInTheDocument()
   })
 
   it("renders every step, its driver and its duration", async () => {
@@ -155,9 +156,10 @@ describe("FitAgent", () => {
     render(<FitAgent />)
     fireEvent.click(screen.getByRole("button", { name: /Find what fits/i }))
 
-    expect(await screen.findByText("4.0 s measured")).toBeInTheDocument()
-    expect(screen.getByText("1 model call")).toBeInTheDocument()
-    expect(screen.getByText("2 search passes")).toBeInTheDocument()
+    expect(await screen.findByText("4.0 s")).toBeInTheDocument()
+    expect(screen.getByText("measured")).toBeInTheDocument()
+    expect(screen.getByText("model call")).toBeInTheDocument()
+    expect(screen.getByText("search passes")).toBeInTheDocument()
     expect(screen.getByText("evolus exec-9")).toBeInTheDocument()
   })
 
@@ -168,7 +170,7 @@ describe("FitAgent", () => {
 
     const attempt = await screen.findByText("KURA sofa")
     expect(screen.getByText("fits")).toBeInTheDocument()
-    expect(attempt.parentElement).toHaveTextContent("0.20 m walkway")
+    expect(attempt.parentElement?.parentElement).toHaveTextContent("0.20 m")
     expect(screen.getByText("recommend")).toBeInTheDocument()
     expect(screen.getByText("widest walkway of the four")).toBeInTheDocument()
   })

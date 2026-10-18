@@ -46,8 +46,7 @@ export function AgentChat() {
         <CardTitle>Ask about a fit
         </CardTitle>
         <CardDescription>
-          Talks to the Evolus agent through our own service, so the workspace key never reaches the browser. The badge on
-          each answer says whether Evolus or the AMD-hosted model replied.
+Each answer says who replied.
         </CardDescription>
       </CardHeader>
 
