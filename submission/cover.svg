@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-label="Buy You Before — the shop that measures the room before it recommends, and only sells what the geometry engine cleared">
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-label="Before You Buy — the shop that measures the room before it recommends, and only sells what the geometry engine cleared">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0.85" y2="1">
       <stop offset="0" stop-color="#17110C"/>
@@ -45,7 +45,7 @@
   <!-- ── headline band ── -->
   <g class="ui">
     <text class="eyebrow" x="100" y="118">AMD DEVELOPER HACKATHON · ACT III · EVOLUS TRACK</text>
-    <text class="h1" x="96" y="236">Buy You Before</text>
+    <text class="h1" x="96" y="236">Before You Buy</text>
     <text class="sub" x="100" y="296">The shop that answers first: it measures</text>
     <text class="sub" x="100" y="330">your room before it recommends, and only</text>
     <text class="sub" x="100" y="364">sells what the geometry engine cleared.</text>

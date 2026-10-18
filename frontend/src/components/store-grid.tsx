@@ -26,6 +26,7 @@ import {
   type StoreSort,
 } from "@/lib/store"
 import { cn } from "@/lib/utils"
+import { validateRoom } from "@/lib/validate"
 
 const SORTS: { key: StoreSort; label: string }[] = [
   { key: "fit", label: "Fit first" },
@@ -43,7 +44,7 @@ const MEASURE = 8
 function ShelfActivity({ events, rows }: { events: { at: string; action: string; sku: string; qty: number }[]; rows: CatalogRow[] }) {
   const name = (sku: string) => rows.find((row) => row.sku === sku)?.name ?? sku
   return (
-    <div className="flex items-center gap-3 overflow-hidden rounded-full border border-border/60 bg-card/70 py-1.5 pr-4 pl-3 text-xs">
+    <div className="flex items-center gap-3 overflow-hidden border-y border-border py-2 text-xs">
       <Radio className="size-3.5 shrink-0 text-primary" />
       {events.length === 0 ? (
         <span className="truncate text-muted-foreground">Nothing has moved on the shelf yet — a hold or an order draft is what changes a count here.</span>
@@ -72,40 +73,38 @@ function CategoryRail({ shelves, selected, onSelect }: { shelves: Shelf[]; selec
       aria-label={shelf.category ?? "Everything"}
       onClick={() => onSelect(shelf.category)}
       className={cn(
-        "group flex w-44 shrink-0 snap-start flex-col justify-between gap-3 rounded-3xl border p-4 text-left transition-all duration-300",
-        selected === shelf.category
-          ? "border-primary/60 bg-card ring-1 ring-primary/30"
-          : "border-border/60 bg-card/50 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card",
+        "group flex shrink-0 snap-start items-baseline gap-3 border-b-2 py-3 text-left whitespace-nowrap transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+        selected === shelf.category ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
       )}
     >
-      <div className="flex h-16 items-center justify-center text-muted-foreground">
+      <span className="h-9 w-14 shrink-0 self-center text-foreground" aria-hidden>
         {shelf.piece ? (
-          <div className="h-16 w-28 transition-transform duration-500 ease-out group-hover:scale-110">
-            <ProductIso
-              parts={shelf.piece.parts}
-              widthCm={shelf.piece.geometry.width_cm}
-              depthCm={shelf.piece.geometry.depth_cm}
-              heightCm={shelf.piece.geometry.height_cm}
-              material={shelf.piece.material}
-              name={shelf.piece.name}
-            />
-          </div>
+          <ProductIso
+            parts={shelf.piece.parts}
+            widthCm={shelf.piece.geometry.width_cm}
+            depthCm={shelf.piece.geometry.depth_cm}
+            heightCm={shelf.piece.geometry.height_cm}
+            material={shelf.piece.material}
+            name={shelf.piece.name}
+          />
         ) : (
-          <span className="num text-3xl font-semibold text-foreground">{shelves.reduce((total, item) => total + item.pieces, 0)}</span>
+          <span className="grid h-full grid-cols-3 grid-rows-2 gap-0.5">
+            {Array.from({ length: 6 }).map((_, at) => (
+              <span key={at} className="rounded-[2px] bg-current opacity-40" />
+            ))}
+          </span>
         )}
-      </div>
-      <div>
-        <p className="eyebrow truncate text-primary">{shelf.category ?? "Everything"}</p>
-        <p className="num mt-1 text-xs text-muted-foreground">
-          {shelf.pieces} {shelf.pieces === 1 ? "piece" : "pieces"}
-          {shelf.from > 0 && ` · from ${price(shelf.from)}`}
-        </p>
-      </div>
+      </span>
+      <span className="display text-xl capitalize">{shelf.category ?? "Everything"}</span>
+      <span className="num text-xs">
+        {shelf.pieces}
+        {shelf.from > 0 && ` · from ${price(shelf.from)}`}
+      </span>
     </button>
   )
   return (
-    <nav aria-label="Shop by category" className="-mx-6 overflow-x-auto px-6 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <div className="flex snap-x gap-3">{shelves.map(tile)}</div>
+    <nav aria-label="Shop by category" className="-mx-6 overflow-x-auto border-b border-border px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex snap-x gap-8">{shelves.map(tile)}</div>
     </nav>
   )
 }
@@ -145,9 +144,11 @@ export function StoreGrid({ initialCategory = null }: { initialCategory?: string
     }
   }, [])
 
-  const roomWidth = Number(width) || 4
-  const roomDepth = Number(depth) || 3.5
-  const roomHeight = Number(height) || 2.4
+  // A wrong measurement is named, not swapped for a default: the sweep waits for a real room.
+  const { room: checked, errors: roomErrors } = useMemo(() => validateRoom({ width, depth, height }), [width, depth, height])
+  const roomWidth = checked?.width ?? 4
+  const roomDepth = checked?.depth ?? 3.5
+  const roomHeight = checked?.height ?? 2.4
   const visible = useMemo(() => sortRows(rows.filter((row) => match(row, filter)), filter, verdicts), [rows, filter, verdicts])
   const cleared = useMemo(() => Object.values(verdicts).filter((verdict) => verdict === "fits" || verdict === "tight").length, [verdicts])
 
@@ -175,6 +176,10 @@ export function StoreGrid({ initialCategory = null }: { initialCategory?: string
     async (override: { category?: string | null; priceBand?: string | null } = {}) => {
       const category = "category" in override ? override.category : filter.category
       const priceBand = "priceBand" in override ? override.priceBand : filter.priceBand
+      if (!checked) {
+        setFitError("Fix the room measurements above before measuring.")
+        return
+      }
       abort.current?.abort()
       const controller = new AbortController()
       abort.current = controller
@@ -215,7 +220,7 @@ export function StoreGrid({ initialCategory = null }: { initialCategory?: string
         }
       }
     },
-    [roomWidth, roomDepth, roomHeight, filter.category, filter.priceBand, filter.query],
+    [checked, roomWidth, roomDepth, roomHeight, filter.category, filter.priceBand, filter.query],
   )
 
   useEffect(() => () => abort.current?.abort(), [])
@@ -238,12 +243,19 @@ export function StoreGrid({ initialCategory = null }: { initialCategory?: string
   }
 
   if (loadError) {
-    return <p className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">{loadError}</p>
+    return <p className="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">{loadError}</p>
   }
   if (!loaded) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" /> Opening the shop…
+      <div aria-busy="true" aria-label="Opening the shop" className="grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
+        {[0, 1, 2].map((slot) => (
+          <div key={slot} className="space-y-3">
+            <div className="aspect-[4/3] animate-pulse rounded-md bg-muted" />
+            <div className="h-9 animate-pulse rounded-md bg-muted/70" />
+            <div className="h-5 w-2/3 animate-pulse rounded bg-muted/70" />
+            <div className="h-24 animate-pulse rounded bg-muted/50" />
+          </div>
+        ))}
       </div>
     )
   }
@@ -258,7 +270,7 @@ export function StoreGrid({ initialCategory = null }: { initialCategory?: string
     <div className="space-y-6">
       <CategoryRail shelves={shelves} selected={filter.category} onSelect={chooseShelf} />
 
-      <div className="sticky top-[3.25rem] z-30 -mx-6 border-y border-border/60 bg-background/80 px-6 py-4 backdrop-blur-xl">
+      <div className="sticky top-[3.25rem] z-30 -mx-6 border-b border-border bg-background/95 px-6 py-3 backdrop-blur-md">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
           <Label htmlFor="room-width" className="eyebrow text-muted-foreground">
             The room you are shopping for
@@ -285,8 +297,12 @@ export function StoreGrid({ initialCategory = null }: { initialCategory?: string
                   inputMode="decimal"
                   value={value}
                   onChange={(event) => setter(event.target.value)}
+                  onFocus={(event) => event.target.select()}
                   disabled={busy}
-                  className="num w-[4.5rem] bg-background/70 text-center font-semibold"
+                  autoComplete="off"
+                  aria-invalid={roomErrors[labelText.toLowerCase() as "width" | "depth" | "height"] ? true : undefined}
+                  title={roomErrors[labelText.toLowerCase() as "width" | "depth" | "height"]}
+                  className="num w-24 bg-background/70 text-center font-semibold aria-invalid:border-destructive aria-invalid:ring-destructive/30"
                 />
               </div>
             ))}
@@ -299,7 +315,6 @@ export function StoreGrid({ initialCategory = null }: { initialCategory?: string
             </Button>
             {busy ? (
               <Button
-                size="lg"
                 variant="secondary"
                 onClick={() => {
                   abort.current?.abort()
@@ -311,13 +326,14 @@ export function StoreGrid({ initialCategory = null }: { initialCategory?: string
                 {progress ? `${progress.of} of ${progress.total} measured` : "Stop"}
               </Button>
             ) : (
-              <Button size="lg" onClick={() => void measure()}>
+              <Button onClick={() => void measure()}>
                 <Ruler className="size-4" /> Measure {MEASURE} in my room
               </Button>
             )}
           </div>
         </div>
-        <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+      </div>
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           {busy && progress ? (
             <span className="flex items-center gap-1.5 text-primary">
               <Loader2 className="size-3 animate-spin" /> Measuring — a card turns the second its own simulation settles.
@@ -330,9 +346,13 @@ export function StoreGrid({ initialCategory = null }: { initialCategory?: string
           ) : (
             <span>Every badge is the geometry engine&rsquo;s own word for this room. Nothing here is guessed.</span>
           )}
+          {Object.entries(roomErrors).map(([field, message]) => (
+            <span key={field} role="alert" className="text-destructive">
+              {field[0].toUpperCase() + field.slice(1)}: {message}
+            </span>
+          ))}
           {fitError && <span className="text-destructive">{fitError}</span>}
-        </p>
-      </div>
+      </p>
 
       <ShelfActivity events={shelf.events} rows={rows} />
 
@@ -372,11 +392,11 @@ export function StoreGrid({ initialCategory = null }: { initialCategory?: string
       </div>
 
       {visible.length === 0 ? (
-        <p className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
+        <p className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground">
           Nothing in the shop matches that. Clear a filter and try again.
         </p>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((row) => (
             <ProductCard
               key={row.sku}

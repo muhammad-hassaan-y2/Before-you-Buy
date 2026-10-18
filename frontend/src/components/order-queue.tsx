@@ -1,9 +1,9 @@
 "use client"
 
-import { ClipboardList } from "lucide-react"
+import { Inbox } from "lucide-react"
 import { useEffect, useState } from "react"
 
-import { Badge } from "@/components/ui/badge"
+import { PriceSplit, Stages } from "@/components/visuals"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { fetchOrders, type OrderSummary } from "@/lib/agent"
 import { price } from "@/lib/store"
@@ -19,33 +19,37 @@ export function OrderQueue() {
   }, [])
 
   return (
-    <Card className="shadow-lg shadow-black/5">
+    <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ClipboardList className="size-4 text-primary" /> Order drafts waiting on a person
+        <CardTitle>Order drafts waiting on a person
         </CardTitle>
         <CardDescription>
-          What checkout wrote after a shopper confirmed in their own words. Every draft cites the simulation that cleared
-          each line, and no card has been taken.
+Drafts a shopper confirmed. No card has been taken.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
         {orders === null && <p className="text-sm text-muted-foreground">Reading the drafts…</p>}
         {orders?.length === 0 && (
-          <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-            Nothing ordered yet. A draft needs the shopper&apos;s own yes and a cleared verdict on every line, so neither an
-            agent nor this page can make one on their behalf.
-          </p>
+          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+            <Inbox className="size-7 opacity-50" />
+            Nothing ordered yet
+            <span className="max-w-xs text-xs">A draft needs the shopper&apos;s own yes and a cleared verdict on every line.</span>
+          </div>
         )}
         {orders?.map((item) => (
-          <div key={item.id} className="rounded-lg border px-3 py-2.5 text-sm">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs text-muted-foreground">{item.id.slice(0, 8)}</span>
-              <Badge variant="secondary">{price(item.total_eur)}</Badge>
-              <span className="font-mono text-xs tabular-nums text-success">+{price(item.margin_eur)}</span>
-              <Badge variant="outline">{item.status.replace("_", " ")}</Badge>
+          <div key={item.id} className="rounded-lg border border-border p-3 text-sm">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="flex items-baseline gap-2">
+                <span className="num display text-2xl">{price(item.total_eur)}</span>
+                <span className="num text-xs text-success">+{price(item.margin_eur)}</span>
+              </span>
+              <span className="font-mono text-[11px] text-muted-foreground">{item.id.slice(0, 8)}</span>
             </div>
-            <p className="mt-1.5 text-xs italic text-muted-foreground">“{item.confirmation}”</p>
+            <div className="mt-2">
+              <PriceSplit cost={item.total_eur - item.margin_eur} margin={item.margin_eur} />
+            </div>
+            <Stages status={item.status} steps={["awaiting merchant", "accepted", "ordered"]} />
+            <p className="mt-2 text-xs italic text-muted-foreground">“{item.confirmation}”</p>
             <p className="mt-1 text-[11px] text-muted-foreground">{item.created_at}</p>
           </div>
         ))}

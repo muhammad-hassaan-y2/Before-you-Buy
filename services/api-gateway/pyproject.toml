@@ -1,7 +1,7 @@
 [project]
 name = "byb-api-gateway"
 version = "0.1.0"
-description = "Buy You Before - ingest, persistence and orchestration gateway"
+description = "Before You Buy - ingest, persistence and orchestration gateway"
 authors = [{ name = "Hassaan", email = "hassaan@example.com" }]
 readme = "README.md"
 requires-python = ">=3.11"

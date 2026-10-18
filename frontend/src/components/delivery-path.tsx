@@ -1,49 +1,80 @@
 "use client"
 
-import { DoorClosed, DoorOpen, Lightbulb, Move, ShieldAlert } from "lucide-react"
+import { Check, DoorOpen, Footprints, Lightbulb, Ruler, TriangleAlert, X, type LucideIcon } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
 import type { FitReport } from "@/lib/api"
+import { cn } from "@/lib/utils"
 
-const DOOR: Record<string, { label: string; variant: "success" | "warning" | "destructive" | "secondary" }> = {
-  pass: { label: "gets through the door", variant: "success" },
-  tight: { label: "doorway is tight", variant: "warning" },
-  blocked: { label: "cannot get through the door", variant: "destructive" },
-  unknown: { label: "doorway not checked", variant: "secondary" },
+type Stop = { icon: LucideIcon; label: string; state: "ok" | "warn" | "bad" | "unknown"; note: string }
+
+const STATE = {
+  ok: { ring: "border-success text-success", mark: Check, bar: "bg-success" },
+  warn: { ring: "border-warning text-warning", mark: TriangleAlert, bar: "bg-warning" },
+  bad: { ring: "border-destructive text-destructive", mark: X, bar: "bg-destructive" },
+  unknown: { ring: "border-border text-muted-foreground", mark: Ruler, bar: "bg-muted-foreground/40" },
 }
 
-/** The delivery path, straight off the fit report: can the box get in, can you still walk around
- *  it once it is in, and how firmly the verdict stands against a sloppy tape measure. */
+/** The delivery path as a route you can read at a glance: door, floor, then the piece itself.
+ *  Each stop is lit by what the fit report said about it, and a stop that fails colours the
+ *  stretch of road after it. */
 export function DeliveryPath({ report }: { report: FitReport }) {
-  const door = DOOR[report.door_pass] ?? DOOR.unknown
   const notes: string[] = []
   if (!report.walkway_connected) notes.push("At that spot the entrance is cut off — no route stays walkable from the door.")
   if (report.isolated_pockets > 0) notes.push(`It seals off ${report.isolated_pockets} pocket${report.isolated_pockets === 1 ? "" : "s"} of floor behind it.`)
   if (report.fragile) notes.push(`It passes on these numbers and fails if reality is off by ${report.tolerance_cm} cm, so the room is worth measuring again.`)
-
+  const stops: Stop[] = [
+    {
+      icon: DoorOpen,
+      label: "Door",
+      state: report.door_pass === "pass" ? "ok" : report.door_pass === "tight" ? "warn" : report.door_pass === "blocked" ? "bad" : "unknown",
+      note: { pass: "gets through the door", tight: "doorway is tight", blocked: "cannot get through the door", unknown: "doorway not checked" }[report.door_pass] ?? "doorway not checked",
+    },
+    {
+      icon: Footprints,
+      label: "Walkways",
+      state: !report.walkway_connected ? "bad" : report.isolated_pockets > 0 ? "warn" : "ok",
+      note: !report.walkway_connected
+        ? "entrance cut off"
+        : report.isolated_pockets > 0
+          ? `${report.isolated_pockets} pocket${report.isolated_pockets === 1 ? "" : "s"} sealed off`
+          : "stay open",
+    },
+    {
+      icon: Ruler,
+      label: "Margin",
+      state: report.fragile ? "warn" : "ok",
+      note: report.fragile ? `fragile by ${report.tolerance_cm} cm` : "holds if measured loosely",
+    },
+  ]
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={door.variant} className="gap-1.5">
-          {report.door_pass === "blocked" ? <DoorClosed className="size-3" /> : <DoorOpen className="size-3" />}
-          {door.label}
-        </Badge>
-        {report.fragile && (
-          <Badge variant="warning" className="gap-1.5">
-            <ShieldAlert className="size-3" /> fragile by {report.tolerance_cm} cm
-          </Badge>
-        )}
-        {!report.walkway_connected && (
-          <Badge variant="destructive" className="gap-1.5">
-            <Move className="size-3" /> entrance cut off
-          </Badge>
-        )}
-        {report.isolated_pockets > 0 && (
-          <Badge variant="warning" className="gap-1.5">
-            <Move className="size-3" /> {report.isolated_pockets} pocket{report.isolated_pockets === 1 ? "" : "s"} sealed off
-          </Badge>
-        )}
-      </div>
+    <div className="space-y-4">
+      <ol className="flex items-start">
+        {stops.map((stop, at) => {
+          const meta = STATE[stop.state]
+          const Mark = meta.mark
+          return (
+            <li key={stop.label} className="flex flex-1 items-start last:flex-none">
+              <div className="flex w-20 flex-col items-center text-center">
+                <span className={cn("relative flex size-11 items-center justify-center rounded-full border-2 bg-card", meta.ring)}>
+                  <stop.icon className="size-5" />
+                  <span className="absolute -right-1 -bottom-1 flex size-4 items-center justify-center rounded-full bg-card">
+                    <Mark className="size-3" />
+                  </span>
+                </span>
+                <p className="mt-2 text-xs font-medium">{stop.label}</p>
+                <p className="text-[11px] leading-tight text-muted-foreground">{stop.note}</p>
+              </div>
+              {at < stops.length - 1 && <span aria-hidden className={cn("mt-[21px] h-0.5 flex-1 rounded-full", STATE[stop.state].bar)} />}
+            </li>
+          )
+        })}
+      </ol>
+
+      {!report.walkway_connected && report.isolated_pockets > 0 && (
+        <p className="text-xs font-medium text-warning">
+          {report.isolated_pockets} pocket{report.isolated_pockets === 1 ? "" : "s"} sealed off
+        </p>
+      )}
 
       {notes.map((note) => (
         <p key={note} className="text-xs leading-relaxed text-muted-foreground">

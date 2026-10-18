@@ -1,4 +1,4 @@
-# Buy You Before - Inference Service
+# Before You Buy - Inference Service
 
 Turns a product URL (or a shopper's notes about a photo) into a real-world
 `ProductProfile` with centimetre dimensions, using an **AMD Token Factory**

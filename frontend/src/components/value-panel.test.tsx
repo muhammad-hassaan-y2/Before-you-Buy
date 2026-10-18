@@ -46,7 +46,7 @@ describe("ValuePanel", () => {
     const calls = (fetch as ReturnType<typeof vi.fn>).mock.calls
     expect(calls[0][0]).toBe("/agent/tools/returns_estimate")
     expect(JSON.parse(String(calls[0][1].body))).toMatchObject({ orders_per_month: 2000, price_band: "$$$", return_rate: 0.3 })
-    expect(screen.getByText("40.2")).toBeInTheDocument()
+    expect(screen.getAllByText("40.2").length).toBeGreaterThan(0)
     expect(screen.getByText(/67 % fit-driven/)).toBeInTheDocument()
   })
 

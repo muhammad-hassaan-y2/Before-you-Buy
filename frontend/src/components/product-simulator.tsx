@@ -1,18 +1,19 @@
 "use client"
 
-import { AlertTriangle, ImageIcon, Loader2, Ruler, X } from "lucide-react"
+import { AlertTriangle, ImageIcon, Loader2, Ruler } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
+import { RoomDimensions } from "@/components/room-dimensions"
 import { FitResult, ProgressStrip } from "@/components/fit-result"
 import { SimulatingRoom } from "@/components/simulating-room"
 import { AddToBag } from "@/components/bag-drawer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PhotoDropzone } from "@/components/ui/photo-dropzone"
 import { createSimulation, pollSimulation, type CatalogRow, type Simulation } from "@/lib/api"
 import { useBag } from "@/lib/bag"
-import { cn } from "@/lib/utils"
+import { validateRoom, type RoomErrors } from "@/lib/validate"
 
 type Props = { row: CatalogRow }
 
@@ -25,7 +26,7 @@ export function ProductSimulator({ row }: Props) {
   const [depth, setDepth] = useState(String(room?.depth_m ?? "3.5"))
   const [height, setHeight] = useState(String(room?.height_m ?? "2.4"))
   const [file, setFile] = useState<File | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
+  const [roomErrors, setRoomErrors] = useState<RoomErrors>({})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [simulation, setSimulation] = useState<Simulation | null>(null)
@@ -34,29 +35,13 @@ export function ProductSimulator({ row }: Props) {
 
   useEffect(() => () => controller.current?.abort(), [])
 
-  function handleDragOver(e: React.DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(true)
-  }
-
-  function handleDragLeave(e: React.DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
-    const droppedFile = e.dataTransfer.files?.[0]
-    if (droppedFile && droppedFile.type.startsWith("image/")) {
-      setFile(droppedFile)
-    }
-  }
-
   async function run() {
+    const { room, errors } = validateRoom({ width, depth, height })
+    setRoomErrors(errors)
+    if (!room) {
+      setError("Fix the room measurements marked below.")
+      return
+    }
     controller.current?.abort()
     controller.current = new AbortController()
     setBusy(true)
@@ -67,9 +52,9 @@ export function ProductSimulator({ row }: Props) {
       const accepted = await createSimulation({
         link: row.commerce.product_url,
         file,
-        roomWidthM: Number(width) || 4,
-        roomDepthM: Number(depth) || 3.5,
-        roomHeightM: Number(height) || 2.4,
+        roomWidthM: room.width,
+        roomDepthM: room.depth,
+        roomHeightM: room.height,
         notes: [row.brand, row.name, row.material].filter(Boolean).join(" "),
       })
       const settled = await pollSimulation(accepted.id, setSimulation, { signal: controller.current.signal })
@@ -86,10 +71,9 @@ export function ProductSimulator({ row }: Props) {
   const report = simulation?.fit_report ?? null
 
   return (
-    <Card className="shadow-lg shadow-black/5">
+    <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Ruler className="size-4 text-primary" /> Test it in your room
+        <CardTitle>Test it in your room
         </CardTitle>
         <CardDescription>
           {busy
@@ -100,52 +84,22 @@ export function ProductSimulator({ row }: Props) {
       </CardHeader>
 
       <CardContent className="space-y-5">
-        <div className="grid grid-cols-3 gap-3">
-          {(
-            [
-              ["Width", width, setWidth, "pdp-width"],
-              ["Depth", depth, setDepth, "pdp-depth"],
-              ["Height", height, setHeight, "pdp-height"],
-            ] as const
-          ).map(([labelText, value, setter, id]) => (
-            <div key={id} className="space-y-1.5">
-              <Label htmlFor={id} className="text-xs text-muted-foreground">
-                {labelText} (m)
-              </Label>
-              <Input id={id} inputMode="decimal" value={value} onChange={(event) => setter(event.target.value)} disabled={busy} className="text-center" />
-            </div>
-          ))}
-        </div>
+        <RoomDimensions
+          idPrefix="pdp"
+          values={{ width, depth, height }}
+          errors={roomErrors}
+          disabled={busy}
+          onChange={(field, value) => {
+            ;({ width: setWidth, depth: setDepth, height: setHeight })[field](value)
+            setRoomErrors((current) => ({ ...current, [field]: undefined }))
+          }}
+        />
 
         <div className="space-y-2">
-          <Label htmlFor="pdp-photo" className="text-xs text-muted-foreground">
+          <Label className="text-xs text-muted-foreground">
             <ImageIcon className="size-3.5" /> Room photo (optional)
           </Label>
-          <label
-            htmlFor="pdp-photo"
-            onDragOver={handleDragOver}
-            onDragEnter={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={cn(
-              "flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed px-3 py-3 text-sm transition-all",
-              isDragging
-                ? "border-primary bg-primary/10 ring-2 ring-primary/40 scale-[1.01]"
-                : file
-                  ? "border-primary/60 bg-primary/5"
-                  : "hover:border-ring hover:bg-muted/40",
-            )}
-          >
-            <span className="truncate text-muted-foreground">
-              {isDragging ? "Drop your room photo here..." : file ? file.name : "Drop or choose a JPG/PNG to measure the room from"}
-            </span>
-            <input id="pdp-photo" type="file" accept="image/*" className="sr-only" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
-          </label>
-          {file && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => setFile(null)}>
-              <X className="size-3.5" /> Remove
-            </Button>
-          )}
+          <PhotoDropzone file={file} onFile={setFile} disabled={busy} hint="Drop a JPG or PNG to measure the room from, or click to choose" />
         </div>
 
         <Button size="lg" className="w-full" onClick={run} disabled={busy}>
@@ -154,7 +108,7 @@ export function ProductSimulator({ row }: Props) {
         </Button>
 
         {error && (
-          <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -176,7 +130,7 @@ export function ProductSimulator({ row }: Props) {
         {report && simulation && <FitResult simulation={simulation} placement={placement} onPlacement={setPlacement} />}
 
         {report && simulation && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/30 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-muted/30 p-3">
             <p className="text-xs text-muted-foreground">Bag it with this report attached — the geometry worker already cleared this piece for this room.</p>
             <AddToBag
               sku={row.sku}

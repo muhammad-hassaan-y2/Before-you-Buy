@@ -1,6 +1,6 @@
 # Layer A — AMD Token Factory deployment readiness
 
-Buy You Before’s inference-service calls an **AMD Token Factory** OpenAI-compatible
+Before You Buy’s inference-service calls an **AMD Token Factory** OpenAI-compatible
 `/chat/completions` endpoint over **HTTPS**. This is not self-hosted vLLM.
 
 ## Docker Compose

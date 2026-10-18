@@ -1,7 +1,7 @@
 [project]
 name = "byb-geometry-service"
 version = "0.1.0"
-description = "Buy You Before - Shapely room fit and placement analysis"
+description = "Before You Buy - Shapely room fit and placement analysis"
 authors = [{ name = "Hassaan", email = "hassaan@example.com" }]
 readme = "README.md"
 requires-python = ">=3.11"

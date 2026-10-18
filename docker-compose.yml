@@ -125,7 +125,8 @@ services:
     volumes:
       - ./components:/components:ro
     depends_on:
-      - api-gateway
+      api-gateway:
+        condition: service_healthy
 
   # ---------- catalog-service ----------
   catalog-service:
@@ -165,7 +166,8 @@ services:
       - ./components:/components:ro
       - ./services/catalog-service/dapr:/subscriptions:ro
     depends_on:
-      - catalog-service
+      catalog-service:
+        condition: service_healthy
 
   # ---------- inference-service ----------
   inference-service:
@@ -210,7 +212,8 @@ services:
       - ./components:/components:ro
       - ./services/inference-service/dapr:/subscriptions:ro
     depends_on:
-      - inference-service
+      inference-service:
+        condition: service_healthy
 
   # ---------- vision-service ----------
   vision-service:
@@ -253,7 +256,8 @@ services:
       - ./components:/components:ro
       - ./services/vision-service/dapr:/subscriptions:ro
     depends_on:
-      - vision-service
+      vision-service:
+        condition: service_healthy
 
   # ---------- geometry-service ----------
   geometry-service:
@@ -293,7 +297,8 @@ services:
       - ./components:/components:ro
       - ./services/geometry-service/dapr:/subscriptions:ro
     depends_on:
-      - geometry-service
+      geometry-service:
+        condition: service_healthy
 
   # ---------- scene-service ----------
   scene-service:
@@ -332,7 +337,8 @@ services:
       - ./components:/components:ro
       - ./services/scene-service/dapr:/subscriptions:ro
     depends_on:
-      - scene-service
+      scene-service:
+        condition: service_healthy
 
   # ---------- agent-service ----------
   # Deliberately without a daprd sidecar: the agent drives the same public HTTP surface a
@@ -372,7 +378,8 @@ services:
     ports:
       - "${AGENT_PORT:-8007}:8007"
     depends_on:
-      - api-gateway
+      api-gateway:
+        condition: service_healthy
 
   # ---------- frontend ----------
   frontend:
@@ -382,9 +389,12 @@ services:
       args:
         # next.config.ts reads this when the rewrite rules are built.
         API_GATEWAY_URL: http://api-gateway:8001
+        AGENT_SERVICE_URL: http://agent-service:8007
+        CATALOG_SERVICE_URL: http://catalog-service:8004
     environment:
       API_GATEWAY_URL: http://api-gateway:8001
       AGENT_SERVICE_URL: http://agent-service:8007
+      CATALOG_SERVICE_URL: http://catalog-service:8004
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-token}
       # Read at build time: the widget script tag is public by design, the key is not.
       NEXT_PUBLIC_EVOLUS_WIDGET_URL: ${NEXT_PUBLIC_EVOLUS_WIDGET_URL:-}
@@ -392,7 +402,8 @@ services:
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
-      - api-gateway
+      api-gateway:
+        condition: service_healthy
 
 networks:
   byb:

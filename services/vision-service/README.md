@@ -1,4 +1,4 @@
-# Buy You Before - Vision Service
+# Before You Buy - Vision Service
 
 Third worker in the chain. Looks at the uploaded room photo and answers two
 questions geometry-service cannot: how big is the room really, and what is already

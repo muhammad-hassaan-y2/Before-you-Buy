@@ -1,4 +1,4 @@
-"""Durable state for Buy You Before simulations.
+"""Durable state for Before You Buy simulations.
 
 Postgres is the production target; column types stay dialect-portable so the
 test suite can run against SQLite without a server.

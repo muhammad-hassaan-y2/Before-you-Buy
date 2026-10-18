@@ -1,6 +1,6 @@
 "use client"
 
-import { Loader2, ShoppingBag, X } from "lucide-react"
+import { CheckCircle2, Loader2, ShoppingBag, X } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -22,6 +22,8 @@ import {
   type BagRoom,
   type Order,
 } from "@/lib/bag"
+import { LeadBar, Meter, Stages } from "@/components/visuals"
+import { getProductImage } from "@/lib/product-images"
 import { PASS_VERDICTS, price, verdictLabel, verdictVariant } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
@@ -45,22 +47,21 @@ export function BagDrawer() {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label="Your bag">
-      <button type="button" className="flex-1 bg-black/40 backdrop-blur-[2px]" aria-label="Close the bag" onClick={closeBag} />
-      <aside className="flex h-full w-full max-w-md flex-col border-l border-border/60 bg-card shadow-2xl">
+      <button type="button" className="flex-1 bg-background/60 backdrop-blur-[2px]" aria-label="Close the bag" onClick={closeBag} />
+      <aside className="flex h-full w-full max-w-md flex-col border-l border-border/60 bg-card">
         <header className="flex items-center gap-3 border-b border-border/50 px-6 py-4">
-          <ShoppingBag className="size-4 text-primary" />
-          <h2 className="text-base font-semibold tracking-tight">{order ? "Order draft" : "Your bag"}</h2>
+          <h2 className="display text-xl">{order ? "Order draft" : "Your bag"}</h2>
           <Button type="button" size="icon" variant="ghost" className="ml-auto" aria-label="Close the bag" onClick={closeBag}>
             <X className="size-4" />
           </Button>
         </header>
 
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
-          {error && <p className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+          {error && <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
           {order ? (
             <Receipt order={order} />
           ) : !bag || bag.lines.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border/60 p-8 text-center text-sm text-muted-foreground">
+            <p className="rounded-md border border-dashed border-border/60 p-8 text-center text-sm text-muted-foreground">
               Nothing in the bag yet. Add a piece and its fit report comes with it.
             </p>
           ) : (
@@ -71,7 +72,7 @@ export function BagDrawer() {
                   <Loader2 className="size-3.5 animate-spin" /> The geometry worker is measuring…
                 </p>
               )}
-              <ul className="space-y-3">
+              <ul className="space-y-4">
                 {bag.lines.map((line) => (
                   <BagRow key={line.sku} line={line} busy={busy} />
                 ))}
@@ -108,34 +109,49 @@ function RoomLine({ bag, current }: { bag: Bag; current: Bag["room"] }) {
 
 function BagRow({ line, busy }: { line: BagLine; busy: boolean }) {
   const tightest = line.walkway_m ? Math.min(...Object.values(line.walkway_m)) : null
+  const image = getProductImage(line.sku, "")
+  const tone = line.verdict ? ({ fits: "text-success", tight: "text-warning" } as Record<string, string>)[line.verdict] ?? "text-destructive" : "text-muted-foreground"
   return (
-    <li className="rounded-2xl border border-border/60 bg-background/40 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{line.name}</p>
-          <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">{line.sku}</p>
-        </div>
-        <Badge variant={verdictVariant(line.verdict ?? undefined)}>{verdictLabel(line.verdict ?? undefined)}</Badge>
+    <li className="flex gap-3 border-b border-border pb-4">
+      <div className="size-20 shrink-0 overflow-hidden rounded-md bg-surface">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={image.url} alt={image.alt} className="h-full w-full object-cover" />
       </div>
-      <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
-        <span className="num text-sm font-semibold text-foreground">{price(line.price_eur * line.quantity)}</span>
-        {tightest !== null && <span className="tabular-nums">{tightest.toFixed(2)} m walkway</span>}
-        <span className="ml-auto flex items-center gap-1">
-          <span className="tabular-nums">× {line.quantity}</span>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="h-7 px-2 text-xs"
-            disabled={busy}
-            onClick={() => void addToBag(line.sku, { quantity: line.quantity + 1, simulationId: line.simulation_id })}
-          >
-            +
-          </Button>
-          <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={busy} onClick={() => void removeFromBag(line.sku)} aria-label={`Remove ${line.name}`}>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="display truncate text-base">{line.name}</p>
+            <p className="font-mono text-[11px] text-muted-foreground">{line.sku}</p>
+          </div>
+          <span className="num text-sm font-semibold">{price(line.price_eur * line.quantity)}</span>
+        </div>
+        <p className={cn("mt-1.5 flex items-center gap-1.5 text-xs font-semibold", tone)}>
+          <span aria-hidden className="size-2 rounded-full bg-current" />
+          {verdictLabel(line.verdict ?? undefined)}
+        </p>
+        {tightest !== null && (
+          <div className="mt-2 flex items-center gap-2">
+            <span className="relative flex-1">
+              <Meter value={tightest} max={1.2} tone={tightest >= 0.6 ? "success" : "warning"} label={`Tightest walkway ${tightest.toFixed(2)} metres`} />
+              <span aria-hidden className="absolute -top-0.5 bottom-[-2px] left-1/2 w-px bg-foreground" />
+            </span>
+            <span className="num w-14 text-right text-[11px] text-muted-foreground">{tightest.toFixed(2)} m</span>
+          </div>
+        )}
+        <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+          <span className="flex items-center rounded-full border border-border">
+            <button type="button" className="size-7 rounded-full hover:bg-muted disabled:opacity-40" disabled={busy || line.quantity <= 1} aria-label={`One fewer ${line.name}`} onClick={() => void addToBag(line.sku, { quantity: line.quantity - 1, simulationId: line.simulation_id })}>
+              −
+            </button>
+            <span className="num w-6 text-center text-foreground">{line.quantity}</span>
+            <button type="button" className="size-7 rounded-full hover:bg-muted disabled:opacity-40" disabled={busy} aria-label={`One more ${line.name}`} onClick={() => void addToBag(line.sku, { quantity: line.quantity + 1, simulationId: line.simulation_id })}>
+              +
+            </button>
+          </span>
+          <Button type="button" size="sm" variant="ghost" className="ml-auto h-7 px-2 text-xs" disabled={busy} onClick={() => void removeFromBag(line.sku)} aria-label={`Remove ${line.name}`}>
             Remove
           </Button>
-        </span>
+        </div>
       </div>
     </li>
   )
@@ -145,7 +161,7 @@ function SetVerdict({ bag }: { bag: Bag }) {
   const set = bag.set
   if (!set) return null
   return (
-    <div className="rounded-2xl border border-border/60 bg-muted/30 p-4">
+    <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
       <div className="flex items-center gap-2">
         <p className="eyebrow text-muted-foreground">Bought together</p>
         <Badge variant={verdictVariant(set.verdict)}>{verdictLabel(set.verdict)}</Badge>
@@ -167,15 +183,15 @@ function SetVerdict({ bag }: { bag: Bag }) {
 
 function Totals({ bag }: { bag: Bag }) {
   return (
-    <dl className="grid gap-1.5 border-t border-border/50 pt-4 text-sm">
-      <div className="flex justify-between">
+    <dl className="space-y-3 pt-1 text-sm">
+      <div className="flex items-baseline justify-between">
         <dt className="text-muted-foreground">{bag.items} piece(s)</dt>
-        <dd className="num font-medium">{price(bag.total_eur)}</dd>
+        <dd className="num display text-2xl">{price(bag.total_eur)}</dd>
       </div>
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <dt>Arrives</dt>
-        <dd className="tabular-nums">
-          {bag.lead_days} days, {bag.freight} freight
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <dt>Arrives · {bag.freight} freight</dt>
+        <dd>
+          <LeadBar days={bag.lead_days} />
         </dd>
       </div>
     </dl>
@@ -199,7 +215,7 @@ function Checkout({
 }) {
   const unproven = bag.unproven.length > 0
   return (
-    <div className="space-y-3 rounded-2xl border border-border/60 p-4">
+    <div className="space-y-3 rounded-lg border border-border/60 p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="eyebrow text-muted-foreground">Fit check</p>
         <Button type="button" size="sm" variant={unproven ? "default" : "outline"} disabled={busy} onClick={() => void onMeasure()}>
@@ -234,8 +250,9 @@ function Checkout({
 
 function Receipt({ order }: { order: Order }) {
   return (
-    <div className="space-y-3 rounded-2xl border border-success/30 bg-success/10 p-4 text-sm">
-      <p className="font-medium text-success">Draft placed · awaiting the shop</p>
+    <div className="space-y-3 rounded-lg border border-success/30 bg-success/10 p-4 text-sm">
+      <p className="flex items-center gap-2 font-medium text-success"><CheckCircle2 className="size-4" /> Draft placed · awaiting the shop</p>
+      <Stages status="awaiting merchant" steps={["awaiting merchant", "accepted", "ordered"]} />
       <p className="text-xs text-muted-foreground">{order.next}</p>
       <ul className="space-y-1 text-xs">
         {order.proofs.map((proof) => (

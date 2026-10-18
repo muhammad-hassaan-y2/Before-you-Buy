@@ -15,9 +15,10 @@ RUN pip install "poetry==${POETRY_VERSION}"
 WORKDIR /app
 
 COPY libs/ ./libs/
-COPY services/vision-service/pyproject.toml services/vision-service/README.md ./services/vision-service/
+COPY services/vision-service/pyproject.toml services/vision-service/poetry.lock* services/vision-service/README.md ./services/vision-service/
 # The dependency layer cannot see src/, so --no-root skips installing the service itself.
-RUN cd services/vision-service && poetry install --no-root --without dev --no-interaction --no-ansi
+RUN cd services/vision-service && poetry install --no-root --without dev --no-interaction --no-ansi \
+    && rm -rf /root/.cache/pypoetry /root/.cache/pip
 
 COPY services/vision-service/src/ ./services/vision-service/src/
 ENV PYTHONPATH=/app/services/vision-service/src:/app/libs/byb-common/src

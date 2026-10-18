@@ -116,8 +116,8 @@ describe("StoreGrid", () => {
     await waitFor(() => expect(screen.getByText("KURA three-seat sofa")).toBeInTheDocument())
     expect(screen.getByText("€919")).toBeInTheDocument()
     expect(screen.getByText("€399")).toBeInTheDocument()
-    expect(screen.getByText("18 days · pallet freight")).toBeInTheDocument()
-    expect(screen.getAllByText("reading the shelf…")).toHaveLength(2)
+    expect(screen.getAllByRole("img", { name: "Ships in 18 days" }).length).toBeGreaterThan(0)
+    expect(screen.getAllByLabelText("Reading the shelf")).toHaveLength(2)
     expect(screen.getByRole("link", { name: /KURA three-seat sofa/ })).toHaveAttribute("href", "/product/BYB-KURA-3S")
   })
 
@@ -164,8 +164,8 @@ describe("StoreGrid", () => {
     live.shelf.events = [{ at: new Date().toISOString(), action: "claimed", sku: sofa.sku, qty: 2 }]
 
     render(<StoreGrid />)
-    await waitFor(() => expect(screen.getByText("3 left · 2 held")).toBeInTheDocument())
-    expect(screen.getByText("Cut after your order · 45 days")).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole("img", { name: "3 available, 2 held, 6 on the floor" })).toBeInTheDocument())
+    expect(screen.getByTitle("Cut after your order · 45 days")).toBeInTheDocument()
     expect(screen.getByText("shelf live · 2 counts")).toBeInTheDocument()
     expect(screen.getByText(/Held/)).toBeInTheDocument()
   })

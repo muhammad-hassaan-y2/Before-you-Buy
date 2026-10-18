@@ -16,7 +16,8 @@ WORKDIR /app
 COPY libs/ ./libs/
 COPY services/agent-service/pyproject.toml services/agent-service/poetry.lock services/agent-service/README.md ./services/agent-service/
 # The dependency layer cannot see src/, so --no-root skips installing the service itself.
-RUN cd services/agent-service && poetry install --no-root --without dev --no-interaction --no-ansi
+RUN cd services/agent-service && poetry install --no-root --without dev --no-interaction --no-ansi \
+    && rm -rf /root/.cache/pypoetry /root/.cache/pip
 
 COPY services/agent-service/src/ ./services/agent-service/src/
 ENV PYTHONPATH=/app/services/agent-service/src:/app/libs/byb-common/src

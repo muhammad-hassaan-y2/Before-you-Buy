@@ -1,7 +1,7 @@
 [project]
 name = "byb-vision-service"
 version = "0.1.0"
-description = "Buy You Before - room photo measurement for the room simulator"
+description = "Before You Buy - room photo measurement for the room simulator"
 authors = [{ name = "Hassaan", email = "hassaan@example.com" }]
 readme = "README.md"
 requires-python = ">=3.11"

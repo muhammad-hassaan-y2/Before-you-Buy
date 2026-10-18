@@ -1,15 +1,14 @@
 "use client"
 
-import { Box, Camera, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 
 import { AddToBag } from "@/components/bag-drawer"
 import { ProductIso } from "@/components/product-iso"
-import { Badge } from "@/components/ui/badge"
 import type { CatalogRow, StockRow } from "@/lib/api"
 import { getProductImage } from "@/lib/product-images"
-import { price, stockLine, stockTone, verdictLabel, verdictVariant } from "@/lib/store"
+import { FootprintPlan, LeadBar, StockDots } from "@/components/visuals"
+import { price, verdictLabel } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
 type Props = {
@@ -22,132 +21,115 @@ type Props = {
   roomHeightM: number
 }
 
+const VERDICT_BAR: Record<string, string> = {
+  fits: "bg-success/12 text-success",
+  tight: "bg-warning/15 text-warning",
+  too_large: "bg-destructive/12 text-destructive",
+  blocked: "bg-destructive/12 text-destructive",
+}
+
+/** A catalogue entry, not a tile: picture, the engine's verdict as a full-width bar, then the
+ *  piece set out in ruled lines. No frame around the whole thing; the rule below separates it. */
 export function ProductCard({ row, verdict, simulationId, stock, roomWidthM, roomDepthM, roomHeightM }: Props) {
   const { commerce, geometry } = row
   const [viewMode, setViewMode] = useState<"photo" | "schematic">("photo")
-  const variant = verdictVariant(verdict)
   const overruns = geometry.width_cm / 100 > roomWidthM || geometry.depth_cm / 100 > roomDepthM
   const image = getProductImage(row.sku, row.category)
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-black/90 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:border-white/25 hover:shadow-2xl hover:shadow-black/50">
-      <div className="relative">
-        <Link
-          href={`/product/${row.sku}`}
-          className="block rounded-3xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-        >
-          {/* Top Hero Media Area */}
-          <div className="relative flex h-60 w-full items-center justify-center overflow-hidden bg-zinc-950 px-6 pt-6">
-            {/* Verdict Badge */}
-            <Badge variant={variant} className="absolute top-4 left-4 z-10 shadow-sm backdrop-blur-md">
-              {verdictLabel(verdict)}
-            </Badge>
-
-            {/* Live Stock Status */}
-            <p className={`absolute top-4 right-4 z-10 text-[11px] font-medium backdrop-blur-md rounded-full px-2 py-0.5 bg-black/40 border border-white/10 ${stockTone(stock?.state)}`}>
-              {stock ? stockLine(stock) : "reading the shelf…"}
-            </p>
-
-            {/* View Mode Content: Real Photo vs CAD Schematic */}
-            {viewMode === "photo" ? (
-              <div className="relative h-full w-full overflow-hidden rounded-2xl">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={image.url}
-                  alt={image.alt}
-                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-              </div>
-            ) : (
-              <div className="flex h-full w-full items-center justify-center py-2 transition-transform duration-500 group-hover:scale-[1.04]">
-                <ProductIso
-                  parts={row.parts}
-                  widthCm={geometry.width_cm}
-                  depthCm={geometry.depth_cm}
-                  heightCm={geometry.height_cm}
-                  clearanceCm={geometry.clearance_cm}
-                  material={row.material}
-                  name={row.name}
-                />
-              </div>
-            )}
-
-            {/* Dimensions HUD tag */}
-            <p className="num absolute bottom-3 left-4 z-10 rounded-full border border-white/10 bg-black/60 px-2 py-0.5 text-[10px] font-mono text-zinc-300 backdrop-blur-md">
-              {geometry.width_cm.toFixed(0)} × {geometry.depth_cm.toFixed(0)} × {geometry.height_cm.toFixed(0)} cm
-            </p>
-          </div>
-        </Link>
-
-        {/* Photo vs 3D Schematic Toggle Button */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            setViewMode((m) => (m === "photo" ? "schematic" : "photo"))
-          }}
-          className="absolute bottom-3 right-4 z-20 flex items-center gap-1 rounded-full border border-white/20 bg-black/70 px-2.5 py-1 text-[11px] font-medium text-white shadow-md backdrop-blur-md transition-colors hover:bg-white/20"
-        >
+    <article className="group flex flex-col">
+      <Link
+        href={`/product/${row.sku}`}
+        className="block overflow-hidden rounded-md focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+      >
+        <div className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-surface">
           {viewMode === "photo" ? (
-            <>
-              <Box className="size-3 text-primary" /> 3D CAD
-            </>
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={image.url}
+              alt={image.alt}
+              className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+              loading="lazy"
+            />
           ) : (
-            <>
-              <Camera className="size-3 text-primary" /> Photo
-            </>
+            <div className="h-full w-full p-6">
+              <ProductIso
+                parts={row.parts}
+                widthCm={geometry.width_cm}
+                depthCm={geometry.depth_cm}
+                heightCm={geometry.height_cm}
+                clearanceCm={geometry.clearance_cm}
+                material={row.material}
+                name={row.name}
+              />
+            </div>
           )}
-        </button>
-      </div>
-
-      <Link href={`/product/${row.sku}`} className="px-5 pt-4 pb-2">
-        <div className="flex items-center justify-between gap-2">
-          <p className="eyebrow truncate text-zinc-400">
-            {row.brand} · {row.category}
-          </p>
-          <span className="flex items-center gap-1 text-[10px] text-zinc-400 font-mono">
-            <Sparkles className="size-2.5 text-primary" /> AI Verified
-          </span>
         </div>
-        <h3 className="mt-1 truncate text-base font-semibold tracking-tight text-white group-hover:text-primary transition-colors">
-          {row.name}
-        </h3>
-        <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
-          <span className="num text-2xl font-semibold tracking-tight text-white">{price(commerce.retail_eur)}</span>
-          <span className="text-xs text-zinc-400 font-medium">+{commerce.margin_pct.toFixed(0)}% margin</span>
-        </p>
       </Link>
 
-      <dl className="mt-auto space-y-1.5 border-t border-white/10 px-5 py-3.5 text-xs">
-        {(
-          [
-            ["Ships", `${commerce.lead_days} days · ${commerce.freight} freight`, null],
-            ["Sold by", `${commerce.supplier.name} · ${commerce.supplier.region}`, null],
-            [
-              "In a",
-              `${roomWidthM} × ${roomDepthM} m room`,
-              overruns ? "text-destructive font-medium" : verdict ? "text-white" : "text-zinc-400",
-            ],
-          ] as const
-        ).map(([labelText, value, tone]) => (
-          <div key={labelText} className="flex items-baseline justify-between gap-3">
-            <dt className="shrink-0 text-zinc-400">{labelText}</dt>
-            <dd className={tone ?? "min-w-0 truncate text-zinc-300"}>{value}</dd>
-          </div>
-        ))}
-      </dl>
+      <div
+        role="status"
+        data-verdict={verdict ?? "none"}
+        className={cn(
+          "mt-3 flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-semibold",
+          verdict ? (VERDICT_BAR[verdict] ?? "bg-muted text-muted-foreground") : "bg-muted text-muted-foreground",
+        )}
+      >
+        <span className="flex items-center gap-2">
+          <span aria-hidden className="size-2 rounded-full bg-current" />
+          {verdictLabel(verdict)}
+        </span>
+        <span className="num text-xs font-normal opacity-80">
+          {roomWidthM} × {roomDepthM} m room
+        </span>
+      </div>
 
-      <div className="px-5 pb-5">
+      <Link href={`/product/${row.sku}`} className="mt-4 block focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none">
+        <p className="eyebrow truncate text-muted-foreground">
+          {row.brand} · {row.category}
+        </p>
+        <h3 className="display mt-1 truncate text-xl text-foreground transition-colors group-hover:text-primary">{row.name}</h3>
+        <p className="num mt-1 text-xl font-semibold text-foreground">{price(commerce.retail_eur)}</p>
+      </Link>
+
+      <div className="mt-4 grid grid-cols-[minmax(0,5fr)_minmax(0,6fr)] items-center gap-4 border-y border-border py-4">
+        <figure>
+          <FootprintPlan roomW={roomWidthM} roomD={roomDepthM} pieceWcm={geometry.width_cm} pieceDcm={geometry.depth_cm} verdict={verdict} />
+          <figcaption className={cn("num mt-1.5 text-center text-[11px]", overruns ? "font-medium text-destructive" : "text-muted-foreground")}>
+            {geometry.width_cm.toFixed(0)} × {geometry.depth_cm.toFixed(0)} × {geometry.height_cm.toFixed(0)} cm
+          </figcaption>
+        </figure>
+        <dl className="space-y-3 text-xs">
+          <div>
+            <dt className="eyebrow text-muted-foreground">On the floor</dt>
+            <dd className="mt-1.5">
+              <StockDots stock={stock} />
+            </dd>
+          </div>
+          <div>
+            <dt className="eyebrow text-muted-foreground">Ships</dt>
+            <dd className="mt-1.5">
+              <LeadBar days={commerce.lead_days} />
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      <div className="mt-4 flex items-center gap-3">
         <AddToBag
           sku={row.sku}
           simulationId={simulationId}
           verdict={verdict}
           room={{ width_m: roomWidthM, depth_m: roomDepthM, height_m: roomHeightM }}
-          className="w-full rounded-full font-medium"
+          className="flex-1 rounded-full font-medium"
         />
+        <button
+          type="button"
+          onClick={() => setViewMode((mode) => (mode === "photo" ? "schematic" : "photo"))}
+          className="shrink-0 px-1 text-xs text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+        >
+          {viewMode === "photo" ? "Schematic" : "Photo"}
+        </button>
       </div>
     </article>
   )

@@ -7,8 +7,7 @@ ENV PYTHONUNBUFFERED=1 \
     POETRY_VERSION=2.1.3 \
     POETRY_VIRTUALENVS_CREATE=false
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential libpq-dev curl libgeos-c1v5 \
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install "poetry==${POETRY_VERSION}"
@@ -17,9 +16,10 @@ WORKDIR /app
 
 # Dependencies first: this layer only rebuilds when a manifest changes.
 COPY libs/ ./libs/
-COPY services/api-gateway/pyproject.toml services/api-gateway/README.md ./services/api-gateway/
+COPY services/api-gateway/pyproject.toml services/api-gateway/poetry.lock* services/api-gateway/README.md ./services/api-gateway/
 # The dependency layer cannot see src/, so --no-root skips installing the service itself.
-RUN cd services/api-gateway && poetry install --no-root --without dev --no-interaction --no-ansi
+RUN cd services/api-gateway && poetry install --no-root --without dev --no-interaction --no-ansi \
+    && rm -rf /root/.cache/pypoetry /root/.cache/pip
 
 COPY services/api-gateway/src/ ./services/api-gateway/src/
 ENV PYTHONPATH=/app/services/api-gateway/src:/app/libs/byb-common/src

@@ -41,14 +41,12 @@ export function AgentChat() {
   }
 
   return (
-    <Card className="shadow-lg shadow-black/5">
+    <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Bot className="size-4 text-primary" /> Ask about a fit
+        <CardTitle>Ask about a fit
         </CardTitle>
         <CardDescription>
-          Talks to the Evolus agent through our own service, so the workspace key never reaches the browser. The badge on
-          each answer says whether Evolus or the AMD-hosted model replied.
+Each answer says who replied.
         </CardDescription>
       </CardHeader>
 

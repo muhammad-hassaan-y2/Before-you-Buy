@@ -1,4 +1,4 @@
-# Buy You Before — submission runbook
+# Before You Buy — submission runbook
 
 The deadline is **Saturday 2026-10-18, 10:00 UTC**. Lablab closes the submission form then, and the
 judging that follows cannot be helped by a late upload. This is the order to do things in, with the
@@ -124,7 +124,7 @@ lablab's submission form wants these; have them written before opening it.
 
 | Field | What goes in it |
 | --- | --- |
-| Title | **Buy You Before — the agent that measures before it recommends** |
+| Title | **Before You Buy — the agent that measures before it recommends** |
 | Short description | The one-liner at the bottom of `submission/pitch.md` |
 | Full description | Pitch sections 3–7: what it does, the three doors, the delivery path, the golden set |
 | Tags | `agents`, `mcp`, `ecommerce`, `computer-vision`, `geometry`, `vllm`, `amd`, `evolus`, `three.js` |

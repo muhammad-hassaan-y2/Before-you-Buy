@@ -15,7 +15,7 @@ const TOOLS = {
 
 const GUIDE: ConnectGuide = {
   name: "buy-you-before",
-  title: "Buy You Before fit assurance",
+  title: "Before You Buy fit assurance",
   url: "https://byb.test/mcp/",
   transport: "streamable-http",
   public: true,

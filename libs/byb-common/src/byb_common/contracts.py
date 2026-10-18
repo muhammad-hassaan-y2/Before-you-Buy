@@ -1,4 +1,4 @@
-"""Wire contracts shared by every Buy You Before service.
+"""Wire contracts shared by every Before You Buy service.
 
 The pipeline is linear, one topic per hop:
 

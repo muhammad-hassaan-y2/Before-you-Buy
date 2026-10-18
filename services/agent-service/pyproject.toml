@@ -1,7 +1,7 @@
 [project]
 name = "byb-agent-service"
 version = "0.1.0"
-description = "Buy You Before - agent that runs the pre-purchase fit process on Evolus and an AMD-hosted model"
+description = "Before You Buy - agent that runs the pre-purchase fit process on Evolus and an AMD-hosted model"
 authors = [{ name = "Hassaan", email = "hassaan@example.com" }]
 readme = "README.md"
 requires-python = ">=3.11"
