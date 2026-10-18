@@ -37,7 +37,7 @@ export function VerdictBanner({ verdict, tightest }: { verdict: string; tightest
   const entry = VERDICT[verdict]
   const tone = VERDICT_TONE[entry?.variant ?? "destructive"]
   return (
-    <div role="status" data-verdict={verdict} className={cn("flex items-center gap-4 rounded-2xl border-2 px-5 py-4", tone.box)}>
+    <div role="status" data-verdict={verdict} className={cn("flex items-center gap-4 rounded-lg border-2 px-5 py-4", tone.box)}>
       <tone.Icon className={cn("size-9 shrink-0", tone.icon)} aria-hidden />
       <div className="min-w-0">
         <p className="eyebrow text-muted-foreground">Verdict</p>
@@ -128,19 +128,19 @@ export function FitResult({ simulation, placement, onPlacement }: Props) {
           ["Occupied", `${report.coverage_pct.toFixed(1)} %`, null],
           ["Tightest gap", tightest === null ? null : `${tightest.toFixed(2)} m`, tightest !== null && tightest < 0.6 ? "text-warning" : null],
         ].map(([labelText, value, tone]) => (
-          <div key={labelText as string} className="rounded-xl border border-border/60 bg-surface px-3.5 py-3">
+          <div key={labelText as string} className="rounded-md border border-border/60 bg-surface px-3.5 py-3">
             <dt className="eyebrow text-muted-foreground">{labelText}</dt>
             <dd className={cn("num mt-1 text-lg font-semibold", tone ?? undefined)}>{value ?? "—"}</dd>
           </div>
         ))}
       </dl>
 
-      <div className="rounded-xl border p-3">
+      <div className="rounded-md border p-3">
         <DeliveryPath report={report} />
       </div>
 
       {profile && (
-        <div className="rounded-xl border p-3 text-sm">
+        <div className="rounded-md border p-3 text-sm">
           <p className="font-medium">{profile.name}</p>
           <p className="mt-1 text-muted-foreground">{profile.summary}</p>
         </div>

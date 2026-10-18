@@ -10,12 +10,13 @@ export const metadata: Metadata = {
 
 export default function WorkspacePage() {
   return (
-    <div className="mx-auto w-full max-w-6xl px-6 py-10 lg:py-14">
-      <header className="mb-8">
-        <h1 className="text-3xl font-semibold tracking-tight lg:text-4xl">3D workspace</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          The same pipeline, seen from above or from eye height. scene-service turns the fit report into a scene spec —
-          walls, obstacles, door swing, part boxes and camera presets — and this viewport only draws what it was given.
+    <div className="mx-auto w-full max-w-6xl px-6 py-14 lg:py-20">
+      <header className="mb-10 max-w-3xl">
+        <p className="eyebrow text-primary">3D workspace</p>
+        <h1 className="display mt-3 text-4xl lg:text-6xl">Stand it in the room.</h1>
+        <p className="mt-4 max-w-xl text-base text-muted-foreground">
+          The same fit, seen from above or from eye height. Walls, obstacles, door swing and walkways come from the geometry
+          worker; this view only draws what it was given.
         </p>
       </header>
       <SceneWorkspace />

@@ -107,7 +107,7 @@ export function SimulatingRoom({
   return (
     <div className="space-y-4">
       {/* Live Pipeline HUD banner */}
-      <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 transition-all">
+      <div className="rounded-md border border-primary/30 bg-primary/5 p-4 transition-all">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <span className="relative flex size-3">
@@ -124,7 +124,7 @@ export function SimulatingRoom({
       </div>
 
       {/* Real-time Room Simulation Blueprint */}
-      <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card/60 p-4 shadow-inner">
+      <div className="relative overflow-hidden rounded-lg border border-primary/20 bg-card/60 p-4 shadow-inner">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2">
             <Scan className="size-3.5 text-primary animate-spin" style={{ animationDuration: "6s" }} />
@@ -141,7 +141,7 @@ export function SimulatingRoom({
           )}
         </div>
 
-        <div className="dark relative mx-auto w-full max-w-md overflow-hidden rounded-xl border border-border/70 bg-[#0f0d0c]/80 p-2 text-foreground">
+        <div className="dark relative mx-auto w-full max-w-md overflow-hidden rounded-md border border-border/70 bg-[#0f0d0c]/80 p-2 text-foreground">
           <svg
             viewBox={`${-PADDING_M} ${-PADDING_M} ${viewBoxWidth} ${viewBoxHeight}`}
             className="w-full h-auto drop-shadow-sm select-none"

@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, ArrowRight, Box, Camera, Compass, ExternalLink, RefreshCw, Sparkles } from "lucide-react"
+import { ArrowLeft, ArrowRight, Box, Camera, Compass, ExternalLink, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 
@@ -74,7 +74,7 @@ export function ProductDetail({ sku }: Props) {
     <div className="w-full">
       {error && (
         <div className="mx-auto w-full max-w-6xl px-6 py-10">
-          <p className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">{error}</p>
+          <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">{error}</p>
           <Link href="/store" className="mt-6 inline-flex items-center gap-1.5 text-sm text-primary hover:underline">
             <ArrowLeft className="size-3.5" /> Back to the shop
           </Link>
@@ -84,7 +84,7 @@ export function ProductDetail({ sku }: Props) {
       {row && (
         <>
           {/* Apple-style Persistent Top Floating Bar */}
-          <div className="sticky top-[3.25rem] z-30 border-b border-border bg-background/80 backdrop-blur-2xl">
+          <div className="sticky top-[3.25rem] z-30 border-b border-border bg-background/80">
             <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-2.5">
               <div className="flex items-center gap-3">
                 <span className="font-semibold text-sm text-foreground">{row.name}</span>
@@ -97,17 +97,13 @@ export function ProductDetail({ sku }: Props) {
             </div>
           </div>
 
-          <section className="relative isolate overflow-hidden border-b border-border bg-gradient-to-b from-card to-transparent">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(80%_80%_at_25%_10%,color-mix(in_oklab,var(--primary)_18%,transparent)_0%,transparent_65%)]"
-            />
+          <section className="relative border-b border-border">
             <div className="mx-auto grid w-full max-w-7xl gap-10 px-6 pt-10 pb-14 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-center lg:pt-14 lg:pb-20">
               {/* Media Viewport with View Switcher */}
               <div className="order-2 flex flex-col lg:order-1">
-                <div className="relative flex h-80 items-center justify-center overflow-hidden rounded-3xl border border-border bg-surface p-6 shadow-2xl lg:h-[440px]">
+                <div className="relative flex h-80 items-center justify-center overflow-hidden rounded-lg border border-border bg-surface p-6 lg:h-[440px]">
                   {/* View Mode Toggle Pill */}
-                  <div className="absolute top-4 left-4 z-20 flex items-center rounded-full border border-border bg-background/70 p-1 backdrop-blur-xl">
+                  <div className="absolute top-4 left-4 z-20 flex items-center rounded-full border border-border bg-background/70 p-1">
                     <button
                       type="button"
                       onClick={() => setMediaView("photo")}
@@ -140,14 +136,10 @@ export function ProductDetail({ sku }: Props) {
                     </button>
                   </div>
 
-                  {/* AI Badge on Media */}
-                  <div className="absolute top-4 right-4 z-20 flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary backdrop-blur-md">
-                    <Sparkles className="size-3" /> Verified Dimensions
-                  </div>
 
                   {/* Media Content */}
                   {mediaView === "photo" ? (
-                    <div className="relative h-full w-full overflow-hidden rounded-2xl">
+                    <div className="relative h-full w-full overflow-hidden rounded-lg">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={image.url}
@@ -234,7 +226,7 @@ export function ProductDetail({ sku }: Props) {
                 </p>
 
                 <div className="mt-8 flex flex-wrap items-center gap-4">
-                  <AddToBag sku={row.sku} size="lg" className="rounded-full px-6 py-2.5 font-medium shadow-lg" />
+                  <AddToBag sku={row.sku} size="lg" className="rounded-full px-6 py-2.5 font-medium" />
                   <p className="max-w-xs text-xs text-muted-foreground">
                     Guaranteed fit: add to bag and the spatial engine measures clearances across your real floor plan before checkout.
                   </p>
@@ -262,9 +254,9 @@ export function ProductDetail({ sku }: Props) {
           {/* Dropship Terms & Simulation Grid */}
           <div className="mx-auto w-full max-w-7xl px-6 py-10 space-y-12">
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:items-start">
-              <div className="rounded-3xl border border-border bg-card/60 p-6 backdrop-blur-xl">
+              <div className="rounded-lg border border-border p-6">
                 <h2 className="eyebrow text-muted-foreground">The terms on this piece</h2>
-                <dl className="mt-4 divide-y divide-white/10 overflow-hidden rounded-2xl border border-border bg-background/40">
+                <dl className="mt-4 divide-y divide-border overflow-hidden rounded-lg border border-border bg-background/40">
                   {terms.map(([labelText, value]) => (
                     <div key={labelText} className="flex items-baseline justify-between gap-4 px-5 py-3.5">
                       <dt className="text-sm text-muted-foreground">{labelText}</dt>
@@ -274,14 +266,14 @@ export function ProductDetail({ sku }: Props) {
                 </dl>
                 <p className="mt-4 text-xs text-muted-foreground">{row.commerce.basis}.</p>
 
-                <div className="mt-6 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-foreground/[0.02] p-3.5 text-xs">
+                <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-border pt-4 text-xs">
                   <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
                   <span className="text-muted-foreground">Listing this simulation reads:</span>
                   <code className="min-w-0 flex-1 truncate font-mono text-foreground/80">{row.commerce.product_url}</code>
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-border bg-card/60 p-6 backdrop-blur-xl">
+              <div className="rounded-lg border border-border p-6">
                 <h2 className="text-xl font-semibold tracking-tight text-foreground mb-2">Live Room Fit Test</h2>
                 <p className="text-sm text-muted-foreground mb-6">
                   Test this piece live in your room. The geometry worker validates door clearance, wall offsets, and walkway buffers.
@@ -301,9 +293,9 @@ export function ProductDetail({ sku }: Props) {
                       <Link
                         key={item.sku}
                         href={`/product/${item.sku}`}
-                        className="group flex items-center gap-4 rounded-2xl border border-border bg-card/60 p-3.5 transition-all hover:-translate-y-0.5 hover:border-border hover:bg-card"
+                        className="group flex items-center gap-4 rounded-lg border border-border bg-card/60 p-3.5 transition-colors hover:bg-muted/50"
                       >
-                        <div className="relative size-16 shrink-0 overflow-hidden rounded-xl border border-border bg-background">
+                        <div className="relative size-16 shrink-0 overflow-hidden rounded-md border border-border bg-background">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={itemImage.url}

@@ -45,22 +45,21 @@ export function BagDrawer() {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label="Your bag">
-      <button type="button" className="flex-1 bg-black/40 backdrop-blur-[2px]" aria-label="Close the bag" onClick={closeBag} />
-      <aside className="flex h-full w-full max-w-md flex-col border-l border-border/60 bg-card shadow-2xl">
+      <button type="button" className="flex-1 bg-background/60 backdrop-blur-[2px]" aria-label="Close the bag" onClick={closeBag} />
+      <aside className="flex h-full w-full max-w-md flex-col border-l border-border/60 bg-card">
         <header className="flex items-center gap-3 border-b border-border/50 px-6 py-4">
-          <ShoppingBag className="size-4 text-primary" />
-          <h2 className="text-base font-semibold tracking-tight">{order ? "Order draft" : "Your bag"}</h2>
+          <h2 className="display text-xl">{order ? "Order draft" : "Your bag"}</h2>
           <Button type="button" size="icon" variant="ghost" className="ml-auto" aria-label="Close the bag" onClick={closeBag}>
             <X className="size-4" />
           </Button>
         </header>
 
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
-          {error && <p className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+          {error && <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
           {order ? (
             <Receipt order={order} />
           ) : !bag || bag.lines.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border/60 p-8 text-center text-sm text-muted-foreground">
+            <p className="rounded-md border border-dashed border-border/60 p-8 text-center text-sm text-muted-foreground">
               Nothing in the bag yet. Add a piece and its fit report comes with it.
             </p>
           ) : (
@@ -109,7 +108,7 @@ function RoomLine({ bag, current }: { bag: Bag; current: Bag["room"] }) {
 function BagRow({ line, busy }: { line: BagLine; busy: boolean }) {
   const tightest = line.walkway_m ? Math.min(...Object.values(line.walkway_m)) : null
   return (
-    <li className="rounded-2xl border border-border/60 bg-background/40 p-4">
+    <li className="rounded-lg border border-border/60 bg-background/40 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{line.name}</p>
@@ -145,7 +144,7 @@ function SetVerdict({ bag }: { bag: Bag }) {
   const set = bag.set
   if (!set) return null
   return (
-    <div className="rounded-2xl border border-border/60 bg-muted/30 p-4">
+    <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
       <div className="flex items-center gap-2">
         <p className="eyebrow text-muted-foreground">Bought together</p>
         <Badge variant={verdictVariant(set.verdict)}>{verdictLabel(set.verdict)}</Badge>
@@ -199,7 +198,7 @@ function Checkout({
 }) {
   const unproven = bag.unproven.length > 0
   return (
-    <div className="space-y-3 rounded-2xl border border-border/60 p-4">
+    <div className="space-y-3 rounded-lg border border-border/60 p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="eyebrow text-muted-foreground">Fit check</p>
         <Button type="button" size="sm" variant={unproven ? "default" : "outline"} disabled={busy} onClick={() => void onMeasure()}>
@@ -234,7 +233,7 @@ function Checkout({
 
 function Receipt({ order }: { order: Order }) {
   return (
-    <div className="space-y-3 rounded-2xl border border-success/30 bg-success/10 p-4 text-sm">
+    <div className="space-y-3 rounded-lg border border-success/30 bg-success/10 p-4 text-sm">
       <p className="font-medium text-success">Draft placed · awaiting the shop</p>
       <p className="text-xs text-muted-foreground">{order.next}</p>
       <ul className="space-y-1 text-xs">

@@ -1,6 +1,6 @@
 "use client"
 
-import { Bot, Camera, Check, CircleSlash, GitBranch, Layers, Loader2, MessagesSquare, Search, SkipForward, Sparkles, Wrench } from "lucide-react"
+import { Bot, Camera, Check, CircleSlash, GitBranch, Layers, Loader2, MessagesSquare, Search, SkipForward, Globe, Ruler, Wrench } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -12,7 +12,7 @@ const KIND: Record<string, { label: string; icon: typeof Bot }> = {
   brief: { label: "Brief read", icon: Search },
   room: { label: "Room measured from the photo", icon: Camera },
   shortlist: { label: "Catalog shortlisted", icon: Layers },
-  simulate: { label: "Fit simulations", icon: Sparkles },
+  simulate: { label: "Fit simulations", icon: Ruler },
   fit: { label: "Fit report", icon: Check },
   branch: { label: "Decision", icon: GitBranch },
   compare: { label: "Candidates compared", icon: Check },
@@ -123,7 +123,7 @@ function TraceRow({ step }: { step: AgentStep }) {
       <div className="flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
         {step.tool && (
           <span className="flex items-center gap-1 font-mono">
-            {step.tool.includes("evolus") || step.tool.startsWith("POST") || step.tool.startsWith("GET") ? <Sparkles className="size-3" /> : <Wrench className="size-3" />}
+            {step.tool.includes("evolus") || step.tool.startsWith("POST") || step.tool.startsWith("GET") ? <Globe className="size-3" /> : <Wrench className="size-3" />}
             {step.tool}
           </span>
         )}

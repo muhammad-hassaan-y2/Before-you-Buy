@@ -32,10 +32,9 @@ export function AgentSurface() {
   }, [])
 
   return (
-    <Card className="shadow-lg shadow-black/5">
+    <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Wrench className="size-4 text-primary" /> What the agent is allowed to do
+        <CardTitle>What the agent is allowed to do
         </CardTitle>
         <CardDescription>
           Every capability is the same function behind three doors: the MCP connector for the agent, REST for an Evolus

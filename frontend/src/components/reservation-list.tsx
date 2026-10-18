@@ -17,10 +17,9 @@ export function ReservationList() {
   }, [])
 
   return (
-    <Card className="shadow-lg shadow-black/5">
+    <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Handshake className="size-4 text-primary" /> Holds waiting on a person
+        <CardTitle>Holds waiting on a person
         </CardTitle>
         <CardDescription>
           What the agent reserved after a shopper confirmed in their own words. Each row links to

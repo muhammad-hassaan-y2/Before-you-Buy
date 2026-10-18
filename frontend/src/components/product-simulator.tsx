@@ -71,10 +71,9 @@ export function ProductSimulator({ row }: Props) {
   const report = simulation?.fit_report ?? null
 
   return (
-    <Card className="shadow-lg shadow-black/5">
+    <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Ruler className="size-4 text-primary" /> Test it in your room
+        <CardTitle>Test it in your room
         </CardTitle>
         <CardDescription>
           {busy
@@ -109,7 +108,7 @@ export function ProductSimulator({ row }: Props) {
         </Button>
 
         {error && (
-          <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -131,7 +130,7 @@ export function ProductSimulator({ row }: Props) {
         {report && simulation && <FitResult simulation={simulation} placement={placement} onPlacement={setPlacement} />}
 
         {report && simulation && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/30 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-muted/30 p-3">
             <p className="text-xs text-muted-foreground">Bag it with this report attached — the geometry worker already cleared this piece for this room.</p>
             <AddToBag
               sku={row.sku}

@@ -78,10 +78,9 @@ export function SceneWorkspace() {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
       <div className="space-y-6">
-        <Card className="shadow-lg shadow-black/5">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sofa className="size-4 text-primary" /> The shelf
+            <CardTitle>The shelf
             </CardTitle>
             <CardDescription>{rows.length} SKUs the catalog service knows about. Pick one and stand it in a room.</CardDescription>
           </CardHeader>
@@ -97,15 +96,15 @@ export function SceneWorkspace() {
               ))}
             </div>
 
-            <ul className="max-h-80 space-y-1.5 overflow-y-auto pr-1">
+            <ul className="max-h-80 divide-y divide-border overflow-y-auto border-y border-border">
               {shown.map((row) => (
                 <li key={row.sku}>
                   <button
                     type="button"
                     onClick={() => setSku(row.sku)}
                     className={cn(
-                      "w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                      sku === row.sku ? "border-primary/60 bg-primary/10" : "hover:border-ring hover:bg-muted/40",
+                      "w-full px-3 py-2.5 text-left text-sm transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+                      sku === row.sku ? "bg-primary/10 text-foreground" : "hover:bg-muted/50",
                     )}
                   >
                     <span className="flex items-baseline justify-between gap-2">
@@ -123,10 +122,9 @@ export function SceneWorkspace() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg shadow-black/5">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Ruler className="size-4 text-primary" /> The room
+            <CardTitle>The room
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -165,7 +163,7 @@ export function SceneWorkspace() {
         </Card>
       </div>
 
-      <Card className="shadow-lg shadow-black/5">
+      <Card>
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">

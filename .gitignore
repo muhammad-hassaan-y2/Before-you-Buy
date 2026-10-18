@@ -45,3 +45,4 @@ Thumbs.db
 .venv-local/
 .local/
 .local-run.log
+.taste-skill/

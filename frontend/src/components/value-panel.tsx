@@ -49,10 +49,9 @@ export function ValuePanel() {
   ] as const
 
   return (
-    <Card className="shadow-lg shadow-black/5">
+    <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="size-4 text-primary" /> What a fit check is worth
+        <CardTitle>What a fit check is worth
         </CardTitle>
         <CardDescription>
           Change the assumptions and the arithmetic follows. The service adds up what a shop saves

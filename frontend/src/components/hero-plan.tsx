@@ -3,7 +3,7 @@
 export function HeroPlan() {
   return (
     <figure className="relative mx-auto w-full max-w-md">
-      <div className="rounded-3xl border border-border bg-card p-4 shadow-xl shadow-black/5">
+      <div className="rounded-lg border border-border bg-card p-4">
         <svg viewBox="0 0 400 300" role="img" aria-label="Illustration: a three-seat sofa in a room with a walkway to the balcony kept clear" className="h-auto w-full">
           <defs>
             <pattern id="hero-grid" width="20" height="20" patternUnits="userSpaceOnUse">

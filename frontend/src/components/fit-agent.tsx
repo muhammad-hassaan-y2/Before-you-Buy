@@ -1,6 +1,6 @@
 "use client"
 
-import { Bot, CircleSlash, Loader2, Send, Sparkles, UserCheck } from "lucide-react"
+import { Bot, CircleSlash, Loader2, Send, UserCheck } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 import { AgentRunTrace, RunStatusBadge } from "@/components/agent-run-trace"
@@ -97,10 +97,9 @@ export function FitAgent() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:items-start">
-      <Card className="shadow-lg shadow-black/5">
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="size-4 text-primary" /> Ask the fit agent
+          <CardTitle>Ask the fit agent
           </CardTitle>
           <CardDescription>
             Say it the way you would to a shop assistant. The agent reads your words, shortlists the catalog, runs a real
@@ -141,7 +140,7 @@ export function FitAgent() {
                   disabled={busy}
                   onClick={() => setBrief(EXAMPLES[index])}
                 >
-                  <Sparkles className="size-3" /> Example {index + 1}
+                  Example {index + 1}
                 </Button>
               ))}
             </div>
@@ -196,7 +195,7 @@ export function FitAgent() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-lg shadow-black/5">
+      <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">

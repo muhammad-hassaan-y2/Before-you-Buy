@@ -290,42 +290,27 @@ export function InteractiveSimulatorEngine({ className }: { className?: string }
   return (
     <div
       className={cn(
-        "relative isolate overflow-hidden rounded-3xl border border-border bg-gradient-to-b from-card to-background p-6 shadow-2xl backdrop-blur-2xl lg:p-8",
+        "relative rounded-lg border border-border bg-card p-5 lg:p-6",
         className,
       )}
     >
-      {/* Background ambient lighting */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-40 left-1/2 -z-10 h-96 w-[36rem] -translate-x-1/2 rounded-full bg-primary/15 blur-3xl"
-      />
-
       {/* Header bar */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-6">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary uppercase tracking-wider">
-              <Zap className="size-3" /> Spatial AI Engine
-            </span>
-            <span className="text-xs text-muted-foreground">Interactive 2D & 3D Spatial Simulator</span>
-          </div>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-foreground lg:text-3xl">
-            See how it fits before you spend a cent.
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground max-w-xl">
-            Test real pieces in real dimensions. The geometry engine computes millimeter clearances, doorway swings,
-            and walkways live.
+          <h3 className="display text-2xl text-foreground">See how it fits before you spend a cent.</h3>
+          <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+            Real pieces in real dimensions. Millimetre clearances, door swing and walkways are computed live.
           </p>
         </div>
 
         {/* 2D / 3D Mode Toggle Capsule */}
-        <div className="flex items-center self-start rounded-full border border-border bg-background/60 p-1 shadow-inner">
+        <div className="flex items-center self-start rounded-full border border-border p-1">
           <button
             type="button"
             onClick={() => setMode("2d")}
             className={cn(
               "flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium whitespace-nowrap transition-all",
-              mode === "2d" ? "bg-foreground text-background shadow-md" : "text-muted-foreground hover:text-foreground",
+              mode === "2d" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
             )}
           >
             <Compass className="size-3.5" /> 2D Blueprint
@@ -335,7 +320,7 @@ export function InteractiveSimulatorEngine({ className }: { className?: string }
             onClick={() => setMode("3d")}
             className={cn(
               "flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium whitespace-nowrap transition-all",
-              mode === "3d" ? "bg-foreground text-background shadow-md" : "text-muted-foreground hover:text-foreground",
+              mode === "3d" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
             )}
           >
             <Box className="size-3.5" /> 3D Spatial
@@ -347,7 +332,7 @@ export function InteractiveSimulatorEngine({ className }: { className?: string }
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         {/* Left Column: Visual Viewport (2D CAD or 3D WebGL) */}
         <div className="flex flex-col space-y-4">
-          <div className="dark relative min-h-[380px] w-full overflow-hidden rounded-2xl border border-border bg-[#09090b] text-foreground shadow-2xl">
+          <div className="dark relative min-h-[380px] w-full overflow-hidden rounded-md border border-border bg-[#09090b] text-foreground">
             {/* Verdict HUD badge */}
             <div className="absolute top-4 left-4 z-20 flex flex-wrap items-center gap-2">
               <span
@@ -556,7 +541,7 @@ export function InteractiveSimulatorEngine({ className }: { className?: string }
           </div>
 
           {/* Interactive Quick Placements & Rotate Controls */}
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-background/40 p-3 text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background/40 p-3 text-xs">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Move className="size-3.5 text-primary" /> Placement:
               <button
@@ -565,7 +550,7 @@ export function InteractiveSimulatorEngine({ className }: { className?: string }
                   setRelX(0.5)
                   setRelY(0.7)
                 }}
-                className="rounded-lg border border-border bg-foreground/5 px-2.5 py-1 text-foreground/80 hover:bg-foreground/10"
+                className="rounded-full border border-border px-3 py-1 text-foreground/80 hover:bg-foreground/10"
               >
                 Back Wall
               </button>
@@ -575,7 +560,7 @@ export function InteractiveSimulatorEngine({ className }: { className?: string }
                   setRelX(0.5)
                   setRelY(0.5)
                 }}
-                className="rounded-lg border border-border bg-foreground/5 px-2.5 py-1 text-foreground/80 hover:bg-foreground/10"
+                className="rounded-full border border-border px-3 py-1 text-foreground/80 hover:bg-foreground/10"
               >
                 Centered
               </button>
@@ -585,7 +570,7 @@ export function InteractiveSimulatorEngine({ className }: { className?: string }
                   setRelX(0.25)
                   setRelY(0.7)
                 }}
-                className="rounded-lg border border-border bg-foreground/5 px-2.5 py-1 text-foreground/80 hover:bg-foreground/10"
+                className="rounded-full border border-border px-3 py-1 text-foreground/80 hover:bg-foreground/10"
               >
                 Left Corner
               </button>
@@ -595,7 +580,7 @@ export function InteractiveSimulatorEngine({ className }: { className?: string }
                   setRelX(0.75)
                   setRelY(0.7)
                 }}
-                className="rounded-lg border border-border bg-foreground/5 px-2.5 py-1 text-foreground/80 hover:bg-foreground/10"
+                className="rounded-full border border-border px-3 py-1 text-foreground/80 hover:bg-foreground/10"
               >
                 Right Corner
               </button>
@@ -616,9 +601,9 @@ export function InteractiveSimulatorEngine({ className }: { className?: string }
         {/* Right Column: Piece Selector, Room Specs & AI Pipeline */}
         <div className="flex flex-col space-y-5">
           {/* Active Piece Studio Preview Card */}
-          <div className="group relative overflow-hidden rounded-2xl border border-border bg-card/60 p-4 transition-all">
+          <div className="group relative border-b border-border pb-4">
             <div className="flex items-center gap-4">
-              <div className="relative size-20 shrink-0 overflow-hidden rounded-xl border border-border bg-background">
+              <div className="relative size-20 shrink-0 overflow-hidden rounded-md border border-border bg-background">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={productImage.url}
@@ -633,7 +618,7 @@ export function InteractiveSimulatorEngine({ className }: { className?: string }
                   </Badge>
                   <span className="font-mono text-xs text-muted-foreground">{selectedPiece.sku}</span>
                 </div>
-                <h3 className="mt-1 font-semibold text-base text-foreground truncate">{selectedPiece.name}</h3>
+                <h3 className="display mt-1 truncate text-lg text-foreground">{selectedPiece.name}</h3>
                 <p className="mt-0.5 font-mono text-xs text-muted-foreground">
                   {selectedPiece.widthCm} × {selectedPiece.depthCm} × {selectedPiece.heightCm} cm · {selectedPiece.material}
                 </p>
@@ -670,7 +655,7 @@ export function InteractiveSimulatorEngine({ className }: { className?: string }
           </div>
 
           {/* Room Presets & Sliders */}
-          <div className="rounded-2xl border border-border bg-card/60 p-4">
+          <div className="rounded-lg border border-border bg-card/60 p-4">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1.5 text-xs font-medium text-foreground/80">
                 <Ruler className="size-3.5 text-primary" /> Target Room Dimensions
@@ -704,7 +689,7 @@ export function InteractiveSimulatorEngine({ className }: { className?: string }
             </div>
 
             {/* Verdict Explanation Message */}
-            <div className="mt-4 rounded-xl border border-border bg-background/40 p-3 text-xs">
+            <div className="mt-4 rounded-md border border-border bg-background/40 p-3 text-xs">
               <div className="flex items-center gap-2">
                 <ShieldCheck className={cn("size-4 shrink-0", verdict === "fits" ? "text-emerald-400" : verdict === "tight" ? "text-amber-400" : "text-rose-400")} />
                 <span className="font-medium text-foreground/80">{verdictMessage}</span>
@@ -713,7 +698,7 @@ export function InteractiveSimulatorEngine({ className }: { className?: string }
           </div>
 
           {/* "How It Works" 4-Step Interactive Pipeline Tour */}
-          <div className="rounded-2xl border border-border bg-card/60 p-4">
+          <div className="rounded-lg border border-border bg-card/60 p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="flex items-center gap-1.5 text-xs font-medium text-foreground/80">
                 <Cpu className="size-3.5 text-primary" /> How The AI Spatial Engine Works
@@ -749,7 +734,7 @@ export function InteractiveSimulatorEngine({ className }: { className?: string }
                   type="button"
                   onClick={() => setActivePipelineStep(idx)}
                   className={cn(
-                    "w-full text-left rounded-xl p-2.5 transition-all border",
+                    "w-full text-left rounded-md p-2.5 transition-all border",
                     activePipelineStep === idx
                       ? "border-primary/50 bg-primary/10 text-foreground"
                       : "border-transparent bg-foreground/[0.02] text-muted-foreground hover:bg-foreground/[0.05]",

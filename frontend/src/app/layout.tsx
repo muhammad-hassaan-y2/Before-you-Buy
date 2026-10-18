@@ -3,6 +3,7 @@ import { Fraunces, Geist, Geist_Mono } from "next/font/google"
 
 import { BagDrawer } from "@/components/bag-drawer"
 import { EvolusWidget } from "@/components/evolus-widget"
+import { SiteFooter } from "@/components/site-footer"
 import { SiteNav } from "@/components/site-nav"
 import { THEME_BOOT } from "@/components/theme-toggle"
 import "./globals.css"
@@ -47,8 +48,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>
       <body className="flex min-h-full flex-col bg-background text-foreground">
+        <a href="#main" className="sr-only z-[60] rounded-full bg-foreground px-4 py-2 text-sm text-background focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
+          Skip to content
+        </a>
         <SiteNav />
-        <main className="flex-1">{children}</main>
+        <main id="main" className="flex-1">{children}</main>
+        <SiteFooter />
         <BagDrawer />
         <EvolusWidget />
       </body>

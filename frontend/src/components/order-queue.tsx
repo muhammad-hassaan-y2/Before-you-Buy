@@ -19,10 +19,9 @@ export function OrderQueue() {
   }, [])
 
   return (
-    <Card className="shadow-lg shadow-black/5">
+    <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ClipboardList className="size-4 text-primary" /> Order drafts waiting on a person
+        <CardTitle>Order drafts waiting on a person
         </CardTitle>
         <CardDescription>
           What checkout wrote after a shopper confirmed in their own words. Every draft cites the simulation that cleared

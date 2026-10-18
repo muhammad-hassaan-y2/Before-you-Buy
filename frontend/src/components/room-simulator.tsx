@@ -77,10 +77,9 @@ export function RoomSimulator() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-      <Card className="shadow-lg shadow-black/5">
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sofa className="size-4 text-primary" /> What are you considering?
+          <CardTitle>What are you considering?
           </CardTitle>
           <CardDescription>
             Paste a product link and the inference service reads its real dimensions with AMD Token Factory. Or attach a
@@ -152,7 +151,7 @@ export function RoomSimulator() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-lg shadow-black/5">
+      <Card>
         <CardHeader>
           <CardTitle>Result</CardTitle>
           <CardDescription>
@@ -183,7 +182,7 @@ export function RoomSimulator() {
           )}
 
           {!busy && !simulation && !report && !error && (
-            <div className="rounded-2xl border border-dashed border-border/70 bg-surface/70 px-6 py-10 text-center">
+            <div className="rounded-lg border border-dashed border-border/70 bg-surface/70 px-6 py-10 text-center">
               <svg viewBox="0 0 120 84" className="mx-auto h-auto w-40" aria-hidden>
                 <rect x="6" y="6" width="108" height="72" rx="4" className="fill-room-floor/20 stroke-muted-foreground/40" strokeWidth="1" strokeDasharray="3 3" />
                 <rect x="14" y="14" width="42" height="19" rx="3" className="fill-room-product/15 stroke-room-product/50" strokeWidth="1" strokeDasharray="3 3" />
