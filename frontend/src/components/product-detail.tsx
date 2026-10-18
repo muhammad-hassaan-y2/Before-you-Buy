@@ -84,11 +84,11 @@ export function ProductDetail({ sku }: Props) {
       {row && (
         <>
           {/* Apple-style Persistent Top Floating Bar */}
-          <div className="sticky top-[3.25rem] z-30 border-b border-white/10 bg-black/80 backdrop-blur-2xl">
+          <div className="sticky top-[3.25rem] z-30 border-b border-border bg-background/80 backdrop-blur-2xl">
             <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-2.5">
               <div className="flex items-center gap-3">
-                <span className="font-semibold text-sm text-white">{row.name}</span>
-                <span className="num font-semibold text-sm text-white">{price(row.commerce.retail_eur)}</span>
+                <span className="font-semibold text-sm text-foreground">{row.name}</span>
+                <span className="num font-semibold text-sm text-foreground">{price(row.commerce.retail_eur)}</span>
                 <span className={`text-xs ${stockTone(stock?.state)}`}>
                   {stock ? stockLine(stock) : "reading the shelf…"}
                 </span>
@@ -97,7 +97,7 @@ export function ProductDetail({ sku }: Props) {
             </div>
           </div>
 
-          <section className="relative isolate overflow-hidden border-b border-white/10 bg-gradient-to-b from-white/[0.03] to-transparent">
+          <section className="relative isolate overflow-hidden border-b border-border bg-gradient-to-b from-card to-transparent">
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(80%_80%_at_25%_10%,color-mix(in_oklab,var(--primary)_18%,transparent)_0%,transparent_65%)]"
@@ -105,15 +105,15 @@ export function ProductDetail({ sku }: Props) {
             <div className="mx-auto grid w-full max-w-7xl gap-10 px-6 pt-10 pb-14 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-center lg:pt-14 lg:pb-20">
               {/* Media Viewport with View Switcher */}
               <div className="order-2 flex flex-col lg:order-1">
-                <div className="relative flex h-80 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-zinc-950 p-6 shadow-2xl lg:h-[440px]">
+                <div className="relative flex h-80 items-center justify-center overflow-hidden rounded-3xl border border-border bg-surface p-6 shadow-2xl lg:h-[440px]">
                   {/* View Mode Toggle Pill */}
-                  <div className="absolute top-4 left-4 z-20 flex items-center rounded-full border border-white/15 bg-black/70 p-1 backdrop-blur-xl">
+                  <div className="absolute top-4 left-4 z-20 flex items-center rounded-full border border-border bg-background/70 p-1 backdrop-blur-xl">
                     <button
                       type="button"
                       onClick={() => setMediaView("photo")}
                       className={cn(
                         "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all",
-                        mediaView === "photo" ? "bg-white text-black shadow-sm" : "text-zinc-400 hover:text-white",
+                        mediaView === "photo" ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground",
                       )}
                     >
                       <Camera className="size-3" /> Photo
@@ -123,7 +123,7 @@ export function ProductDetail({ sku }: Props) {
                       onClick={() => setMediaView("iso")}
                       className={cn(
                         "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all",
-                        mediaView === "iso" ? "bg-white text-black shadow-sm" : "text-zinc-400 hover:text-white",
+                        mediaView === "iso" ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground",
                       )}
                     >
                       <Box className="size-3" /> 3D Clearance
@@ -133,7 +133,7 @@ export function ProductDetail({ sku }: Props) {
                       onClick={() => setMediaView("floor")}
                       className={cn(
                         "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all",
-                        mediaView === "floor" ? "bg-white text-black shadow-sm" : "text-zinc-400 hover:text-white",
+                        mediaView === "floor" ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground",
                       )}
                     >
                       <Compass className="size-3" /> Room Fit
@@ -155,11 +155,11 @@ export function ProductDetail({ sku }: Props) {
                         className="h-full w-full object-cover transition-transform duration-700 ease-out hover:scale-105"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-                      <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-xs text-zinc-300">
-                        <span className="font-mono bg-black/60 px-2.5 py-1 rounded-full border border-white/10 backdrop-blur-md">
+                      <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-xs text-foreground/80">
+                        <span className="font-mono bg-background/60 px-2.5 py-1 rounded-full border border-border backdrop-blur-md">
                           {row.geometry.width_cm} × {row.geometry.depth_cm} × {row.geometry.height_cm} cm
                         </span>
-                        <span className="font-medium bg-black/60 px-2.5 py-1 rounded-full border border-white/10 backdrop-blur-md">
+                        <span className="font-medium bg-background/60 px-2.5 py-1 rounded-full border border-border backdrop-blur-md">
                           {row.material}
                         </span>
                       </div>
@@ -192,7 +192,7 @@ export function ProductDetail({ sku }: Props) {
                   )}
                 </div>
 
-                <figcaption className="mt-3 text-xs text-zinc-400">
+                <figcaption className="mt-3 text-xs text-muted-foreground">
                   Drawn from the {row.geometry.width_cm.toFixed(0)} × {row.geometry.depth_cm.toFixed(0)} ×{" "}
                   {row.geometry.height_cm.toFixed(0)} cm catalog specifications. Dashed outline indicates manufacturer clearance buffer.
                 </figcaption>
@@ -200,27 +200,27 @@ export function ProductDetail({ sku }: Props) {
 
               {/* Product Info & Action Area */}
               <div className="order-1 lg:order-2">
-                <Link href="/store" className="inline-flex items-center gap-1.5 text-xs text-zinc-400 transition-colors hover:text-white">
+                <Link href="/store" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground">
                   <ArrowLeft className="size-3.5" /> Back to the shop
                 </Link>
                 <div className="mt-5 flex items-center gap-2">
                   <span className="eyebrow text-primary">
                     {row.brand} · {row.category}
                   </span>
-                  <span className="text-zinc-600">·</span>
-                  <span className="font-mono text-xs text-zinc-400">{row.sku}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="font-mono text-xs text-muted-foreground">{row.sku}</span>
                 </div>
-                <h1 className="mt-2 text-4xl font-semibold tracking-[-0.035em] text-white text-balance lg:text-5xl">
+                <h1 className="mt-2 text-4xl font-semibold tracking-[-0.035em] text-foreground text-balance lg:text-5xl">
                   {row.name}
                 </h1>
                 <p className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="num text-4xl font-semibold tracking-tight text-white">{price(row.commerce.retail_eur)}</span>
-                  <Badge variant="secondary" className="bg-white/10 text-zinc-300">{bandLabel(row.price_band ?? "")}</Badge>
+                  <span className="num text-4xl font-semibold tracking-tight text-foreground">{price(row.commerce.retail_eur)}</span>
+                  <Badge variant="secondary" className="bg-foreground/10 text-foreground/80">{bandLabel(row.price_band ?? "")}</Badge>
                 </p>
                 <p className={`mt-4 text-sm font-medium ${stockTone(stock?.state)}`}>
                   {stock ? stockLine(stock) : "Reading the shelf…"}
                 </p>
-                <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+                <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   Est. arrival {arrival(row.commerce.lead_days)}
                   <span aria-hidden>·</span>
                   <ShelfPulse live={shelf.live} counts={Object.keys(shelf.bySku).length} />
@@ -235,12 +235,12 @@ export function ProductDetail({ sku }: Props) {
 
                 <div className="mt-8 flex flex-wrap items-center gap-4">
                   <AddToBag sku={row.sku} size="lg" className="rounded-full px-6 py-2.5 font-medium shadow-lg" />
-                  <p className="max-w-xs text-xs text-zinc-400">
+                  <p className="max-w-xs text-xs text-muted-foreground">
                     Guaranteed fit: add to bag and the spatial engine measures clearances across your real floor plan before checkout.
                   </p>
                 </div>
 
-                <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-white/10 pt-6">
+                <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-border pt-6">
                   {(
                     [
                       ["Footprint", `${row.geometry.width_cm.toFixed(0)} × ${row.geometry.depth_cm.toFixed(0)} cm`],
@@ -250,8 +250,8 @@ export function ProductDetail({ sku }: Props) {
                     ] as const
                   ).map(([labelText, value]) => (
                     <div key={labelText}>
-                      <dt className="eyebrow text-zinc-400">{labelText}</dt>
-                      <dd className="num mt-1 text-sm font-medium text-white">{value}</dd>
+                      <dt className="eyebrow text-muted-foreground">{labelText}</dt>
+                      <dd className="num mt-1 text-sm font-medium text-foreground">{value}</dd>
                     </div>
                   ))}
                 </dl>
@@ -262,28 +262,28 @@ export function ProductDetail({ sku }: Props) {
           {/* Dropship Terms & Simulation Grid */}
           <div className="mx-auto w-full max-w-7xl px-6 py-10 space-y-12">
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:items-start">
-              <div className="rounded-3xl border border-white/10 bg-zinc-900/60 p-6 backdrop-blur-xl">
-                <h2 className="eyebrow text-zinc-400">The terms on this piece</h2>
-                <dl className="mt-4 divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-black/40">
+              <div className="rounded-3xl border border-border bg-card/60 p-6 backdrop-blur-xl">
+                <h2 className="eyebrow text-muted-foreground">The terms on this piece</h2>
+                <dl className="mt-4 divide-y divide-white/10 overflow-hidden rounded-2xl border border-border bg-background/40">
                   {terms.map(([labelText, value]) => (
                     <div key={labelText} className="flex items-baseline justify-between gap-4 px-5 py-3.5">
-                      <dt className="text-sm text-zinc-400">{labelText}</dt>
-                      <dd className="num text-right text-sm font-medium text-white">{value}</dd>
+                      <dt className="text-sm text-muted-foreground">{labelText}</dt>
+                      <dd className="num text-right text-sm font-medium text-foreground">{value}</dd>
                     </div>
                   ))}
                 </dl>
-                <p className="mt-4 text-xs text-zinc-400">{row.commerce.basis}.</p>
+                <p className="mt-4 text-xs text-muted-foreground">{row.commerce.basis}.</p>
 
-                <div className="mt-6 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-3.5 text-xs">
-                  <ExternalLink className="size-3.5 shrink-0 text-zinc-400" />
-                  <span className="text-zinc-400">Listing this simulation reads:</span>
-                  <code className="min-w-0 flex-1 truncate font-mono text-zinc-300">{row.commerce.product_url}</code>
+                <div className="mt-6 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-foreground/[0.02] p-3.5 text-xs">
+                  <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="text-muted-foreground">Listing this simulation reads:</span>
+                  <code className="min-w-0 flex-1 truncate font-mono text-foreground/80">{row.commerce.product_url}</code>
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-zinc-900/60 p-6 backdrop-blur-xl">
-                <h2 className="text-xl font-semibold tracking-tight text-white mb-2">Live Room Fit Test</h2>
-                <p className="text-sm text-zinc-400 mb-6">
+              <div className="rounded-3xl border border-border bg-card/60 p-6 backdrop-blur-xl">
+                <h2 className="text-xl font-semibold tracking-tight text-foreground mb-2">Live Room Fit Test</h2>
+                <p className="text-sm text-muted-foreground mb-6">
                   Test this piece live in your room. The geometry worker validates door clearance, wall offsets, and walkway buffers.
                 </p>
                 <ProductSimulator row={row} />
@@ -292,8 +292,8 @@ export function ProductDetail({ sku }: Props) {
 
             {/* Related items */}
             {alsoIn.length > 0 && (
-              <section className="border-t border-white/10 pt-10">
-                <h2 className="eyebrow text-zinc-400">More on the {row.category} shelf</h2>
+              <section className="border-t border-border pt-10">
+                <h2 className="eyebrow text-muted-foreground">More on the {row.category} shelf</h2>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {alsoIn.map((item) => {
                     const itemImage = getProductImage(item.sku, item.category)
@@ -301,9 +301,9 @@ export function ProductDetail({ sku }: Props) {
                       <Link
                         key={item.sku}
                         href={`/product/${item.sku}`}
-                        className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-zinc-900/60 p-3.5 transition-all hover:-translate-y-0.5 hover:border-white/20 hover:bg-zinc-900"
+                        className="group flex items-center gap-4 rounded-2xl border border-border bg-card/60 p-3.5 transition-all hover:-translate-y-0.5 hover:border-border hover:bg-card"
                       >
-                        <div className="relative size-16 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black">
+                        <div className="relative size-16 shrink-0 overflow-hidden rounded-xl border border-border bg-background">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={itemImage.url}
@@ -312,10 +312,10 @@ export function ProductDetail({ sku }: Props) {
                           />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-white group-hover:text-primary transition-colors">{item.name}</p>
-                          <p className="num text-xs text-zinc-400 mt-0.5">{price(item.commerce.retail_eur)}</p>
+                          <p className="truncate text-sm font-medium text-foreground group-hover:text-primary transition-colors">{item.name}</p>
+                          <p className="num text-xs text-muted-foreground mt-0.5">{price(item.commerce.retail_eur)}</p>
                         </div>
-                        <ArrowRight className="ml-auto size-4 shrink-0 text-zinc-500 transition-transform group-hover:translate-x-0.5 group-hover:text-white" />
+                        <ArrowRight className="ml-auto size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
                       </Link>
                     )
                   })}

@@ -1,4 +1,4 @@
-# Buy You Before - Catalog Service
+# Before You Buy - Catalog Service
 
 First worker in the chain. Turns a product link or the shopper's own words into a known
 SKU from a seeded furniture catalog, so inference-service gets a real dimension prior

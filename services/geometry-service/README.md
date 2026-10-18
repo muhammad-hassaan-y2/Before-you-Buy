@@ -1,4 +1,4 @@
-# Buy You Before - Geometry Service
+# Before You Buy - Geometry Service
 
 Shapely worker. Builds the room polygon, reserves the door swing and whatever
 vision-service found on the floor, then tests the product footprint against wall

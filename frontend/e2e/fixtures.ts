@@ -51,7 +51,7 @@ export const tools = {
  *  exactly the case the page has to explain rather than hide. */
 export const connect = {
   name: "buy-you-before",
-  title: "Buy You Before fit assurance",
+  title: "Before You Buy fit assurance",
   url: "/mcp/",
   transport: "streamable-http",
   public: false,
@@ -76,7 +76,7 @@ export const connect = {
       steps: [
         "Set PUBLIC_BASE_URL to the https tunnel URL and restart agent-service.",
         "Open the Apps directory -> Advanced -> Add custom MCP server.",
-        "Create it, then @-mention Buy You Before in a chat and give it a room to measure.",
+        "Create it, then @-mention Before You Buy in a chat and give it a room to measure.",
       ],
       note: "ChatGPT will not accept a static bearer header.",
     },

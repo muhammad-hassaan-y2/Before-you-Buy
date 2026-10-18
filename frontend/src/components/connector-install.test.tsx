@@ -7,7 +7,7 @@ import type { ConnectGuide } from "@/lib/agent"
 function guide(overrides: Partial<ConnectGuide> = {}): ConnectGuide {
   return {
     name: "buy-you-before",
-    title: "Buy You Before fit assurance",
+    title: "Before You Buy fit assurance",
     url: "https://byb.test/mcp/",
     transport: "streamable-http",
     public: true,

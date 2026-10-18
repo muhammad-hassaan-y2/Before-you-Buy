@@ -1,7 +1,7 @@
 [project]
 name = "byb-scene-service"
 version = "0.1.0"
-description = "Buy You Before - 3D scene and glTF export for the room simulator"
+description = "Before You Buy - 3D scene and glTF export for the room simulator"
 authors = [{ name = "Hassaan", email = "hassaan@example.com" }]
 readme = "README.md"
 requires-python = ">=3.11"

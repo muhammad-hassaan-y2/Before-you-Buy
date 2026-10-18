@@ -1,4 +1,4 @@
-"""Buy You Before API gateway: accepts a room image or product link, persists the job
+"""Before You Buy API gateway: accepts a room image or product link, persists the job
 and publishes it to the head of the worker chain."""
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ async def lifespan(app: FastAPI):
         yield
 
 
-app = FastAPI(title="Buy You Before - API Gateway", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Before You Buy - API Gateway", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.origin_list,

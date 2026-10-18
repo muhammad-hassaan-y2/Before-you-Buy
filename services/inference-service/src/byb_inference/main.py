@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
         yield
 
 
-app = FastAPI(title="Buy You Before - Inference Service", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Before You Buy - Inference Service", version="0.1.0", lifespan=lifespan)
 
 
 @app.get("/healthz")

@@ -1,17 +1,19 @@
 "use client"
 
-import { AlertTriangle, ImageIcon, Link2, Loader2, Ruler, Sofa, X } from "lucide-react"
+import { AlertTriangle, ImageIcon, Link2, Loader2, Ruler, Sofa } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
+import { RoomDimensions } from "@/components/room-dimensions"
 import { FitResult, ProgressStrip, STEPS } from "@/components/fit-result"
 import { SimulatingRoom } from "@/components/simulating-room"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PhotoDropzone } from "@/components/ui/photo-dropzone"
 import { Textarea } from "@/components/ui/textarea"
 import { createSimulation, pollSimulation, type Simulation } from "@/lib/api"
-import { cn } from "@/lib/utils"
+import { validateLink, validateRoom, type RoomErrors } from "@/lib/validate"
 
 export function RoomSimulator() {
   const [link, setLink] = useState("")
@@ -24,32 +26,11 @@ export function RoomSimulator() {
   const [error, setError] = useState<string | null>(null)
   const [simulation, setSimulation] = useState<Simulation | null>(null)
   const [placement, setPlacement] = useState<string | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
+  const [linkError, setLinkError] = useState<string | null>(null)
+  const [roomErrors, setRoomErrors] = useState<RoomErrors>({})
   const controller = useRef<AbortController | null>(null)
 
   useEffect(() => () => controller.current?.abort(), [])
-
-  function handleDragOver(e: React.DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(true)
-  }
-
-  function handleDragLeave(e: React.DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
-    const droppedFile = e.dataTransfer.files?.[0]
-    if (droppedFile && droppedFile.type.startsWith("image/")) {
-      setFile(droppedFile)
-    }
-  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -57,7 +38,16 @@ export function RoomSimulator() {
       setError("Paste a product link or attach a room photo first.")
       return
     }
+    const badLink = validateLink(link)
+    const { room, errors } = validateRoom({ width, depth, height })
+    setLinkError(badLink)
+    setRoomErrors(errors)
+    if (badLink || !room) {
+      setError("Fix the fields marked below.")
+      return
+    }
     controller.current?.abort()
+    controller.current = new AbortController()
     setBusy(true)
     setError(null)
     setSimulation(null)
@@ -66,9 +56,9 @@ export function RoomSimulator() {
       const accepted = await createSimulation({
         link: link.trim() || undefined,
         file,
-        roomWidthM: Number(width),
-        roomDepthM: Number(depth),
-        roomHeightM: Number(height),
+        roomWidthM: room.width,
+        roomDepthM: room.depth,
+        roomHeightM: room.height,
         notes: notes.trim() || undefined,
       })
       const settled = await pollSimulation(accepted.id, setSimulation, { signal: controller.current?.signal })
@@ -106,69 +96,39 @@ export function RoomSimulator() {
               <Input
                 id="link"
                 value={link}
-                onChange={(event) => setLink(event.target.value)}
+                onChange={(event) => {
+                  setLink(event.target.value)
+                  setLinkError(null)
+                }}
                 placeholder="https://www.ikea.com/.../sofa"
                 disabled={busy}
+                aria-invalid={linkError ? true : undefined}
+                className="aria-invalid:border-destructive aria-invalid:ring-destructive/30"
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="photo">
-                <ImageIcon className="size-3.5" /> Room photo (optional)
-              </Label>
-              <label
-                htmlFor="photo"
-                onDragOver={handleDragOver}
-                onDragEnter={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className={cn(
-                  "flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-3 text-sm transition-all",
-                  isDragging
-                    ? "border-primary bg-primary/10 ring-2 ring-primary/40 scale-[1.01]"
-                    : file
-                      ? "border-primary/60 bg-primary/5"
-                      : "hover:border-ring hover:bg-muted/40",
-                )}
-              >
-                <span className="truncate text-muted-foreground">
-                  {isDragging ? "Drop your room photo here..." : file ? file.name : "Drop or choose a JPG/PNG"}
-                </span>
-                <input
-                  id="photo"
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-                />
-              </label>
-              {file && (
-                <Button type="button" variant="ghost" size="sm" onClick={() => setFile(null)}>
-                  <X className="size-3.5" /> Remove
-                </Button>
+              {linkError && (
+                <p role="alert" className="text-xs text-destructive">
+                  {linkError}
+                </p>
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              {([
-                ["Width", width, setWidth],
-                ["Depth", depth, setDepth],
-                ["Height", height, setHeight],
-              ] as const).map(([labelText, value, setter]) => (
-                <div key={labelText} className="space-y-2">
-                  <Label htmlFor={labelText.toLowerCase()} className="text-muted-foreground">
-                    {labelText} (m)
-                  </Label>
-                  <Input
-                    id={labelText.toLowerCase()}
-                    inputMode="decimal"
-                    value={value}
-                    onChange={(event) => setter(event.target.value)}
-                    disabled={busy}
-                  />
-                </div>
-              ))}
+            <div className="space-y-2">
+              <Label>
+                <ImageIcon className="size-3.5" /> Room photo (optional)
+              </Label>
+              <PhotoDropzone file={file} onFile={setFile} disabled={busy} />
             </div>
+
+            <RoomDimensions
+              idPrefix="sim"
+              values={{ width, depth, height }}
+              errors={roomErrors}
+              disabled={busy}
+              onChange={(field, value) => {
+                ;({ width: setWidth, depth: setDepth, height: setHeight })[field](value)
+                setRoomErrors((current) => ({ ...current, [field]: undefined }))
+              }}
+            />
 
             <div className="space-y-2">
               <Label htmlFor="notes" className="text-muted-foreground">

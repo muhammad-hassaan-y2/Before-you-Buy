@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, CheckCircle2 } from "lucide-react"
+import { AlertTriangle, CheckCircle2, OctagonX, type LucideIcon } from "lucide-react"
 
 import { DeliveryPath } from "@/components/delivery-path"
 import { FitViews } from "@/components/fit-views"
@@ -24,6 +24,28 @@ export const VERDICT: Record<string, { label: string; variant: "success" | "warn
   tight: { label: "Fits, but tight", variant: "warning" },
   too_large: { label: "Too large for this room", variant: "destructive" },
   blocked: { label: "No clear placement", variant: "destructive" },
+}
+
+const VERDICT_TONE: Record<string, { box: string; icon: string; Icon: LucideIcon }> = {
+  success: { box: "border-success/40 bg-success/10", icon: "text-success", Icon: CheckCircle2 },
+  warning: { box: "border-warning/50 bg-warning/10", icon: "text-warning", Icon: AlertTriangle },
+  destructive: { box: "border-destructive/40 bg-destructive/10", icon: "text-destructive", Icon: OctagonX },
+}
+
+/** The answer the page exists for, so it is the largest thing in the result — not a chip. */
+export function VerdictBanner({ verdict, tightest }: { verdict: string; tightest: number | null }) {
+  const entry = VERDICT[verdict]
+  const tone = VERDICT_TONE[entry?.variant ?? "destructive"]
+  return (
+    <div role="status" data-verdict={verdict} className={cn("flex items-center gap-4 rounded-2xl border-2 px-5 py-4", tone.box)}>
+      <tone.Icon className={cn("size-9 shrink-0", tone.icon)} aria-hidden />
+      <div className="min-w-0">
+        <p className="eyebrow text-muted-foreground">Verdict</p>
+        <p className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">{entry?.label ?? verdict}</p>
+        {tightest !== null && <p className="num mt-0.5 text-sm text-muted-foreground">Tightest gap {tightest.toFixed(2)} m</p>}
+      </div>
+    </div>
+  )
 }
 
 /** One dot per worker, lit by the status the gateway reported. Nothing here is a decoration:
@@ -75,16 +97,8 @@ export function FitResult({ simulation, placement, onPlacement }: Props) {
 
   return (
     <div className="space-y-5">
-      <div className="space-y-2">
-        <p className="flex items-center gap-2.5 text-xl font-semibold tracking-tight text-balance">
-          <span
-            className={cn(
-              "size-2 shrink-0 rounded-full",
-              report.verdict === "fits" ? "bg-success" : report.verdict === "tight" ? "bg-warning" : "bg-destructive",
-            )}
-          />
-          {VERDICT[report.verdict]?.label ?? report.verdict}
-        </p>
+      <div className="space-y-3">
+        <VerdictBanner verdict={report.verdict} tightest={tightest} />
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">
             {profile

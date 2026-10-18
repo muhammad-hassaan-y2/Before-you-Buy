@@ -172,7 +172,7 @@ def build_gltf(spec: SceneSpec, spot: ScenePlacement | None) -> dict[str, Any]:
 
     axes = [positions[axis::3] for axis in range(3)]
     return {
-        "asset": {"version": "2.0", "generator": "Buy You Before scene-service"},
+        "asset": {"version": "2.0", "generator": "Before You Buy scene-service"},
         "scene": 0,
         "scenes": [{"name": "room", "nodes": root}],
         "nodes": builder.nodes,

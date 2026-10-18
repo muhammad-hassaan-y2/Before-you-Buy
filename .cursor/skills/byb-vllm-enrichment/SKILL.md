@@ -1,7 +1,7 @@
 ---
 name: byb-vllm-enrichment
 description: >-
-  Improve Buy You Before listing scrape, vLLM prompts, JSON parsing, vision
+  Improve Before You Buy listing scrape, vLLM prompts, JSON parsing, vision
   messages, and category heuristic fallbacks that produce ProductProfile.
   Use when changing vllm_client.py, products.py, SYSTEM_PROMPT, HEURISTICS,
   confidence scoring, scraped dimension extraction, or VLLM_SUPPORTS_VISION.

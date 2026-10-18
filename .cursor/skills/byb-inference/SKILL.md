@@ -1,13 +1,13 @@
 ---
 name: byb-inference
 description: >-
-  Own the Buy You Before AI enrichment path (inference-service): scrape listing
+  Own the Before You Buy AI enrichment path (inference-service): scrape listing
   context, call vLLM or heuristics, emit ProductProfile, forward SimulationMeasured.
   Use when editing services/inference-service, ProductProfile contracts, enrichment
   prompts, confidence/source tagging, or the simulation.requested → measured flow.
 ---
 
-# Buy You Before — Inference (AI component)
+# Before You Buy — Inference (AI component)
 
 ## Ownership boundary
 

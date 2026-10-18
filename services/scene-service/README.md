@@ -1,4 +1,4 @@
-# Buy You Before - Scene Service
+# Before You Buy - Scene Service
 
 Last worker in the chain. It turns the fit report into the two things a 3D viewport
 needs: a semantic scene description the browser can animate, and a glTF 2.0 document

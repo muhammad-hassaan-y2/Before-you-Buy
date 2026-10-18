@@ -22,7 +22,7 @@ test.beforeEach(async ({ page }) => {
 
 test("a photo of the room is stored, then every candidate is fitted into the room it shows", async ({ page }) => {
   await page.goto("/room-simulator")
-  await page.locator("#agent-photo").setInputFiles({ name: "living-room.jpg", mimeType: "image/jpeg", buffer: Buffer.from("\u00ff\u00d8\u00ff\u00e1") })
+  await page.getByLabel("Photo of the room").setInputFiles({ name: "living-room.jpg", mimeType: "image/jpeg", buffer: Buffer.from("\u00ff\u00d8\u00ff\u00e1") })
   await expect(page.getByText("living-room.jpg")).toBeVisible()
 
   const sent = page.waitForRequest("**/agent/brief")

@@ -32,7 +32,7 @@ logger = logging.getLogger("byb.mcp")
 # a model does - measure, use the photo, distrust an unproven piece, ask before a hold or an order
 # - are said first and in as few words as they can be said. The tour of the tools follows the rules.
 INSTRUCTIONS = (
-    "Buy You Before measures furniture against a real room before it is bought. Four rules: "
+    "Before You Buy measures furniture against a real room before it is bought. Four rules: "
     "(1) Never recommend from a listed dimension - run simulate_product, joint_fit or fit_catalog "
     "and quote the verdict fit_report or explain_fit returns. (2) If the shopper sent a photo of "
     "the room, pass the image_key the gateway returned for it, so the room measured from the photo "
@@ -66,7 +66,7 @@ def build_server(tools: Tools, settings: Settings | None = None) -> MCPServer:
     base = settings.public_base_url.rstrip("/") if settings and settings.public_base_url else ""
     server = MCPServer(
         "buy-you-before",
-        title="Buy You Before fit assurance",
+        title="Before You Buy fit assurance",
         description="Measures furniture against a real room before it is bought, and holds a proven fit only on a human's own yes.",
         instructions=INSTRUCTIONS,
         website_url=base or None,
@@ -467,9 +467,9 @@ def connect(settings: Settings) -> dict[str, Any]:
                 "Turn on Developer mode: Settings -> Security, or Workspace settings -> "
                 "Permissions & roles if your account has a workspace. Reload the tab.",
                 "Open the Apps directory -> Advanced -> Add custom MCP server.",
-                "Name it Buy You Before and paste the URL below - the shop's own origin, /mcp/.",
+                "Name it Before You Buy and paste the URL below - the shop's own origin, /mcp/.",
                 "Leave authentication on No authentication, or on OAuth if the shop put OAuth in front.",
-                "Create it, then @-mention Buy You Before in a chat and give it a room to measure.",
+                "Create it, then @-mention Before You Buy in a chat and give it a room to measure.",
                 "Finish the purchase in the same chat: ask it to add what cleared to a cart, measure the "
                 "bag and check out - an order is refused until every line carries a cleared verdict.",
             ],
@@ -486,7 +486,7 @@ def connect(settings: Settings) -> dict[str, Any]:
             "steps": [
                 "Open Customize -> Connectors, or Settings -> Connectors on the desktop app.",
                 "Click + and choose Add custom connector.",
-                "Name it Buy You Before and paste the URL below - the shop's own origin, /mcp/.",
+                "Name it Before You Buy and paste the URL below - the shop's own origin, /mcp/.",
                 "Connect it as-is, or set an OAuth Client ID under Advanced settings when the shop "
                 "speaks OAuth; Claude takes no typed key the way Claude Code does.",
                 "Switch the connector on inside the chat, then ask it which sofas fit the room.",
@@ -543,7 +543,7 @@ def connect(settings: Settings) -> dict[str, Any]:
     }
     return {
         "name": "buy-you-before",
-        "title": "Buy You Before fit assurance",
+        "title": "Before You Buy fit assurance",
         "url": url,
         "transport": "streamable-http",
         "public": bool(base),

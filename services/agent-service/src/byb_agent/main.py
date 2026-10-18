@@ -63,7 +63,7 @@ async def lifespan(_: FastAPI):
         yield
 
 
-app = FastAPI(title="Buy You Before - Agent Service", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Before You Buy - Agent Service", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.origin_list,
@@ -247,7 +247,7 @@ async def chat(request: Request, payload: dict[str, Any] = Body(default_factory=
     if not MODEL.configured:
         raise HTTPException(status_code=503, detail="neither Evolus nor an AMD model endpoint is configured")
     try:
-        answer = await MODEL.complete(prompt, system="You are the Buy You Before fit assistant. Be brief and concrete.", max_tokens=400)
+        answer = await MODEL.complete(prompt, system="You are the Before You Buy fit assistant. Be brief and concrete.", max_tokens=400)
     except (httpx.HTTPError, RuntimeError) as exc:
         raise HTTPException(status_code=502, detail=f"AMD model endpoint failed: {exc}") from exc
     return {"answer": answer, "answered_by": MODEL.name}

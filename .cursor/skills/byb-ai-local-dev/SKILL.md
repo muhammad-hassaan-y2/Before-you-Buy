@@ -1,7 +1,7 @@
 ---
 name: byb-ai-local-dev
 description: >-
-  Run and verify the Buy You Before AI path locally with AMD Token Factory
+  Run and verify the Before You Buy AI path locally with AMD Token Factory
   (OpenAI-compatible VLLM_* env) or heuristic fallback. Use when starting
   inference, configuring Token Factory credentials, or validating enrich.
 ---

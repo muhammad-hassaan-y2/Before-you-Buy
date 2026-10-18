@@ -1,4 +1,4 @@
-# Buy You Before — the five-minute walkthrough
+# Before You Buy — the five-minute walkthrough
 
 The spine of this video is the measurement: the shop's shelf gets measured, one listing measures
 itself, a brief goes in and a verdict comes out with everything between them named, timed and

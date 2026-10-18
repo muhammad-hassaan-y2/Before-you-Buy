@@ -58,7 +58,7 @@ files = [
 [[package]]
 name = "byb-common"
 version = "0.1.0"
-description = "Shared event contracts and Dapr transport helpers for Buy You Before services"
+description = "Shared event contracts and Dapr transport helpers for Before You Buy services"
 optional = false
 python-versions = ">=3.11,<4.0"
 groups = ["main"]

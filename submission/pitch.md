@@ -1,4 +1,4 @@
-# Buy You Before — pitch
+# Before You Buy — pitch
 
 AMD Developer Hackathon: ACT III · Evolus partner track · "Reinvent Commerce"
 Four slides of it fit on a screen; twelve in the deck. Judged on Application of Technology,
@@ -8,7 +8,7 @@ Presentation, Business Value and Originality, so each section below says which o
 
 ## 1. Title
 
-**Buy You Before — the agent that measures before it recommends.**
+**Before You Buy — the agent that measures before it recommends.**
 
 An e-commerce agent that answers the question that stops the purchase: *will it fit my room?*
 It only ever recommends what a geometry engine proved, and it shows the proof.

@@ -26,6 +26,7 @@ import {
   type StoreSort,
 } from "@/lib/store"
 import { cn } from "@/lib/utils"
+import { validateRoom } from "@/lib/validate"
 
 const SORTS: { key: StoreSort; label: string }[] = [
   { key: "fit", label: "Fit first" },
@@ -145,9 +146,11 @@ export function StoreGrid({ initialCategory = null }: { initialCategory?: string
     }
   }, [])
 
-  const roomWidth = Number(width) || 4
-  const roomDepth = Number(depth) || 3.5
-  const roomHeight = Number(height) || 2.4
+  // A wrong measurement is named, not swapped for a default: the sweep waits for a real room.
+  const { room: checked, errors: roomErrors } = useMemo(() => validateRoom({ width, depth, height }), [width, depth, height])
+  const roomWidth = checked?.width ?? 4
+  const roomDepth = checked?.depth ?? 3.5
+  const roomHeight = checked?.height ?? 2.4
   const visible = useMemo(() => sortRows(rows.filter((row) => match(row, filter)), filter, verdicts), [rows, filter, verdicts])
   const cleared = useMemo(() => Object.values(verdicts).filter((verdict) => verdict === "fits" || verdict === "tight").length, [verdicts])
 
@@ -175,6 +178,10 @@ export function StoreGrid({ initialCategory = null }: { initialCategory?: string
     async (override: { category?: string | null; priceBand?: string | null } = {}) => {
       const category = "category" in override ? override.category : filter.category
       const priceBand = "priceBand" in override ? override.priceBand : filter.priceBand
+      if (!checked) {
+        setFitError("Fix the room measurements above before measuring.")
+        return
+      }
       abort.current?.abort()
       const controller = new AbortController()
       abort.current = controller
@@ -215,7 +222,7 @@ export function StoreGrid({ initialCategory = null }: { initialCategory?: string
         }
       }
     },
-    [roomWidth, roomDepth, roomHeight, filter.category, filter.priceBand, filter.query],
+    [checked, roomWidth, roomDepth, roomHeight, filter.category, filter.priceBand, filter.query],
   )
 
   useEffect(() => () => abort.current?.abort(), [])
@@ -285,8 +292,12 @@ export function StoreGrid({ initialCategory = null }: { initialCategory?: string
                   inputMode="decimal"
                   value={value}
                   onChange={(event) => setter(event.target.value)}
+                  onFocus={(event) => event.target.select()}
                   disabled={busy}
-                  className="num w-[4.5rem] bg-background/70 text-center font-semibold"
+                  autoComplete="off"
+                  aria-invalid={roomErrors[labelText.toLowerCase() as "width" | "depth" | "height"] ? true : undefined}
+                  title={roomErrors[labelText.toLowerCase() as "width" | "depth" | "height"]}
+                  className="num w-24 bg-background/70 text-center font-semibold aria-invalid:border-destructive aria-invalid:ring-destructive/30"
                 />
               </div>
             ))}
@@ -330,6 +341,11 @@ export function StoreGrid({ initialCategory = null }: { initialCategory?: string
           ) : (
             <span>Every badge is the geometry engine&rsquo;s own word for this room. Nothing here is guessed.</span>
           )}
+          {Object.entries(roomErrors).map(([field, message]) => (
+            <span key={field} role="alert" className="text-destructive">
+              {field[0].toUpperCase() + field.slice(1)}: {message}
+            </span>
+          ))}
           {fitError && <span className="text-destructive">{fitError}</span>}
         </p>
       </div>

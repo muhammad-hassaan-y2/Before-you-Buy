@@ -1,21 +1,23 @@
 "use client"
 
-import { Bot, CircleSlash, ImageIcon, Loader2, Send, Sparkles, UserCheck, X } from "lucide-react"
+import { Bot, CircleSlash, Loader2, Send, Sparkles, UserCheck } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 import { AgentRunTrace, RunStatusBadge } from "@/components/agent-run-trace"
 import { AddToBag } from "@/components/bag-drawer"
 import { FitViews } from "@/components/fit-views"
+import { RoomDimensions } from "@/components/room-dimensions"
+import { SimulatingRoom } from "@/components/simulating-room"
 import { DimensionEstimateWarning, ProductSourceBadge } from "@/components/product-provenance"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PhotoDropzone } from "@/components/ui/photo-dropzone"
 import { Textarea } from "@/components/ui/textarea"
 import { pollRun, startJourney, type AgentRun } from "@/lib/agent"
 import { fetchSimulation, ROOM_SCAN_LABEL, uploadRoomPhoto, type Simulation } from "@/lib/api"
-import { cn } from "@/lib/utils"
+import { validateRoom, type RoomErrors } from "@/lib/validate"
 
 const EXAMPLES = [
   "Three-seater linen sofa under 900 for a living room, needs to leave a walkway to the balcony",
@@ -29,7 +31,7 @@ export function FitAgent() {
   const [depth, setDepth] = useState("3.5")
   const [height, setHeight] = useState("2.4")
   const [photo, setPhoto] = useState<File | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
+  const [roomErrors, setRoomErrors] = useState<RoomErrors>({})
   const [run, setRun] = useState<AgentRun | null>(null)
   const [fit, setFit] = useState<{ id: string; detail: Simulation } | null>(null)
   const [busy, setBusy] = useState(false)
@@ -37,28 +39,6 @@ export function FitAgent() {
   const controller = useRef<AbortController | null>(null)
 
   useEffect(() => () => controller.current?.abort(), [])
-
-  function handleDragOver(e: React.DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(true)
-  }
-
-  function handleDragLeave(e: React.DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
-    const droppedFile = e.dataTransfer.files?.[0]
-    if (droppedFile && droppedFile.type.startsWith("image/")) {
-      setPhoto(droppedFile)
-    }
-  }
 
   const fittedId = run?.decision?.simulation_id ?? null
 
@@ -83,6 +63,12 @@ export function FitAgent() {
       setError("Describe what you are looking for, in your own words.")
       return
     }
+    const { room, errors } = validateRoom({ width, depth, height })
+    setRoomErrors(errors)
+    if (!room) {
+      setError("Fix the room measurements marked below.")
+      return
+    }
     controller.current?.abort()
     setBusy(true)
     setError(null)
@@ -92,9 +78,9 @@ export function FitAgent() {
       const imageKey = photo ? await uploadRoomPhoto(photo) : undefined
       const accepted = await startJourney({
         brief: brief.trim(),
-        roomWidthM: Number(width),
-        roomDepthM: Number(depth),
-        roomHeightM: Number(height),
+        roomWidthM: room.width,
+        roomDepthM: room.depth,
+        roomHeightM: room.height,
         imageKey,
       })
       const settled = await pollRun(accepted.run_id, setRun, { signal: controller.current?.signal })
@@ -128,17 +114,19 @@ export function FitAgent() {
               <Label htmlFor="brief">Your brief</Label>
               <Textarea
                 id="brief"
-                rows={4}
+                rows={2}
                 value={brief}
                 onChange={(event) => setBrief(event.target.value)}
                 onKeyDown={(event) => {
-                  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+                  // Enter sends, as in any chat box; Shift+Enter is the only way to a new line.
+                  if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
                     event.preventDefault()
-                    void submit(event)
+                    event.currentTarget.form?.requestSubmit()
                   }
                 }}
                 placeholder="A sofa that seats three, under 900, and leaves a walkway to the balcony"
                 disabled={busy}
+                className="min-h-16 resize-y"
               />
             </div>
 
@@ -159,72 +147,27 @@ export function FitAgent() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="agent-photo">
-                <ImageIcon className="size-3.5" /> Photo of the room (optional)
-              </Label>
-              <label
-                htmlFor="agent-photo"
-                onDragOver={handleDragOver}
-                onDragEnter={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className={cn(
-                  "flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-3 text-sm transition-all",
-                  isDragging
-                    ? "border-primary bg-primary/10 ring-2 ring-primary/40 scale-[1.01]"
-                    : photo
-                      ? "border-primary/60 bg-primary/5"
-                      : "hover:border-ring hover:bg-muted/40",
-                )}
-              >
-                <span className="truncate text-muted-foreground">
-                  {isDragging ? "Drop your room photo here..." : photo ? photo.name : "Drop or choose a JPG/PNG of the room"}
-                </span>
-                <input
-                  id="agent-photo"
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  disabled={busy}
-                  onChange={(event) => setPhoto(event.target.files?.[0] ?? null)}
-                />
-              </label>
+              <Label>Photo of the room (optional)</Label>
+              <PhotoDropzone file={photo} onFile={setPhoto} disabled={busy} hint="Drop a JPG or PNG of the room, or click to choose" />
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs text-muted-foreground">
                   {photo
                     ? "Every candidate is fitted into the room measured from this photo, not the numbers below."
                     : "Without a photo the agent uses the room you type."}
                 </p>
-                {photo && (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setPhoto(null)}>
-                    <X className="size-3.5" /> Remove
-                  </Button>
-                )}
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              {(
-                [
-                  ["Width", width, setWidth],
-                  ["Depth", depth, setDepth],
-                  ["Height", height, setHeight],
-                ] as const
-              ).map(([labelText, value, setter]) => (
-                <div key={labelText} className="space-y-2">
-                  <Label htmlFor={`agent-${labelText.toLowerCase()}`} className="text-muted-foreground">
-                    {labelText} (m)
-                  </Label>
-                  <Input
-                    id={`agent-${labelText.toLowerCase()}`}
-                    inputMode="decimal"
-                    value={value}
-                    onChange={(event) => setter(event.target.value)}
-                    disabled={busy}
-                  />
-                </div>
-              ))}
-            </div>
+            <RoomDimensions
+              idPrefix="agent"
+              values={{ width, depth, height }}
+              errors={roomErrors}
+              disabled={busy}
+              onChange={(field, value) => {
+                ;({ width: setWidth, depth: setDepth, height: setHeight })[field](value)
+                setRoomErrors((current) => ({ ...current, [field]: undefined }))
+              }}
+            />
 
             <Button type="submit" size="lg" className="w-full" disabled={busy}>
               {busy ? <Loader2 className="animate-spin" /> : <Send className="size-4" />}
@@ -274,11 +217,23 @@ export function FitAgent() {
             </div>
           )}
 
-          {!run && !error && (
+          {!run && !error && !busy && (
             <div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-sm text-muted-foreground">
               <Bot className="size-6 opacity-40" />
               No journey yet.
             </div>
+          )}
+
+          {/* The room being solved, drawn while the agent is still measuring candidates. */}
+          {busy && !fitted && (
+            <SimulatingRoom
+              widthM={Number(width) || 4}
+              depthM={Number(depth) || 3.5}
+              heightM={Number(height) || 2.4}
+              status="fitting"
+              notes={brief}
+              photoName={photo?.name}
+            />
           )}
 
           {run && <AgentRunTrace run={run} />}

@@ -141,7 +141,7 @@ export function SimulatingRoom({
           )}
         </div>
 
-        <div className="relative mx-auto w-full max-w-md overflow-hidden rounded-xl border border-border/70 bg-[#0f0d0c]/80 p-2">
+        <div className="dark relative mx-auto w-full max-w-md overflow-hidden rounded-xl border border-border/70 bg-[#0f0d0c]/80 p-2 text-foreground">
           <svg
             viewBox={`${-PADDING_M} ${-PADDING_M} ${viewBoxWidth} ${viewBoxHeight}`}
             className="w-full h-auto drop-shadow-sm select-none"

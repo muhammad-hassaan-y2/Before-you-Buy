@@ -1,4 +1,4 @@
-# Buy You Before — the shop that answers first
+# Before You Buy — the shop that answers first
 
 An e-commerce agent that answers the one question that stops a purchase: **will it fit my
 room?** A shopper says it in their own words — "three-seater sofa under 900, and I need to
