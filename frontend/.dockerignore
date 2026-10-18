@@ -7,3 +7,12 @@ node_modules
 .env.local
 Dockerfile
 .dockerignore
+e2e
+tests
+*.test.ts
+*.test.tsx
+vitest.config.mts
+vitest.setup.ts
+playwright.config.ts
+README.md
+AGENTS.md

@@ -14,9 +14,10 @@ RUN pip install "poetry==${POETRY_VERSION}"
 WORKDIR /app
 
 COPY libs/ ./libs/
-COPY services/catalog-service/pyproject.toml services/catalog-service/README.md ./services/catalog-service/
+COPY services/catalog-service/pyproject.toml services/catalog-service/poetry.lock* services/catalog-service/README.md ./services/catalog-service/
 # The dependency layer cannot see src/, so --no-root skips installing the service itself.
-RUN cd services/catalog-service && poetry install --no-root --without dev --no-interaction --no-ansi
+RUN cd services/catalog-service && poetry install --no-root --without dev --no-interaction --no-ansi \
+    && rm -rf /root/.cache/pypoetry /root/.cache/pip
 
 COPY services/catalog-service/src/ ./services/catalog-service/src/
 ENV PYTHONPATH=/app/services/catalog-service/src:/app/libs/byb-common/src

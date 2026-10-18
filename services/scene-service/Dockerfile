@@ -14,9 +14,10 @@ RUN pip install "poetry==${POETRY_VERSION}"
 WORKDIR /app
 
 COPY libs/ ./libs/
-COPY services/scene-service/pyproject.toml services/scene-service/README.md ./services/scene-service/
+COPY services/scene-service/pyproject.toml services/scene-service/poetry.lock* services/scene-service/README.md ./services/scene-service/
 # The dependency layer cannot see src/, so --no-root skips installing the service itself.
-RUN cd services/scene-service && poetry install --no-root --without dev --no-interaction --no-ansi
+RUN cd services/scene-service && poetry install --no-root --without dev --no-interaction --no-ansi \
+    && rm -rf /root/.cache/pypoetry /root/.cache/pip
 
 COPY services/scene-service/src/ ./services/scene-service/src/
 ENV PYTHONPATH=/app/services/scene-service/src:/app/libs/byb-common/src

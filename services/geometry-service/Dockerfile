@@ -14,9 +14,10 @@ RUN pip install "poetry==${POETRY_VERSION}"
 WORKDIR /app
 
 COPY libs/ ./libs/
-COPY services/geometry-service/pyproject.toml services/geometry-service/README.md ./services/geometry-service/
+COPY services/geometry-service/pyproject.toml services/geometry-service/poetry.lock* services/geometry-service/README.md ./services/geometry-service/
 # The dependency layer cannot see src/, so --no-root skips installing the service itself.
-RUN cd services/geometry-service && poetry install --no-root --without dev --no-interaction --no-ansi
+RUN cd services/geometry-service && poetry install --no-root --without dev --no-interaction --no-ansi \
+    && rm -rf /root/.cache/pypoetry /root/.cache/pip
 
 COPY services/geometry-service/src/ ./services/geometry-service/src/
 ENV PYTHONPATH=/app/services/geometry-service/src:/app/libs/byb-common/src

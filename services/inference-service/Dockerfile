@@ -14,9 +14,10 @@ RUN pip install "poetry==${POETRY_VERSION}"
 WORKDIR /app
 
 COPY libs/ ./libs/
-COPY services/inference-service/pyproject.toml services/inference-service/README.md ./services/inference-service/
+COPY services/inference-service/pyproject.toml services/inference-service/poetry.lock* services/inference-service/README.md ./services/inference-service/
 # The dependency layer cannot see src/, so --no-root skips installing the service itself.
-RUN cd services/inference-service && poetry install --no-root --without dev --no-interaction --no-ansi
+RUN cd services/inference-service && poetry install --no-root --without dev --no-interaction --no-ansi \
+    && rm -rf /root/.cache/pypoetry /root/.cache/pip
 
 COPY services/inference-service/src/ ./services/inference-service/src/
 ENV PYTHONPATH=/app/services/inference-service/src:/app/libs/byb-common/src

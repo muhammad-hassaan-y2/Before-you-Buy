@@ -66,9 +66,9 @@ def require_internal_token(x_byb_token: str = Header(default="")) -> None:
 
 
 @app.get("/healthz", response_model=HealthResponse)
-def health() -> HealthResponse:
+def health(db: Session = Depends(get_db)) -> HealthResponse:
     try:
-        init_db()
+        db.execute(select(1))
         database = "up"
     except Exception as exc:  # noqa: BLE001 - health must report, not raise
         logger.warning("database unreachable: %s", exc)
