@@ -210,7 +210,7 @@ export function ProductDetail({ sku }: Props) {
                   <span className="text-muted-foreground">·</span>
                   <span className="font-mono text-xs text-muted-foreground">{row.sku}</span>
                 </div>
-                <h1 className="mt-2 text-4xl font-semibold tracking-[-0.035em] text-foreground text-balance lg:text-5xl">
+                <h1 className="display mt-2 text-4xl text-foreground text-balance lg:text-5xl">
                   {row.name}
                 </h1>
                 <p className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">

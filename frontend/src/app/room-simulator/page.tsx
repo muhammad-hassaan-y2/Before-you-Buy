@@ -18,10 +18,10 @@ export const metadata: Metadata = {
 export default function RoomSimulatorPage() {
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-14 lg:py-20">
-      <header className="mb-12 text-center">
+      <header className="mb-12 max-w-3xl">
         <p className="eyebrow text-primary">Fit agent</p>
-        <h1 className="mx-auto mt-4 max-w-3xl text-4xl font-semibold tracking-[-0.03em] text-balance lg:text-6xl">The fit agent</h1>
-        <p className="mx-auto mt-5 max-w-2xl text-base text-pretty text-muted-foreground lg:text-lg">
+        <h1 className="display mt-4 text-4xl text-balance lg:text-6xl">The fit agent</h1>
+        <p className="mt-5 max-w-2xl text-base text-pretty text-muted-foreground lg:text-lg">
           An agent shortlists the catalog, runs a real fit simulation for each candidate through the same API your
           shoppers use, and only recommends what the geometry says fits. Every step is shown, including the ones that
           were skipped.
@@ -72,7 +72,7 @@ function Section({ eyebrow, title, children }: { eyebrow?: string; title?: strin
       {title && (
         <div className="mb-5">
           {eyebrow && <p className="eyebrow text-primary">{eyebrow}</p>}
-          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em]">{title}</h2>
+          <h2 className="display mt-2 text-3xl">{title}</h2>
         </div>
       )}
       {children}

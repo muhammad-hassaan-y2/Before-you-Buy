@@ -112,7 +112,7 @@ export function ProductCard({ row, verdict, simulationId, stock, roomWidthM, roo
             <Sparkles className="size-2.5 text-primary" /> AI Verified
           </span>
         </div>
-        <h3 className="mt-1 truncate text-base font-semibold tracking-tight text-foreground group-hover:text-primary transition-colors">
+        <h3 className="display mt-1 truncate text-lg text-foreground group-hover:text-primary transition-colors">
           {row.name}
         </h3>
         <p className="mt-1 flex flex-wrap items-baseline gap-x-2">

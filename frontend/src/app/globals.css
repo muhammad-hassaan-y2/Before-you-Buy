@@ -95,6 +95,7 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces), Georgia, serif;
 }
 
 @layer base {
@@ -129,6 +130,15 @@
       transition-duration: 0.01ms !important;
     }
   }
+}
+
+/* Headings and the wordmark: roman serif, never italic. */
+@utility display {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-style: normal;
+  letter-spacing: -0.02em;
+  font-optical-sizing: auto;
 }
 
 /* The small label above a value. Monospace is reserved for what a person would copy — a SKU, a

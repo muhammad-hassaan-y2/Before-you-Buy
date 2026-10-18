@@ -41,7 +41,7 @@ export function VerdictBanner({ verdict, tightest }: { verdict: string; tightest
       <tone.Icon className={cn("size-9 shrink-0", tone.icon)} aria-hidden />
       <div className="min-w-0">
         <p className="eyebrow text-muted-foreground">Verdict</p>
-        <p className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">{entry?.label ?? verdict}</p>
+        <p className="display text-2xl text-balance sm:text-3xl">{entry?.label ?? verdict}</p>
         {tightest !== null && <p className="num mt-0.5 text-sm text-muted-foreground">Tightest gap {tightest.toFixed(2)} m</p>}
       </div>
     </div>

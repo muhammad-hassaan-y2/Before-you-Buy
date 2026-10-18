@@ -42,3 +42,6 @@ e2e.db
 .vscode/
 .DS_Store
 Thumbs.db
+.venv-local/
+.local/
+.local-run.log
