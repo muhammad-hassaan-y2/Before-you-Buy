@@ -2,6 +2,7 @@
 
 import { AlertTriangle, CheckCircle2, OctagonX, type LucideIcon } from "lucide-react"
 
+import { Meter } from "@/components/visuals"
 import { DeliveryPath } from "@/components/delivery-path"
 import { FitViews } from "@/components/fit-views"
 import { DimensionEstimateWarning, ProductSourceBadge } from "@/components/product-provenance"
@@ -121,19 +122,29 @@ export function FitResult({ simulation, placement, onPlacement }: Props) {
         scene={simulation.scene ?? null}
       />
 
-      <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-        {[
-          ["Room", `${report.room_area_m2.toFixed(1)} m²`, null],
-          ["Usable", `${report.usable_area_m2.toFixed(1)} m²`, null],
-          ["Occupied", `${report.coverage_pct.toFixed(1)} %`, null],
-          ["Tightest gap", tightest === null ? null : `${tightest.toFixed(2)} m`, tightest !== null && tightest < 0.6 ? "text-warning" : null],
-        ].map(([labelText, value, tone]) => (
-          <div key={labelText as string} className="rounded-md border border-border/60 bg-surface px-3.5 py-3">
-            <dt className="eyebrow text-muted-foreground">{labelText}</dt>
-            <dd className={cn("num mt-1 text-lg font-semibold", tone ?? undefined)}>{value ?? "—"}</dd>
+      <div className="grid gap-5 sm:grid-cols-3">
+        <div>
+          <p className="eyebrow text-muted-foreground">Floor taken</p>
+          <p className="num mt-1 text-2xl font-semibold">{report.coverage_pct.toFixed(0)}<span className="text-sm font-normal text-muted-foreground"> % of {report.room_area_m2.toFixed(1)} m²</span></p>
+          <div className="mt-2"><Meter value={report.coverage_pct} label={`${report.coverage_pct.toFixed(0)} percent of the floor is taken`} tone={report.coverage_pct > 55 ? "warning" : "primary"} /></div>
+        </div>
+        <div>
+          <p className="eyebrow text-muted-foreground">Usable floor</p>
+          <p className="num mt-1 text-2xl font-semibold">{report.usable_area_m2.toFixed(1)}<span className="text-sm font-normal text-muted-foreground"> m² left</span></p>
+          <div className="mt-2"><Meter value={report.usable_area_m2} max={report.room_area_m2} tone="success" label={`${report.usable_area_m2.toFixed(1)} of ${report.room_area_m2.toFixed(1)} square metres usable`} /></div>
+        </div>
+        <div>
+          <p className="eyebrow text-muted-foreground">Tightest gap</p>
+          <p className={cn("num mt-1 text-2xl font-semibold", tightest !== null && tightest < 0.6 && "text-warning")}>
+            {tightest === null ? "—" : tightest.toFixed(2)}
+            <span className="text-sm font-normal text-muted-foreground"> m · 0.60 needed</span>
+          </p>
+          <div className="relative mt-2">
+            <Meter value={tightest ?? 0} max={1.2} tone={tightest !== null && tightest >= 0.6 ? "success" : "warning"} label={`Tightest gap ${tightest === null ? "unknown" : tightest.toFixed(2)} metres`} />
+            <span aria-hidden className="absolute -top-1 bottom-[-4px] left-1/2 w-px bg-foreground" />
           </div>
-        ))}
-      </dl>
+        </div>
+      </div>
 
       <div className="rounded-md border p-3">
         <DeliveryPath report={report} />

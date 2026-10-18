@@ -18,9 +18,9 @@ export function HeroPlan() {
           <rect x="386" y="70" width="8" height="110" rx="2" className="fill-primary/60" />
           <text x="300" y="60" className="fill-muted-foreground" fontSize="10">balcony</text>
           {/* walkway */}
-          <path d="M100 250 C200 250 260 190 380 125" fill="none" className="stroke-success" strokeWidth="3" strokeDasharray="2 8" strokeLinecap="round" />
+          <path d="M100 250 C200 250 260 190 380 125" fill="none" className="animate-walk stroke-success" strokeWidth="3" strokeDasharray="2 8" strokeLinecap="round" />
           {/* sofa */}
-          <g>
+          <g className="animate-settle">
             <rect x="110" y="70" width="150" height="62" rx="10" className="fill-primary/20 stroke-primary" strokeWidth="2.5" />
             <rect x="118" y="78" width="134" height="22" rx="6" className="fill-primary/30" />
             <text x="185" y="122" textAnchor="middle" className="fill-foreground" fontSize="11" fontWeight="600">3-seat sofa · 220 cm</text>

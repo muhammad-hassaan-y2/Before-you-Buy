@@ -7,7 +7,8 @@ import { AddToBag } from "@/components/bag-drawer"
 import { ProductIso } from "@/components/product-iso"
 import type { CatalogRow, StockRow } from "@/lib/api"
 import { getProductImage } from "@/lib/product-images"
-import { price, stockLine, stockTone, verdictLabel } from "@/lib/store"
+import { FootprintPlan, LeadBar, StockDots } from "@/components/visuals"
+import { price, verdictLabel } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
 type Props = {
@@ -91,20 +92,28 @@ export function ProductCard({ row, verdict, simulationId, stock, roomWidthM, roo
         <p className="num mt-1 text-xl font-semibold text-foreground">{price(commerce.retail_eur)}</p>
       </Link>
 
-      <dl className="mt-3 divide-y divide-border border-y border-border text-xs">
-        {(
-          [
-            ["Size", `${geometry.width_cm.toFixed(0)} × ${geometry.depth_cm.toFixed(0)} × ${geometry.height_cm.toFixed(0)} cm`, overruns ? "text-destructive font-medium" : null],
-            ["Ships", `${commerce.lead_days} days · ${commerce.freight} freight`, null],
-            ["Stock", stock ? stockLine(stock) : "reading the shelf…", stock ? stockTone(stock.state) : null],
-          ] as const
-        ).map(([labelText, value, tone]) => (
-          <div key={labelText} className="flex items-baseline justify-between gap-3 py-2">
-            <dt className="shrink-0 text-muted-foreground">{labelText}</dt>
-            <dd className={cn("min-w-0 truncate text-right", tone ?? "text-foreground/80")}>{value}</dd>
+      <div className="mt-4 grid grid-cols-[minmax(0,5fr)_minmax(0,6fr)] items-center gap-4 border-y border-border py-4">
+        <figure>
+          <FootprintPlan roomW={roomWidthM} roomD={roomDepthM} pieceWcm={geometry.width_cm} pieceDcm={geometry.depth_cm} verdict={verdict} />
+          <figcaption className={cn("num mt-1.5 text-center text-[11px]", overruns ? "font-medium text-destructive" : "text-muted-foreground")}>
+            {geometry.width_cm.toFixed(0)} × {geometry.depth_cm.toFixed(0)} × {geometry.height_cm.toFixed(0)} cm
+          </figcaption>
+        </figure>
+        <dl className="space-y-3 text-xs">
+          <div>
+            <dt className="eyebrow text-muted-foreground">On the floor</dt>
+            <dd className="mt-1.5">
+              <StockDots stock={stock} />
+            </dd>
           </div>
-        ))}
-      </dl>
+          <div>
+            <dt className="eyebrow text-muted-foreground">Ships</dt>
+            <dd className="mt-1.5">
+              <LeadBar days={commerce.lead_days} />
+            </dd>
+          </div>
+        </dl>
+      </div>
 
       <div className="mt-4 flex items-center gap-3">
         <AddToBag

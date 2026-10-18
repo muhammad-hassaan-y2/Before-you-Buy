@@ -39,7 +39,7 @@ describe("ProductDetail", () => {
     // The price is on the listing and again on the bar that follows it down the page.
     expect(screen.getAllByText("€919")).toHaveLength(2)
     expect(screen.getByText("€515")).toBeInTheDocument()
-    expect(screen.getByText("€404 · 44.0%")).toBeInTheDocument()
+    expect(screen.getByText(/margin 44\.0 %/)).toBeInTheDocument()
     expect(screen.getByText("18 days")).toBeInTheDocument()
     expect(screen.getByText("Porto Frame Works · PT")).toBeInTheDocument()
     expect(screen.getByText(/no supplier feed connected/)).toBeInTheDocument()

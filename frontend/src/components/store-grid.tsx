@@ -4,6 +4,7 @@ import { Activity, ArrowDown, Loader2, Radio, Ruler, Search, Square, StopCircle 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { ProductCard } from "@/components/product-card"
+import { ProductIso } from "@/components/product-iso"
 import { ShelfPulse } from "@/components/shelf-pulse"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -72,10 +73,28 @@ function CategoryRail({ shelves, selected, onSelect }: { shelves: Shelf[]; selec
       aria-label={shelf.category ?? "Everything"}
       onClick={() => onSelect(shelf.category)}
       className={cn(
-        "group flex shrink-0 snap-start items-baseline gap-2 border-b-2 py-2 text-left whitespace-nowrap transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+        "group flex shrink-0 snap-start items-baseline gap-3 border-b-2 py-3 text-left whitespace-nowrap transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
         selected === shelf.category ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
       )}
     >
+      <span className="h-9 w-14 shrink-0 self-center text-foreground" aria-hidden>
+        {shelf.piece ? (
+          <ProductIso
+            parts={shelf.piece.parts}
+            widthCm={shelf.piece.geometry.width_cm}
+            depthCm={shelf.piece.geometry.depth_cm}
+            heightCm={shelf.piece.geometry.height_cm}
+            material={shelf.piece.material}
+            name={shelf.piece.name}
+          />
+        ) : (
+          <span className="grid h-full grid-cols-3 grid-rows-2 gap-0.5">
+            {Array.from({ length: 6 }).map((_, at) => (
+              <span key={at} className="rounded-[2px] bg-current opacity-40" />
+            ))}
+          </span>
+        )}
+      </span>
       <span className="display text-xl capitalize">{shelf.category ?? "Everything"}</span>
       <span className="num text-xs">
         {shelf.pieces}

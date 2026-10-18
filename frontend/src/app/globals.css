@@ -177,3 +177,29 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
+
+/* The hero plan: the sofa settles into place, then the walkway to the balcony keeps flowing. */
+@keyframes settle {
+  from {
+    transform: translateX(-60px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes walk {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+@utility animate-settle {
+  animation: settle 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@utility animate-walk {
+  animation: walk 1.2s linear infinite;
+}

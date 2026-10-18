@@ -9,7 +9,7 @@ import { ProductFigure } from "@/components/product-figure"
 import { ProductIso } from "@/components/product-iso"
 import { ProductSimulator } from "@/components/product-simulator"
 import { ShelfPulse } from "@/components/shelf-pulse"
-import { Badge } from "@/components/ui/badge"
+import { LeadBar, PriceBand, PriceSplit, SpecFigure, StockDots } from "@/components/visuals"
 import { fetchCatalog, fetchProduct, type CatalogRow } from "@/lib/api"
 import { useBag } from "@/lib/bag"
 import { useShelf } from "@/lib/live"
@@ -62,8 +62,6 @@ export function ProductDetail({ sku }: Props) {
 
   const terms = row
     ? ([
-        ["Cost to the shop", price(row.commerce.cost_eur)],
-        ["Margin", `${price(row.commerce.margin_eur)} · ${row.commerce.margin_pct.toFixed(1)}%`],
         ["Ships in", `${row.commerce.lead_days} days`],
         ["Freight", `${row.commerce.freight} · ${row.commerce.volume_m3.toFixed(3)} m³`],
         ["Sold by", `${row.commerce.supplier.name} · ${row.commerce.supplier.region}`],
@@ -207,11 +205,15 @@ export function ProductDetail({ sku }: Props) {
                 </h1>
                 <p className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="num text-4xl font-semibold tracking-tight text-foreground">{price(row.commerce.retail_eur)}</span>
-                  <Badge variant="secondary" className="bg-foreground/10 text-foreground/80">{bandLabel(row.price_band ?? "")}</Badge>
+                  <span className="flex items-center gap-2 text-sm text-muted-foreground"><PriceBand band={row.price_band} />{bandLabel(row.price_band ?? "")}</span>
                 </p>
-                <p className={`mt-4 text-sm font-medium ${stockTone(stock?.state)}`}>
-                  {stock ? stockLine(stock) : "Reading the shelf…"}
-                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <StockDots stock={stock} />
+                  <span className={`text-sm font-medium ${stockTone(stock?.state)}`}>{stock ? stockLine(stock) : "Reading the shelf…"}</span>
+                </div>
+                <div className="mt-3">
+                  <LeadBar days={row.commerce.lead_days} />
+                </div>
                 <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   Est. arrival {arrival(row.commerce.lead_days)}
                   <span aria-hidden>·</span>
@@ -232,21 +234,23 @@ export function ProductDetail({ sku }: Props) {
                   </p>
                 </div>
 
-                <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-border pt-6">
-                  {(
-                    [
-                      ["Footprint", `${row.geometry.width_cm.toFixed(0)} × ${row.geometry.depth_cm.toFixed(0)} cm`],
-                      ["Height", `${row.geometry.height_cm.toFixed(0)} cm`],
-                      ["Clearance buffer", `${row.geometry.clearance_cm.toFixed(0)} cm all round`],
-                      ["Volume", `${row.commerce.volume_m3.toFixed(3)} m³ · ${row.commerce.freight}`],
-                    ] as const
-                  ).map(([labelText, value]) => (
-                    <div key={labelText}>
-                      <dt className="eyebrow text-muted-foreground">{labelText}</dt>
-                      <dd className="num mt-1 text-sm font-medium text-foreground">{value}</dd>
+                <div className="mt-8 grid items-center gap-6 border-t border-border pt-6 sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <SpecFigure w={row.geometry.width_cm} d={row.geometry.depth_cm} h={row.geometry.height_cm} clearance={row.geometry.clearance_cm} />
+                  <dl className="space-y-3 text-sm">
+                    <div>
+                      <dt className="eyebrow text-muted-foreground">Clearance</dt>
+                      <dd className="num font-medium">{row.geometry.clearance_cm.toFixed(0)} cm all round</dd>
                     </div>
-                  ))}
-                </dl>
+                    <div>
+                      <dt className="eyebrow text-muted-foreground">Volume</dt>
+                      <dd className="num font-medium">{row.commerce.volume_m3.toFixed(3)} m³</dd>
+                    </div>
+                    <div>
+                      <dt className="eyebrow text-muted-foreground">Freight</dt>
+                      <dd className="font-medium">{row.commerce.freight}</dd>
+                    </div>
+                  </dl>
+                </div>
               </div>
             </div>
           </section>
@@ -256,7 +260,11 @@ export function ProductDetail({ sku }: Props) {
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:items-start">
               <div className="rounded-lg border border-border p-6">
                 <h2 className="eyebrow text-muted-foreground">The terms on this piece</h2>
-                <dl className="mt-4 divide-y divide-border overflow-hidden rounded-lg border border-border bg-background/40">
+                <div className="mt-4">
+                  <PriceSplit cost={row.commerce.cost_eur} margin={row.commerce.margin_eur} />
+                  <p className="num mt-2 text-xs text-muted-foreground">Retail {price(row.commerce.retail_eur)} · margin {row.commerce.margin_pct.toFixed(1)} %</p>
+                </div>
+                <dl className="mt-4 divide-y divide-border border-y border-border">
                   {terms.map(([labelText, value]) => (
                     <div key={labelText} className="flex items-baseline justify-between gap-4 px-5 py-3.5">
                       <dt className="text-sm text-muted-foreground">{labelText}</dt>
